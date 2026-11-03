@@ -12,3 +12,17 @@ Los issues se crean después de inicializar los repositorios. Los enlaces se com
 | EPIC-F06 | Portal y perfil de comercio | Pendiente de creación |
 | EPIC-F07 | Precios oficiales y promociones | Pendiente de creación |
 | EPIC-F08 | Integración y neutralidad | Pendiente de creación |
+
+
+## Issues creados
+
+| ID | Issue |
+|---|---|
+| EPIC-F01 | [EPIC-F01](https://github.com/JuanJo0775/Sistema_valora_F/issues/1) |
+| EPIC-F02 | [EPIC-F02](https://github.com/JuanJo0775/Sistema_valora_F/issues/2) |
+| EPIC-F03 | [EPIC-F03](https://github.com/JuanJo0775/Sistema_valora_F/issues/3) |
+| EPIC-F04 | [EPIC-F04](https://github.com/JuanJo0775/Sistema_valora_F/issues/4) |
+| EPIC-F05 | [EPIC-F05](https://github.com/JuanJo0775/Sistema_valora_F/issues/5) |
+| EPIC-F06 | [EPIC-F06](https://github.com/JuanJo0775/Sistema_valora_F/issues/6) |
+| EPIC-F07 | [EPIC-F07](https://github.com/JuanJo0775/Sistema_valora_F/issues/7) |
+| EPIC-F08 | [EPIC-F08](https://github.com/JuanJo0775/Sistema_valora_F/issues/8) |
