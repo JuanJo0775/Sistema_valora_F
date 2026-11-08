@@ -30,4 +30,4 @@ El frontend debe consumir el contrato vigente, no mantener una segunda especific
 
 ## Estado
 
-Este documento define reglas de integración. No representa endpoints implementados ni contrato OpenAPI ya disponible en el backend.
+El contrato preliminar ya está publicado en el backend como `docs/openapi.yaml` (19 operaciones). El frontend genera sus tipos a partir de ese archivo con openapi-typescript, sin copiar los tipos a mano. Los endpoints todavía no están implementados.

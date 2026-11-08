@@ -4,6 +4,12 @@
 
 La PWA mantiene una cola local persistente para **registrar precios** sin conexión. La consulta y comparación de precios requieren conectividad. No se promete una aplicación completamente offline.
 
+## Tecnología (ADR-017)
+
+- **vite-plugin-pwa (Workbox):** genera el manifest, registra y actualiza el service worker y guarda en caché los archivos de la aplicación.
+- **IndexedDB:** guarda los reportes pendientes de envío (ADR-010). Dexie es una biblioteca candidata para acceder a IndexedDB, todavía sin seleccionar.
+- **Lógica de la aplicación:** la cola, los reintentos y la idempotencia son código propio del frontend junto con la API; el plugin PWA no los resuelve.
+
 ## Comportamiento esperado
 
 1. Al iniciar un registro, crear un identificador único y una clave de idempotencia.

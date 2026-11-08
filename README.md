@@ -14,7 +14,7 @@ Aplicación web de **Valora**, plataforma colaborativa para comparar precios ent
 - API: REST + JSON + OpenAPI 3.x bajo `/v1`.
 - Autenticación aprobada: sesión de servidor mediante cookie segura, CSRF y Argon2id en backend.
 - Lenguaje principal aprobado para el proyecto: TypeScript.
-- Framework UI y librerías concretas pendientes de selección.
+- Stack aceptado el 8 de noviembre de 2026 (ADR-017): React + TypeScript + Vite, vite-plugin-pwa (Workbox) para el manifest y el service worker, y React Router para las áreas `/`, `/comercios` y `/moderacion`. La cola local usa IndexedDB; Dexie es una biblioteca candidata. Pruebas con Vitest y Playwright.
 
 Este repositorio empieza como base de organización y documentación. No afirma que la interfaz esté implementada ni que la PWA esté probada.
 
@@ -54,7 +54,7 @@ tests/
   e2e/
 ```
 
-La estructura de código se materializará después de elegir el framework y las herramientas del frontend. Los nombres de carpetas son una organización propuesta, no una decisión sobre React/Vue u otra librería.
+La estructura de código se materializará con el esqueleto de extremo a extremo (H2-01), sobre React + Vite (ADR-017). Los nombres de carpetas son la organización propuesta para ese proyecto.
 
 ## Repositorios
 
