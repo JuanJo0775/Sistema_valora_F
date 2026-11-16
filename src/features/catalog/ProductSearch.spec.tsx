@@ -44,4 +44,15 @@ describe('buscar productos', () => {
     expect(link).toHaveTextContent('Diana · Granos y abarrotes');
     expect(link).toHaveTextContent('500 g');
   });
+
+  it('si se escriben solo los números del código de barras, busca por código', async () => {
+    const api = stubApi({ 'GET /v1/products': { status: 200, body: { items: [rice] } } });
+    renderSearch();
+
+    search('7702511000014');
+
+    await screen.findByRole('link', { name: /Arroz blanco/ });
+    expect(api.requested[0]?.searchParams.get('barcode')).toBe('7702511000014');
+    expect(api.requested[0]?.searchParams.has('q')).toBe(false);
+  });
 });
