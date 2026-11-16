@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import type { components } from '../../shared/api/schema';
 import { directionsTo } from '../../shared/directions';
 import { formatDistance } from '../../shared/location';
@@ -18,7 +19,9 @@ const SOURCE: Record<Item['source'], string> = {
 export function Offer({ offer, size }: { offer: Item; size: string }) {
   return (
     <li className="offer">
-      <h3>{offer.establishment.name}</h3>
+      <h3>
+        <Link to={`/tiendas/${offer.establishment.id}`}>{offer.establishment.name}</Link>
+      </h3>
       {offer.establishment.distanceM !== undefined && (
         <p className="muted">{formatDistance(offer.establishment.distanceM)}</p>
       )}

@@ -11,6 +11,8 @@ import { BasketProvider } from '../features/basket/BasketProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ComparePrices } from '../features/comparison/ComparePrices';
 import { PriceHistory } from '../features/history/PriceHistory';
+import { MapPage } from '../features/stores/MapPage';
+import { StorePage } from '../features/stores/StorePage';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportPrice } from '../features/reports/ReportPrice';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -51,7 +53,8 @@ export function App() {
                 <Route path="/productos/:productId" element={<ProductDetail />} />
                 <Route path="/productos/:productId/comparar" element={<ComparePrices />} />
                 <Route path="/productos/:productId/historial" element={<PriceHistory />} />
-                <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
+                <Route path="/mapa" element={<MapPage />} />
+                <Route path="/tiendas/:establishmentId" element={<StorePage />} />
                 <Route
                   path="/registrar"
                   element={
