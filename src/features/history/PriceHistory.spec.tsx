@@ -63,4 +63,27 @@ describe('historial de precios', () => {
       '16 nov$2.300$2.3001',
     ]);
   });
+
+  it('la gráfica muestra el precio más bajo de cada día y no une los días sin precios', async () => {
+    stubHistory(
+      history({
+        presentationId: 'p500',
+        label: '500 g',
+        points: [
+          point('2026-11-10', 2600, 2600, 1),
+          point('2026-11-11', 2500, 2500, 1),
+          point('2026-11-15', 2300, 2400, 2),
+        ],
+      }),
+    );
+
+    renderHistory();
+
+    const chart = await screen.findByRole('img', {
+      name: 'Precio más bajo por día · 500 g: de $2.600 el 10 nov a $2.300 el 15 nov',
+    });
+    // Dos tramos: 10 y 11 de noviembre seguidos; el 15 va solo (no se inventan los días del medio).
+    expect(chart.querySelectorAll('polyline')).toHaveLength(2);
+    expect(chart.querySelectorAll('circle.dot')).toHaveLength(3);
+  });
 });
