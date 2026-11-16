@@ -114,4 +114,20 @@ describe('crear cuenta', () => {
       '/entrar?volver=%2Fyo',
     );
   });
+
+  it('mientras crea la cuenta el botón dice «Creando cuenta…» y no se reenvía', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.url.endsWith('/auth/session')
+          ? Promise.resolve(new Response(JSON.stringify(unauthorized.body), { status: 401 }))
+          : new Promise<Response>(() => undefined),
+      ),
+    );
+    renderSignUp();
+
+    fill();
+
+    expect(screen.getByRole('button', { name: 'Creando cuenta…' })).toBeDisabled();
+  });
 });
