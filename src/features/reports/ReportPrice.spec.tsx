@@ -173,4 +173,15 @@ describe('registrar un precio', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(message);
     expect(sentReports(api)).toHaveLength(0);
   });
+
+  it('«Es oferta» envía el precio como oferta', async () => {
+    const api = stubApi(reportRoutes);
+    renderReport();
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Es oferta' }));
+
+    await fillAndSend();
+
+    await screen.findByRole('heading', { name: 'Recibido' });
+    expect(JSON.parse(sentReports(api)[0]?.body ?? '{}')).toMatchObject({ priceType: 'oferta' });
+  });
 });
