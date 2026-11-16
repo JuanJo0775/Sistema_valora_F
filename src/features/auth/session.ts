@@ -14,12 +14,14 @@ export type Session =
 
 export interface SessionState {
   session: Session;
+  signIn: (credentials: { email: string; password: string }) => Promise<void>;
   signOut: () => Promise<void>;
   reload: () => void;
 }
 
 export const SessionContext = createContext<SessionState>({
   session: { status: 'loading' },
+  signIn: () => Promise.resolve(),
   signOut: () => Promise.resolve(),
   reload: () => undefined,
 });

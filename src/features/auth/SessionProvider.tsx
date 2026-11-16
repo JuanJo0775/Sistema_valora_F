@@ -22,6 +22,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       session,
+      // Iniciar sesión responde 204 con la cookie; el rol se vuelve a pedir a /auth/session.
+      signIn: async (credentials: { email: string; password: string }) => {
+        await call(api.POST('/auth/login', { body: credentials }));
+        setSession({ status: 'loading' });
+        setAttempt((current) => current + 1);
+      },
       signOut: async () => {
         await call(api.POST('/auth/logout'));
         setSession({ status: 'anonymous' });

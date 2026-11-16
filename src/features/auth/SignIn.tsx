@@ -1,7 +1,7 @@
 import { type SyntheticEvent, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { api, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { safeReturn } from './safeReturn';
 import { useSession } from './session';
 import './auth.css';
 
@@ -10,7 +10,7 @@ import './auth.css';
 export function SignIn() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { reload } = useSession();
+  const { signIn } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
@@ -20,9 +20,8 @@ export function SignIn() {
     event.preventDefault();
     setError(null);
     setSending(true);
-    call(api.POST('/auth/login', { body: { email, password } }))
+    signIn({ email, password })
       .then(() => {
-        reload();
         void navigate(safeReturn(params.get('volver')), { replace: true });
       })
       .catch((failure: unknown) => {
@@ -65,10 +64,4 @@ export function SignIn() {
       </button>
     </form>
   );
-}
-
-// Solo rutas de la misma app: un enlace «/entrar?volver=//otro.sitio» no saca a nadie de Valora.
-function safeReturn(path: string | null): string {
-  // El navegador lee «/\» igual que «//» (otro sitio).
-  return path && /^\/(?![/\\])/.test(path) ? path : '/';
 }

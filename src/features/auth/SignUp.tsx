@@ -12,7 +12,7 @@ const POLICY_VERSION = '2026-11';
 export function SignUp() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { reload } = useSession();
+  const { signIn } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accepted, setAccepted] = useState(false);
@@ -24,9 +24,8 @@ export function SignUp() {
         body: { email, password, acceptedPolicyVersion: POLICY_VERSION },
       }),
     )
-      .then(() => call(api.POST('/auth/login', { body: { email, password } })))
+      .then(() => signIn({ email, password }))
       .then(() => {
-        reload();
         void navigate(safeReturn(params.get('volver')), { replace: true });
       });
   };
