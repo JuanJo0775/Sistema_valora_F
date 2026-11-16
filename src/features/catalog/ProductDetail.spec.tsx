@@ -40,4 +40,15 @@ describe('detalle del producto', () => {
     expect(presentations).toHaveTextContent('500 g');
     expect(presentations).toHaveTextContent('1 kg');
   });
+
+  it('si el producto no existe lo dice y ofrece volver a buscar', async () => {
+    stubApi({});
+
+    renderDetail(rice.id);
+
+    expect(
+      await screen.findByRole('heading', { name: 'No encontramos este producto' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Buscar otro producto' })).toHaveAttribute('href', '/');
+  });
 });
