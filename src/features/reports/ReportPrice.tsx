@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { formatPresentation } from '../catalog/presentation';
+import { type Store, StorePicker } from './StorePicker';
 import './reports.css';
 
 type Product = components['schemas']['Product'];
@@ -13,6 +14,7 @@ export function ReportPrice() {
   const productId = params.get('producto') ?? '';
   const [product, setProduct] = useState<Product | null>(null);
   const [presentationId, setPresentationId] = useState('');
+  const [store, setStore] = useState<Store | null>(null);
 
   useEffect(() => {
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
@@ -41,6 +43,7 @@ export function ReportPrice() {
           </label>
         ))}
       </fieldset>
+      <StorePicker value={store} onChange={setStore} />
     </form>
   );
 }
