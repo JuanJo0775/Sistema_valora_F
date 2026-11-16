@@ -13,6 +13,8 @@ const store = (id: string, name: string) => ({
   municipality: 'armenia' as const,
 });
 const ara = store('a', 'Ara');
+const d1 = store('d', 'D1');
+const exito = store('e', 'Éxito');
 
 const offer = (where: typeof ara, presentationId: string, priceCop: number): Offer => ({
   establishment: where,
@@ -36,5 +38,43 @@ describe('total de la canasta por tienda', () => {
     ]);
 
     expect(total).toMatchObject({ store: ara, totalCop: 9000, found: 2, complete: true });
+  });
+
+  it('solo cuenta la presentación elegida: si la tienda tiene 1 kg y pediste 500 g, no lo tiene', () => {
+    const [total] = totalsByStore([
+      { presentationId: 'arroz-500g', quantity: 1, offers: [offer(ara, 'arroz-1kg', 4800)] },
+    ]);
+
+    expect(total).toBeUndefined();
+  });
+
+  it('una tienda a la que le falta un producto dice cuántos tiene y no está completa', () => {
+    const [total] = totalsByStore([
+      { presentationId: 'arroz-500g', quantity: 1, offers: [offer(d1, 'arroz-500g', 2300)] },
+      { presentationId: 'leche-1l', quantity: 1, offers: [] },
+    ]);
+
+    expect(total).toMatchObject({ store: d1, found: 1, complete: false });
+  });
+
+  it('primero las tiendas con todo, de la más barata a la más cara; luego las demás, por cuántos tienen', () => {
+    const totals = totalsByStore([
+      {
+        presentationId: 'arroz-500g',
+        quantity: 1,
+        offers: [
+          offer(ara, 'arroz-500g', 2600),
+          offer(d1, 'arroz-500g', 2300),
+          offer(exito, 'arroz-500g', 2400),
+        ],
+      },
+      {
+        presentationId: 'leche-1l',
+        quantity: 1,
+        offers: [offer(ara, 'leche-1l', 4000), offer(exito, 'leche-1l', 3900)],
+      },
+    ]);
+
+    expect(totals.map(({ store: { name } }) => name)).toEqual(['Éxito', 'Ara', 'D1']);
   });
 });
