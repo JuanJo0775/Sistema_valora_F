@@ -51,7 +51,13 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
         .filter(({ status }) => status === 'pendiente')
         .sort((a, b) => a.savedAt.localeCompare(b.savedAt));
       for (const report of pending) {
-        await send(report);
+        try {
+          await send(report);
+        } catch {
+          // Sin red o 5xx: queda pendiente y se reintenta después con la misma clave. Se detiene
+          // aquí: si el servidor no contesta a este, tampoco contestará a los siguientes.
+          return;
+        }
         await db.put('reports', {
           ...report,
           status: 'sincronizado',
