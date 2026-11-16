@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '../../test/fakeApi';
@@ -63,5 +63,20 @@ describe('pestaña Yo', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Tu cuenta está suspendida hasta el 20 de noviembre de 2026. Mientras tanto puedes ver el estado de tus aportes y apelar.',
     );
+  });
+
+  it('cerrar sesión la termina en el servidor y vuelve a invitar a entrar', async () => {
+    const api = stubApi({
+      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'POST /v1/auth/logout': { status: 204 },
+    });
+    renderProfile();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Cerrar sesión' }));
+
+    expect(await screen.findByRole('link', { name: 'Iniciar sesión' })).toBeInTheDocument();
+    expect(
+      api.calls.some(({ method, path }) => method === 'POST' && path === '/v1/auth/logout'),
+    ).toBe(true);
   });
 });
