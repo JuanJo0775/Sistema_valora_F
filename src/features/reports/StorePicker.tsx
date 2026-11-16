@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api, call } from '../../shared/api';
+import { askLocation } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
@@ -27,38 +28,26 @@ export function StorePicker({
   const findNearby = () => {
     setProblem('');
     setError(null);
-    const noLocation = () => {
-      setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
-      setSearching(false);
-    };
-    // Algunos navegadores (o páginas sin HTTPS) no tienen geolocation, aunque los tipos digan que sí.
-    const { geolocation } = navigator as Partial<Navigator>;
-    if (!geolocation) {
-      noLocation();
-      return;
-    }
     setSearching(true);
-    geolocation.getCurrentPosition(
-      ({ coords }) => {
-        call(
-          api.GET('/establishments/nearby', {
-            params: { query: { lat: coords.latitude, lng: coords.longitude } },
-          }),
-        )
-          .then(({ items }) => {
-            setStores(items);
-            if (items.length === 0) setProblem('No hay tiendas registradas cerca de ti.');
-          })
-          .catch((failure: unknown) => {
-            setError(failure);
-          })
-          .finally(() => {
-            setSearching(false);
-          });
-      },
-      // Sin ubicación todavía no hay otra forma de elegir la tienda (llega con B#116).
-      noLocation,
-    );
+    askLocation()
+      .then(
+        (point) =>
+          call(api.GET('/establishments/nearby', { params: { query: point } }))
+            .then(({ items }) => {
+              setStores(items);
+              if (items.length === 0) setProblem('No hay tiendas registradas cerca de ti.');
+            })
+            .catch((failure: unknown) => {
+              setError(failure);
+            }),
+        // Sin ubicación todavía no hay otra forma de elegir la tienda (llega con B#116).
+        () => {
+          setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
+        },
+      )
+      .finally(() => {
+        setSearching(false);
+      });
   };
 
   return (
