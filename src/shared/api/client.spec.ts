@@ -191,4 +191,39 @@ describe('cliente de la API', () => {
     const sessions = backend.requests.filter((request) => request.url.endsWith('/auth/session'));
     expect(sessions).toHaveLength(2);
   });
+
+  it('sin sesión, una operación que la exige llega como 401 UNAUTHORIZED', async () => {
+    const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
+    const backend = fakeBackend({
+      'GET /v1/auth/session': {
+        status: 401,
+        body: { code: 'UNAUTHORIZED', message: 'Sin sesión.' },
+      },
+      [`POST /v1/reports/${reportId}/flag`]: {
+        status: 401,
+        body: { code: 'UNAUTHORIZED', message: 'Inicia sesión para continuar.' },
+      },
+    });
+    const api = createApiClient({ fetch: backend.fetch });
+
+    const request = call(
+      api.POST('/reports/{reportId}/flag', {
+        params: { path: { reportId } },
+        body: { reason: 'precio_falso' },
+      }),
+    );
+
+    await expect(request).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+    const flag = backend.requests.find((sent) => sent.method === 'POST');
+    expect(flag?.headers.get('X-CSRF-Token')).toBeNull();
+  });
+
+  it('si la respuesta de error no es JSON (por ejemplo, un 502 del proxy), llega un error genérico', async () => {
+    const proxyDown = () => Promise.resolve(new Response('Bad Gateway', { status: 502 }));
+    const api = createApiClient({ fetch: proxyDown });
+
+    const request = call(api.GET('/products', { params: { query: { q: 'arroz' } } }));
+
+    await expect(request).rejects.toMatchObject({ status: 502, code: 'REQUEST_ERROR' });
+  });
 });
