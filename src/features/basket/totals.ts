@@ -35,8 +35,12 @@ export function totalsByStore(lines: BasketLine[]): StoreTotal[] {
       byStore.set(offer.establishment.id, current);
     }
   }
-  return [...byStore.values()].map((total) => ({
-    ...total,
-    complete: total.found === lines.length,
-  }));
+  // Primero las tiendas con todo, de la más barata a la más cara; luego las incompletas, por
+  // cuántos productos tienen.
+  return [...byStore.values()]
+    .map((total) => ({ ...total, complete: total.found === lines.length }))
+    .sort(
+      (a, b) =>
+        Number(b.complete) - Number(a.complete) || b.found - a.found || a.totalCop - b.totalCop,
+    );
 }
