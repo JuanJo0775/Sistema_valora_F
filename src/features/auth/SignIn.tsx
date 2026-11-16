@@ -1,6 +1,7 @@
 import { type SyntheticEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { Field } from './Field';
 import { safeReturn, withReturn } from './safeReturn';
 import { useSession } from './session';
 import './auth.css';
@@ -36,30 +37,14 @@ export function SignIn() {
       <h1>Iniciar sesión</h1>
       {/* 401, 429 y sin red: el servidor y el cliente ya traen el mensaje en español. */}
       {error !== null && <ErrorState error={error} />}
-      <label className="field">
-        Correo
-        <input
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value);
-          }}
-        />
-      </label>
-      <label className="field">
-        Contraseña
-        <input
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value);
-          }}
-        />
-      </label>
+      <Field label="Correo" type="email" autoComplete="email" value={email} onValue={setEmail} />
+      <Field
+        label="Contraseña"
+        type="password"
+        autoComplete="current-password"
+        value={password}
+        onValue={setPassword}
+      />
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Entrando…' : 'Entrar'}
       </button>

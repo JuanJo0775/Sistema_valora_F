@@ -2,6 +2,7 @@ import { type SyntheticEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { Field } from './Field';
 import { safeReturn, withReturn } from './safeReturn';
 import { useSession } from './session';
 import './auth.css';
@@ -78,31 +79,15 @@ export function SignUp() {
           <Link to={withReturn('/entrar', volver)}>Iniciar sesión</Link>
         </p>
       )}
-      <label className="field">
-        Correo
-        <input
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value);
-          }}
-        />
-      </label>
-      <label className="field">
-        Contraseña
-        <input
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={MIN_PASSWORD}
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value);
-          }}
-        />
-      </label>
+      <Field label="Correo" type="email" autoComplete="email" value={email} onValue={setEmail} />
+      <Field
+        label="Contraseña"
+        type="password"
+        autoComplete="new-password"
+        minLength={MIN_PASSWORD}
+        value={password}
+        onValue={setPassword}
+      />
       <label className="check">
         <input
           type="checkbox"
