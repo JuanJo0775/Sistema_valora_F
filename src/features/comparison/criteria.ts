@@ -18,7 +18,7 @@ export const MUNICIPALITIES: Record<Municipality, string> = {
   salento: 'Salento',
 };
 
-export const SORTS: Record<Criteria['sort'], string> = {
+const SORTS: Record<Criteria['sort'], string> = {
   unit_price: 'precio por unidad',
   recent: 'los más recientes',
   distance: 'distancia',
