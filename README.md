@@ -152,16 +152,17 @@ Qué hace hoy la PWA: se instala con el ícono de Valora y guarda en caché los 
 
 ## Comandos
 
-| Comando                             | Qué hace                                         |
-| ----------------------------------- | ------------------------------------------------ |
-| `pnpm dev`                          | Servidor de desarrollo con recarga               |
-| `pnpm build`                        | Verifica tipos y compila a `dist/` (con la PWA)  |
-| `pnpm preview`                      | Sirve `dist/` para probar la PWA                 |
-| `pnpm test` / `pnpm test:watch`     | Pruebas con Vitest                               |
-| `pnpm test:cov`                     | Pruebas con cobertura (umbral de 80 % de líneas) |
-| `pnpm typecheck`                    | TypeScript estricto                              |
-| `pnpm lint`                         | ESLint (prohíbe pruebas enfocadas o saltadas)    |
-| `pnpm format` / `pnpm format:check` | Prettier                                         |
+| Comando                             | Qué hace                                                                                                 |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                          | Servidor de desarrollo con recarga                                                                       |
+| `pnpm build`                        | Verifica tipos y compila a `dist/` (con la PWA)                                                          |
+| `pnpm preview`                      | Sirve `dist/` para probar la PWA                                                                         |
+| `pnpm test` / `pnpm test:watch`     | Pruebas con Vitest                                                                                       |
+| `pnpm test:cov`                     | Pruebas con cobertura (umbral de 80 % de líneas)                                                         |
+| `pnpm typecheck`                    | TypeScript estricto                                                                                      |
+| `pnpm lint`                         | ESLint (prohíbe pruebas enfocadas o saltadas)                                                            |
+| `pnpm format` / `pnpm format:check` | Prettier                                                                                                 |
+| `pnpm api:types`                    | Regenera los tipos de la API desde `../Sistema_valora_B/docs/openapi.yaml` (ver docs/API_INTEGRATION.md) |
 
 La CI corre en cada pull request hacia `dev` o `main` con los jobs **Calidad** (tipos, lint, formato y compilación), **Pruebas** (Vitest con cobertura) y **SonarQube** (proyecto `JuanJo0775_Sistema_valora_F`, secreto `SONAR_TOKEN`). Si uno falla, no se mezcla.
 
@@ -196,6 +197,7 @@ public/                 # íconos de la PWA (logo naranja de «Identidad de marc
 src/
   app/                  # rutas y página de inicio
   features/health/      # estado de la API
+  shared/api/           # cliente de la API con los tipos del contrato
   test/                 # configuración de Vitest
 ```
 

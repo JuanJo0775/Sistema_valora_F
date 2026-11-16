@@ -19,9 +19,11 @@
     "lint": "eslint .",
     "typecheck": "tsc",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "api:types": "openapi-typescript ../Sistema_valora_B/docs/openapi.yaml -o src/shared/api/schema.d.ts"
   },
   "dependencies": {
+    "openapi-fetch": "^0.17.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router": "^8.5.1"
@@ -41,6 +43,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
     "jsdom": "^28.1.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.10.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.2",

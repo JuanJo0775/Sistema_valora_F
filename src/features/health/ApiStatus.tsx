@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { api, call } from '../../shared/api';
 
 type Status = 'checking' | 'connected' | 'disconnected';
 
@@ -6,9 +7,9 @@ export function ApiStatus() {
   const [status, setStatus] = useState<Status>('checking');
 
   useEffect(() => {
-    fetch('/v1/health')
-      .then((response) => {
-        setStatus(response.ok ? 'connected' : 'disconnected');
+    call(api.GET('/health'))
+      .then(() => {
+        setStatus('connected');
       })
       .catch(() => {
         setStatus('disconnected');
