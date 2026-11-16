@@ -200,6 +200,7 @@ src/
   features/basket/      # canasta: lista de compras y dónde sale más barata
   features/catalog/     # buscar productos y ver su detalle
   features/comparison/  # comparar precios entre tiendas con el criterio declarado
+  features/history/     # historial y gráfica de los últimos 30 días
   features/reports/     # registrar un precio: producto, tienda cercana, precio y hora
   pwa/                  # cola sin conexión (IndexedDB), reportes pendientes y aviso de versión nueva
   shared/api/           # cliente de la API con los tipos del contrato
