@@ -15,12 +15,14 @@ export interface QueueState {
   // El servidor pidió sesión (401 o 403): los pendientes esperan a que se inicie.
   needsSession: boolean;
   submit: (report: NewReport) => Promise<SubmitResult>;
+  discard: (idempotencyKey: string) => Promise<void>;
 }
 
 export const QueueContext = createContext<QueueState>({
   reports: [],
   needsSession: false,
   submit: () => Promise.resolve({ kind: 'guardado' }),
+  discard: () => Promise.resolve(),
 });
 
 export const useReportQueue = () => useContext(QueueContext);

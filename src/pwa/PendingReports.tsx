@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { ApiError } from '../shared/api';
 import { formatCop } from '../shared/money';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -13,13 +14,25 @@ const STATUS: Record<QueuedReport['status'], string> = {
 
 // UX.md: el estado de cada reporte guardado en el teléfono (ADR-010).
 export function PendingReports() {
-  const { reports } = useReportQueue();
+  const { reports, needsSession, discard } = useReportQueue();
   if (reports.length === 0) {
     return <EmptyState title="No tienes reportes guardados en este teléfono" />;
   }
   return (
     <section className="pending">
       <h1>Reportes en este teléfono</h1>
+      {needsSession && (
+        <p role="alert" className="banner warn">
+          <Link to="/entrar?volver=%2Fpendientes">Inicia sesión para enviarlos</Link>
+        </p>
+      )}
+      {/* OFFLINE_FIRST.md: el navegador no garantiza la sincronización en segundo plano. */}
+      {reports.some(({ status }) => status === 'pendiente') && (
+        <p className="muted">
+          Se envían solos cuando hay conexión. Si no salen, abre Valora con internet: el navegador
+          no siempre los envía con la app cerrada.
+        </p>
+      )}
       <ul className="offers">
         {reports.map((report) => (
           <li key={report.idempotencyKey} className="offer">
@@ -28,7 +41,18 @@ export function PendingReports() {
             <p className="badges">
               <span className={`pill ${TONE[report.status]}`}>{STATUS[report.status]}</span>
             </p>
-            {report.problem && <ReportProblem error={new ApiError(report.problem)} />}
+            {report.status === 'requiere_atencion' && (
+              <>
+                {report.problem && <ReportProblem error={new ApiError(report.problem)} />}
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => void discard(report.idempotencyKey)}
+                >
+                  Descartar
+                </button>
+              </>
+            )}
           </li>
         ))}
       </ul>

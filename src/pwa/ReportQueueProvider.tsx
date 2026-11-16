@@ -83,7 +83,19 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
     [opened],
   );
 
-  const value = useMemo(() => ({ reports, needsSession, submit }), [reports, needsSession, submit]);
+  const discard = useCallback(
+    async (idempotencyKey: string) => {
+      const reportQueue = await opened();
+      await reportQueue.discard(idempotencyKey);
+      setReports(await reportQueue.list());
+    },
+    [opened],
+  );
+
+  const value = useMemo(
+    () => ({ reports, needsSession, submit, discard }),
+    [reports, needsSession, submit, discard],
+  );
   return <QueueContext value={value}>{children}</QueueContext>;
 }
 
