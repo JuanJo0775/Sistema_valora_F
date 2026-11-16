@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../shared/api';
-import { openReportQueue } from './reportQueue';
+import { openReportQueue, type QueuedReport } from './reportQueue';
 
 let dbCount = 0;
 // Cada prueba usa su propia base, como si fuera otro teléfono.
@@ -21,7 +21,7 @@ const report = (key = '7e6d5c4b-3a29-4180-9f7e-6d5c4b3a2918') => ({
 
 // El envío a POST /v1/reports: responde bien o lanza el ApiError que llegaría del servidor.
 const answers = (...replies: (ApiError | 'ok')[]) =>
-  vi.fn(() => {
+  vi.fn<(report: QueuedReport) => Promise<void>>(() => {
     const reply = replies.shift() ?? 'ok';
     return reply === 'ok' ? Promise.resolve() : Promise.reject(reply);
   });
@@ -57,5 +57,24 @@ describe('cola de reportes sin conexión', () => {
     const [synced] = await queue.list();
     expect(synced?.status).toBe('sincronizado');
     expect(synced?.syncedAt).toBeDefined();
+  });
+
+  it.each([
+    ['sin red', new ApiError({ status: 0, code: 'NETWORK_ERROR', message: 'Sin red.' })],
+    ['con un 5xx', new ApiError({ status: 503, code: 'REQUEST_ERROR', message: 'No disponible.' })],
+  ])('%s se queda pendiente y se reintenta después con la misma clave', async (_case, failure) => {
+    const queue = await openReportQueue(freshName());
+    await queue.add(report());
+    const send = answers(failure, 'ok');
+
+    await queue.sync(send);
+    expect((await queue.list())[0]?.status).toBe('pendiente');
+    await queue.sync(send);
+
+    expect((await queue.list())[0]?.status).toBe('sincronizado');
+    const keys = send.mock.calls.map(
+      ([sent]) => (sent as { idempotencyKey: string }).idempotencyKey,
+    );
+    expect(keys).toEqual([report().idempotencyKey, report().idempotencyKey]);
   });
 });
