@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi } from '../../test/fakeApi';
+import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { PriceHistory } from './PriceHistory';
 
 const RICE = '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d';
@@ -85,5 +85,79 @@ describe('historial de precios', () => {
     // Dos tramos: 10 y 11 de noviembre seguidos; el 15 va solo (no se inventan los días del medio).
     expect(chart.querySelectorAll('polyline')).toHaveLength(2);
     expect(chart.querySelectorAll('circle.dot')).toHaveLength(3);
+  });
+
+  it('dice de qué producto es y qué días abarca', async () => {
+    stubHistory(
+      history({
+        presentationId: 'p500',
+        label: '500 g',
+        points: [point('2026-11-16', 2300, 2300, 1)],
+      }),
+    );
+
+    renderHistory();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Historial de precios · Arroz blanco' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Últimos 30 días: del 18 oct al 16 nov.')).toBeInTheDocument();
+  });
+
+  it('con varias presentaciones se elige cuál ver', async () => {
+    stubHistory(
+      history(
+        { presentationId: 'p500', label: '500 g', points: [point('2026-11-16', 2300, 2300, 1)] },
+        { presentationId: 'p1kg', label: '1 kg', points: [point('2026-11-15', 4400, 4500, 2)] },
+      ),
+    );
+    renderHistory();
+    await screen.findByRole('table', { name: 'Precio por día · 500 g' });
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Presentación' }), {
+      target: { value: 'p1kg' },
+    });
+
+    expect(screen.getByRole('table', { name: 'Precio por día · 1 kg' })).toHaveTextContent(
+      '$4.400',
+    );
+  });
+
+  it('sin precios en los últimos 30 días lo dice, sin inventar una gráfica', async () => {
+    stubHistory(history());
+
+    renderHistory();
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Todavía no hay precios de este producto en los últimos 30 días',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('mientras carga dice «Cargando…», y si falla permite reintentar', async () => {
+    stubPendingApi();
+    const waiting = renderHistory();
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+    waiting.unmount();
+    stubApi({
+      [`GET /v1/products/${RICE}`]: { status: 200, body: rice },
+      [`GET /v1/products/${RICE}/history`]: [
+        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        history({
+          presentationId: 'p500',
+          label: '500 g',
+          points: [point('2026-11-16', 2300, 2300, 1)],
+        }),
+      ],
+    });
+
+    renderHistory();
+    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
+
+    expect(
+      await screen.findByRole('table', { name: 'Precio por día · 500 g' }),
+    ).toBeInTheDocument();
   });
 });
