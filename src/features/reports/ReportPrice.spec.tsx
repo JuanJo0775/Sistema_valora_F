@@ -545,4 +545,26 @@ describe('registrar un precio', () => {
     const asked = api.requested.find(({ pathname }) => pathname === '/v1/establishments');
     expect(asked?.searchParams.get('q')).toBe('don pepe');
   });
+
+  it.each([
+    [
+      'con menos de 2 letras avisa sin buscar',
+      'd',
+      'Escribe al menos 2 letras del nombre de la tienda.',
+      false,
+    ],
+    ['sin resultados lo dice', 'zzz', 'No encontramos tiendas con ese nombre.', true],
+  ])('la búsqueda de tienda %s', async (_case, text, message, asks) => {
+    const api = stubApi({
+      ...productRoute,
+      'GET /v1/establishments': { status: 200, body: { items: [] } },
+    });
+    renderReport();
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+
+    searchStore(text);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    expect(api.requested.some(({ pathname }) => pathname === '/v1/establishments')).toBe(asks);
+  });
 });
