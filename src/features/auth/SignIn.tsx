@@ -57,5 +57,6 @@ export function SignIn() {
 
 // Solo rutas de la misma app: un enlace «/entrar?volver=//otro.sitio» no saca a nadie de Valora.
 function safeReturn(path: string | null): string {
-  return path?.startsWith('/') && !path.startsWith('//') ? path : '/';
+  // El navegador lee «/\» igual que «//» (otro sitio).
+  return path && /^\/(?![/\\])/.test(path) ? path : '/';
 }
