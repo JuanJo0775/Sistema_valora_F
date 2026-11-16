@@ -102,7 +102,7 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
       });
     },
     list: () => db.getAll('reports'),
-    discard: () => Promise.resolve(),
+    discard: (idempotencyKey) => db.delete('reports', idempotencyKey),
     sync: (send) => {
       running ??= syncOnce(send).finally(() => {
         running = null;
