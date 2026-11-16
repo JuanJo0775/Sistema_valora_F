@@ -52,4 +52,23 @@ describe('secciones con sesión', () => {
       await screen.findByText('Estás en /entrar?volver=%2Fregistrar%3Fproducto%3Dabc'),
     ).toBeInTheDocument();
   });
+
+  it('con el rol pedido muestra la sección', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionOf('reportante') });
+
+    renderAt('/registrar');
+
+    expect(await screen.findByRole('heading', { name: 'Registrar precio' })).toBeInTheDocument();
+  });
+
+  it('con otro rol dice para quién es la sección y no la muestra', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionOf('comercio') });
+
+    renderAt('/registrar');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Esta sección es para cuentas de reportante' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
+  });
 });
