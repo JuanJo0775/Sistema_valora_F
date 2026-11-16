@@ -75,4 +75,25 @@ describe('cliente de la API', () => {
 
     await expect(request).rejects.toMatchObject({ status: 0, code: 'NETWORK_ERROR' });
   });
+
+  it('demasiados intentos (429) dice en cuántos segundos se puede volver a intentar', async () => {
+    const backend = fakeBackend({
+      'POST /v1/auth/login': {
+        status: 429,
+        body: { code: 'TOO_MANY_REQUESTS', message: 'Demasiados intentos.' },
+        headers: { 'Retry-After': '120' },
+      },
+    });
+    const api = createApiClient({ fetch: backend.fetch });
+
+    const request = call(
+      api.POST('/auth/login', { body: { email: 'ana@correo.com', password: 'una-clave-larga' } }),
+    );
+
+    await expect(request).rejects.toMatchObject({
+      status: 429,
+      code: 'TOO_MANY_REQUESTS',
+      retryAfterSeconds: 120,
+    });
+  });
 });
