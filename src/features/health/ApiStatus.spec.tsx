@@ -22,4 +22,12 @@ describe('estado de la API', () => {
 
     expect(await screen.findByText('API conectada')).toBeInTheDocument();
   });
+
+  it('dice «Sin conexión con la API» cuando el backend responde con un error', async () => {
+    respondWith(503, { code: 'SERVICE_UNAVAILABLE', message: 'Base de datos caída' });
+
+    render(<ApiStatus />);
+
+    expect(await screen.findByText('Sin conexión con la API')).toBeInTheDocument();
+  });
 });
