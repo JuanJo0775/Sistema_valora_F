@@ -366,4 +366,44 @@ describe('comparar precios', () => {
 
     expect(await screen.findByRole('combobox', { name: 'Municipio' })).toHaveValue('calarca');
   });
+
+  // #16 / RF-014: la referencia mayorista del DANE va aparte; nunca es precio de una tienda.
+  const wholesale = {
+    source: 'SIPSA (DANE)',
+    productName: 'Arroz blanco',
+    market: 'Armenia, Mercar',
+    pricePerKgCop: 3800,
+    periodStart: '2026-11-02',
+    periodEnd: '2026-11-08',
+    url: 'https://www.dane.gov.co/sipsa/boletin.pdf',
+  };
+
+  it('la referencia mayorista SIPSA va aparte, fuera de la lista de tiendas', async () => {
+    stubCompare({
+      status: 200,
+      body: { ...comparison([result()]).body, wholesaleReference: wholesale },
+    });
+
+    renderCompare();
+
+    const reference = await screen.findByRole('region', { name: 'Referencia mayorista' });
+    expect(reference).toHaveTextContent('$3.800 por kilo');
+    expect(reference).toHaveTextContent('Armenia, Mercar · del 2 al 8 de noviembre de 2026');
+    expect(reference).toHaveTextContent('SIPSA (DANE). No es el precio de una tienda.');
+    expect(within(reference).getByRole('link', { name: 'Ver el boletín' })).toHaveAttribute(
+      'href',
+      wholesale.url,
+    );
+    const [stores] = screen.getAllByRole('list');
+    expect(stores).not.toHaveTextContent('3.800');
+  });
+
+  it('sin referencia mayorista no muestra esa sección', async () => {
+    stubCompare(comparison([result()]));
+
+    renderCompare();
+
+    await screen.findByRole('heading', { name: 'Tienda Don Pepe' });
+    expect(screen.queryByRole('region', { name: 'Referencia mayorista' })).not.toBeInTheDocument();
+  });
 });
