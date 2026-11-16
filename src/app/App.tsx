@@ -21,7 +21,7 @@ function Home() {
       <p className="muted">
         Precios de tiendas de barrio, minimercados y supermercados cerca de ti.
       </p>
-      <ProductSearch />
+      <ProductSearch formClassName="search home-search" />
     </>
   );
 }

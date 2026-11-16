@@ -30,7 +30,7 @@ describe('inicio', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
       target: { value: 'arroz' },
     });
-    fireEvent.submit(screen.getByRole('search'));
+    fireEvent.submit(screen.getByRole('search', { name: 'Buscar producto' }));
     fireEvent.click(await screen.findByRole('link', { name: /Arroz blanco/ }));
 
     expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
