@@ -36,7 +36,7 @@ const renderAt = (path: string) =>
           <Route
             path="/registrar"
             element={
-              <RequireRole role="reportante">
+              <RequireRole role="reportante" allowOffline>
                 <h1>Registrar precio</h1>
               </RequireRole>
             }
@@ -58,6 +58,7 @@ const renderAt = (path: string) =>
 describe('secciones con sesión', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it('sin sesión lleva a iniciar sesión y recuerda a dónde volver', async () => {
@@ -140,5 +141,45 @@ describe('secciones con sesión', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Actualizar' }));
 
     expect(await screen.findByText('Estás en /entrar?volver=%2Fmis-aportes')).toBeInTheDocument();
+  });
+
+  // #26: registrar sin señal. Sin red no se sabe si la sesión sigue; si la última vez entró como
+  // reportante, puede guardar el reporte en el teléfono. El servidor lo verifica al sincronizar.
+  const offline = () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+  };
+
+  it('sin red, quien entró como reportante la última vez puede registrar en el teléfono', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+    const before = renderAt('/registrar');
+    await screen.findByRole('heading', { name: 'Registrar precio' });
+    before.unmount();
+    offline();
+
+    renderAt('/registrar');
+
+    expect(await screen.findByRole('heading', { name: 'Registrar precio' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Sin conexión: tu reporte se guardará en el teléfono y se enviará solo.',
+    );
+  });
+
+  it('sin red, si cerró sesión no recuerda el rol y muestra el error', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+    const before = renderAt('/registrar');
+    await screen.findByRole('heading', { name: 'Registrar precio' });
+    before.unmount();
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    const signedOut = renderAt('/registrar');
+    await screen.findByText(/Estás en \/entrar/);
+    signedOut.unmount();
+    offline();
+
+    renderAt('/registrar');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No hay conexión con Valora');
   });
 });

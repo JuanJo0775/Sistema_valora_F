@@ -9,7 +9,7 @@ export type Session =
   | { status: 'loading' }
   | { status: 'anonymous' }
   // Sin respuesta del servidor (sin red, error 500): no se sabe si hay sesión.
-  | { status: 'unknown'; error: unknown }
+  | { status: 'unknown'; error: unknown; lastRole: Role | null }
   | { status: 'active'; role: Role; suspendedUntil?: string | undefined };
 
 export interface SessionState {

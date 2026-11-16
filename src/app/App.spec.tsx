@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
+import { openReportQueue } from '../pwa/reportQueue';
 import { App } from './App';
 
 const rice = {
@@ -147,5 +148,53 @@ describe('inicio', () => {
         name: 'Todavía nadie ha reportado este producto en Armenia',
       }),
     ).toBeInTheDocument();
+  });
+
+  it('si quedan reportes por enviar, un aviso lo dice y lleva a verlos', async () => {
+    await (
+      await openReportQueue()
+    ).add({
+      idempotencyKey: '11111111-1111-4111-8111-111111111111',
+      body: {
+        presentationId: rice.presentations[0]?.id ?? '',
+        establishmentId: '5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d',
+        priceCop: 2500,
+        priceType: 'normal',
+        observedAt: new Date().toISOString(),
+      },
+      label: { product: 'Arroz blanco · 500 g', store: 'Tienda Don Pepe' },
+    });
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'POST /v1/reports': {
+        status: 503,
+        body: { code: 'REQUEST_ERROR', message: 'No disponible.' },
+      },
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole('link', { name: '1 reporte por enviar' })).toHaveAttribute(
+      'href',
+      '/pendientes',
+    );
+    fireEvent.click(screen.getByRole('link', { name: '1 reporte por enviar' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Reportes en este teléfono' }),
+    ).toBeInTheDocument();
+  });
+
+  it('sin red, quien entró como reportante la última vez puede abrir «Registrar precio»', async () => {
+    localStorage.setItem('valora:ultimo-rol', 'reportante');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+    window.history.pushState({}, '', '/registrar');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
+    localStorage.clear();
   });
 });

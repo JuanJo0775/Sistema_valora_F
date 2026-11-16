@@ -2,7 +2,7 @@ import type { components } from '../../shared/api/schema';
 import { formatDistance } from '../../shared/location';
 import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
-import { formatCop, formatUnitPrice } from './money';
+import { formatCop, formatUnitPrice } from '../../shared/money';
 
 type Item = components['schemas']['ComparisonItem'];
 

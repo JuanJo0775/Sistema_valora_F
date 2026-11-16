@@ -2,6 +2,7 @@ import react from '@vitejs/plugin-react';
 import { loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import { CATALOG_PRODUCT } from './src/pwa/catalogCache';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -9,10 +10,11 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       // ADR-017: la app se instala en el celular. Solo se guardan en caché los archivos de la app;
-      // las consultas a /v1 siempre van a la red (la consulta requiere conexión, ADR-010). La cola
-      // sin conexión del registro llega con la #26.
+      // las consultas a /v1 van a la red (la consulta requiere conexión, ADR-010). La única excepción
+      // es el detalle de un producto ya abierto, para registrar sin señal (#26).
       VitePWA({
-        registerType: 'autoUpdate',
+        // Aviso de versión nueva (UpdateBanner): se actualiza cuando la persona lo pide.
+        registerType: 'prompt',
         includeAssets: ['favicon-64.png', 'apple-touch-icon.png'],
         manifest: {
           name: 'Valora — precios de tu barrio',
@@ -40,6 +42,18 @@ export default defineConfig(({ mode }) => {
           // Las fuentes y los íconos también, para que la app abra igual sin internet.
           globPatterns: ['**/*.{js,css,html,png,woff2}'],
           navigateFallbackDenylist: [/^\/v1\//],
+          runtimeCaching: [
+            {
+              urlPattern: CATALOG_PRODUCT,
+              // Red primero: con señal siempre el catálogo al día; sin señal, el último que se vio.
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'catalogo',
+                networkTimeoutSeconds: 4,
+                expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+          ],
         },
       }),
     ],
