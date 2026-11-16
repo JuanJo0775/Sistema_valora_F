@@ -15,7 +15,15 @@ const ARMENIA: L.LatLngExpression = [4.5339, -75.6811];
 
 // ADR-019: Leaflet sobre teselas de OpenStreetMap, con su atribución visible. El mapa es una ayuda
 // visual; la lista de tiendas de la pantalla es su equivalente accesible.
-export function StoreMap({ stores, label }: { stores: MapStore[]; label: string }) {
+export function StoreMap({
+  stores,
+  label,
+}: {
+  stores: MapStore[];
+  label: string;
+  onPick?: (point: { lat: number; lng: number }) => void;
+  picked?: { lat: number; lng: number } | null;
+}) {
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const pins = useRef<L.LayerGroup | null>(null);
