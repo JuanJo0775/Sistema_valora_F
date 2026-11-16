@@ -1,6 +1,7 @@
 import { type SyntheticEvent, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import type { components } from '../../shared/api/schema';
 import { formatPresentation } from './presentation';
 import './catalog.css';
@@ -14,7 +15,8 @@ export function ProductSearch() {
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
   const [text, setText] = useState(query);
-  const [products, setProducts] = useState<Product[]>([]);
+  // null: todavía no hay respuesta para la búsqueda actual.
+  const [products, setProducts] = useState<Product[] | null>(null);
   const [hint, setHint] = useState('');
 
   useEffect(() => {
@@ -55,8 +57,14 @@ export function ProductSearch() {
         </button>
       </form>
       {hint && <p className="muted">{hint}</p>}
+      {products?.length === 0 && (
+        <EmptyState
+          title={`Sin resultados para «${query}»`}
+          text="Revisa la escritura o pide que lo agreguemos al catálogo."
+        />
+      )}
       <ul className="results">
-        {products.map((product) => (
+        {products?.map((product) => (
           <li key={product.id}>
             <Link to={`/productos/${product.id}`} className="result">
               <strong>{product.name}</strong>
