@@ -26,3 +26,6 @@ Thumbs.db
 playwright-report/
 test-results/
 .nyc_output/
+
+# TypeScript
+*.tsbuildinfo
