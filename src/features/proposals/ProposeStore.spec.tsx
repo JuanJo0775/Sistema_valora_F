@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, sessionAs, stubApi } from '../../test/fakeApi';
+import { stubLocation } from '../../test/location';
 import { ProposeStore } from './ProposeStore';
 
 // El mapa simulado: un botón hace de toque en el mapa y dice el punto elegido.
@@ -78,5 +79,47 @@ describe('proponer una tienda', () => {
       municipality: 'armenia',
       address: 'Carrera 19 # 10-20',
     });
+  });
+
+  it('«Estoy en la tienda» marca el punto donde está la persona, solo si lo toca', async () => {
+    const api = renderPropose();
+    stubLocation();
+    fill();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Estoy en la tienda' }));
+    expect(await screen.findByText('Marcado en 4.53, -75.68')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    await screen.findByRole('heading', { name: 'Recibido' });
+    expect(sentBody(api)).toMatchObject({ lat: 4.53, lng: -75.68 });
+  });
+
+  it.each([
+    ['el nombre', false, true, 'Escribe el nombre de la tienda.'],
+    ['el punto en el mapa', true, false, 'Toca el mapa para marcar dónde queda la tienda.'],
+  ])('sin %s lo dice y no envía', (_missing, withName, withPoint, message) => {
+    const api = renderPropose();
+    if (withName) fill();
+    if (withPoint) fireEvent.click(screen.getByRole('button', { name: 'Tocar el mapa' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+    expect(api.calls.some(({ method }) => method === 'POST')).toBe(false);
+  });
+
+  it('si el servidor no la acepta muestra por qué', async () => {
+    renderPropose({
+      status: 400,
+      body: { code: 'VALIDATION_ERROR', message: 'La ubicación está fuera del Quindío.' },
+    });
+    fill();
+    fireEvent.click(screen.getByRole('button', { name: 'Tocar el mapa' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La ubicación está fuera del Quindío.',
+    );
   });
 });
