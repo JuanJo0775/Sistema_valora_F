@@ -471,4 +471,42 @@ describe('registrar un precio', () => {
       );
     },
   );
+
+  it('una hora que el servidor no acepta pide revisar cuándo se vio', async () => {
+    stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': {
+        status: 422,
+        body: { code: 'INVALID_OBSERVATION_DATE', message: 'observedAt fuera de rango.' },
+      },
+    });
+    renderReport();
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La hora en que lo viste debe ser de las últimas 24 horas. Revisa «¿Cuándo lo viste?».',
+    );
+  });
+
+  it('con la cuenta suspendida dice que no puede registrar y lleva a sus aportes', async () => {
+    stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': {
+        status: 403,
+        body: { code: 'ACCOUNT_SUSPENDED', message: 'La cuenta está suspendida.' },
+      },
+    });
+    renderReport();
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Tu cuenta está suspendida: por ahora no puedes registrar precios.',
+    );
+    expect(screen.getByRole('link', { name: 'Ver mis aportes' })).toHaveAttribute(
+      'href',
+      '/mis-aportes',
+    );
+  });
 });
