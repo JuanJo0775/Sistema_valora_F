@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
+import { openReportQueue } from '../../pwa/reportQueue';
+import { ReportQueueProvider } from '../../pwa/ReportQueueProvider';
 import { ReportPrice } from './ReportPrice';
 
 const rice = {
@@ -75,11 +77,13 @@ const sentReports = (api: ReturnType<typeof stubApi>) =>
 
 const renderReport = (path = `/registrar?producto=${rice.id}`) =>
   render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/registrar" element={<ReportPrice />} />
-      </Routes>
-    </MemoryRouter>,
+    <ReportQueueProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/registrar" element={<ReportPrice />} />
+        </Routes>
+      </MemoryRouter>
+    </ReportQueueProvider>,
   );
 
 describe('registrar un precio', () => {
@@ -192,50 +196,53 @@ describe('registrar un precio', () => {
     expect(JSON.parse(sentReports(api)[0]?.body ?? '{}')).toMatchObject({ priceType: 'oferta' });
   });
 
-  it('si el envío falla muestra el error y al reintentar usa la misma clave', async () => {
-    const api = stubApi({
+  it('si el servidor no responde, el reporte queda guardado en el teléfono y se enviará solo', async () => {
+    stubApi({
       ...reportRoutes,
-      'POST /v1/reports': [
-        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
-        { status: 201, body: receipt },
-      ],
+      'POST /v1/reports': {
+        status: 503,
+        body: { code: 'REQUEST_ERROR', message: 'Servicio no disponible.' },
+      },
     });
     renderReport();
+
     await fillAndSend();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
-    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
-
-    await screen.findByRole('heading', { name: 'Recibido' });
-    const [first, retry] = sentReports(api).map(({ headers }) => headers.get('Idempotency-Key'));
-    expect(retry).toBe(first);
+    expect(
+      await screen.findByRole('heading', { name: 'Guardado en tu teléfono' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Se enviará solo cuando haya conexión.')).toBeInTheDocument();
+    const [saved] = await (await openReportQueue()).list();
+    expect(saved?.status).toBe('pendiente');
   });
 
-  it('el reintento envía exactamente el mismo reporte, con la misma hora', async () => {
-    const api = stubApi({
-      ...reportRoutes,
-      'POST /v1/reports': [
-        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
-        { status: 201, body: receipt },
-      ],
-    });
+  it('el reporte se guarda en el teléfono antes de intentar enviarlo', async () => {
+    stubApi({ ...reportRoutes, 'POST /v1/reports': { status: 201, pending: true } });
     renderReport();
+
     await fillAndSend();
-    await screen.findByRole('alert');
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await screen.findByRole('button', { name: 'Enviando…' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
-
-    await screen.findByRole('heading', { name: 'Recibido' });
-    const [first, retry] = sentReports(api).map(({ body }) => body);
-    expect(retry).toBe(first);
+    const [saved] = await (await openReportQueue()).list();
+    expect(saved).toMatchObject({
+      status: 'pendiente',
+      body: { establishmentId: donPepe.id, priceCop: 2500 },
+      label: { product: 'Arroz blanco · 500 g', store: 'Tienda Don Pepe' },
+    });
   });
 
-  it('si después de un fallo cambia el reporte, lo envía con una clave nueva', async () => {
+  it('si el servidor lo rechaza y se cambia el reporte, lo envía con una clave nueva', async () => {
     const api = stubApi({
       ...reportRoutes,
       'POST /v1/reports': [
-        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        {
+          status: 409,
+          body: {
+            code: 'DUPLICATE_REPORT',
+            message: 'Repetido.',
+            availableFrom: '2026-11-16T15:30:00Z',
+          },
+        },
         { status: 201, body: receipt },
       ],
     });

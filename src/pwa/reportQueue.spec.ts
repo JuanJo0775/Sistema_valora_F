@@ -130,7 +130,7 @@ describe('cola de reportes sin conexión', () => {
 
       const outcome = await queue.sync(send);
 
-      expect(outcome).toEqual({ needsSession: true });
+      expect(outcome).toMatchObject({ needsSession: true, problem: { status, code } });
       expect(send).toHaveBeenCalledTimes(1);
       expect((await queue.list()).every(({ status: state }) => state === 'pendiente')).toBe(true);
     },
