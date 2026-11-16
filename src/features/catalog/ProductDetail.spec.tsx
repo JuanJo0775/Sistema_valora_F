@@ -58,6 +58,7 @@ const renderDetail = (productId: string) =>
 describe('detalle del producto', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it('muestra el nombre, la marca, la categoría y las presentaciones', async () => {
@@ -186,5 +187,19 @@ describe('detalle del producto', () => {
 
     expect(await screen.findByText('No pudimos cargar los precios.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+  });
+
+  it('los más baratos son del municipio que se eligió al comparar', async () => {
+    localStorage.setItem('valora:municipio', 'calarca');
+    const api = stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([offer('Ara', 2000, true)]),
+    });
+
+    renderDetail(rice.id);
+
+    expect(await screen.findByRole('list', { name: 'Más baratos en Calarcá' })).toBeInTheDocument();
+    const asked = api.requested.find(({ pathname }) => pathname.endsWith('/comparison'));
+    expect(asked?.searchParams.get('municipality')).toBe('calarca');
   });
 });

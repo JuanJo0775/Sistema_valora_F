@@ -6,14 +6,23 @@ import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { SelectField } from '../../shared/ui/SelectField';
 import { formatPresentation } from '../catalog/presentation';
-import { describeCriteria, MUNICIPALITIES } from './criteria';
+import { describeCriteria, type Municipality, MUNICIPALITIES } from './criteria';
+import { readMunicipality, saveMunicipality } from './lastMunicipality';
 import { Offer } from './Offer';
 import './comparison.css';
 
 type Product = components['schemas']['Product'];
 type Comparison = components['schemas']['Comparison'];
 type Sort = Comparison['criteria']['sort'];
+const RADII = [0.5, 1, 2, 3];
+
+const MUNICIPALITY_OPTIONS = (Object.keys(MUNICIPALITIES) as Municipality[]).map((value) => ({
+  value,
+  label: MUNICIPALITIES[value],
+}));
+
 const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: 'unit_price', label: 'Precio por unidad' },
   { value: 'recent', label: 'Más recientes' },
@@ -30,6 +39,8 @@ export function ComparePrices() {
   // Por defecto Armenia, sin pedir permisos; con la ubicación, las tiendas cercanas (EC-08: la
   // ubicación solo va en la consulta y no se guarda).
   const [point, setPoint] = useState<Point | null>(null);
+  const [municipality, setMunicipality] = useState<Municipality>(readMunicipality);
+  const [radiusKm, setRadiusKm] = useState(2);
   const [locationProblem, setLocationProblem] = useState('');
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
@@ -37,7 +48,7 @@ export function ComparePrices() {
     { key: string; comparison: Comparison } | { key: string; error: unknown } | null
   >(null);
   const [attempt, setAttempt] = useState(0);
-  const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : 'armenia'}`;
+  const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : municipality}|${String(radiusKm)}`;
 
   useEffect(() => {
     call(api.GET('/products/{productId}', { params: { path: { productId } } }))
@@ -53,7 +64,7 @@ export function ComparePrices() {
       api.GET('/products/{productId}/comparison', {
         params: {
           path: { productId },
-          query: { ...(point ?? { municipality: 'armenia' as const }), sort, onlyCurrent },
+          query: { ...(point ? { ...point, radiusKm } : { municipality }), sort, onlyCurrent },
         },
       }),
     )
@@ -66,7 +77,7 @@ export function ComparePrices() {
     return () => {
       current = false;
     };
-  }, [productId, sort, point, onlyCurrent, key]);
+  }, [productId, sort, point, municipality, radiusKm, onlyCurrent, key]);
 
   const retry = () => {
     setProductError(null);
@@ -101,6 +112,63 @@ export function ComparePrices() {
           </label>
         ))}
       </fieldset>
+      {/* #15: por defecto Armenia (las tiendas de la semilla), sin pedir la ubicación (EC-08). Con la
+          ubicación, las tiendas a la redonda; las dos cosas no se mezclan. */}
+      {point ? (
+        <>
+          {/* ADR-019: radio calibrable de 0,5 a 3 km; 2 km por defecto. */}
+          <SelectField
+            label="Radio"
+            value={String(radiusKm)}
+            options={RADII.map((km) => ({
+              value: String(km),
+              label: `${String(km).replace('.', ',')} km`,
+            }))}
+            onChange={(km) => {
+              setRadiusKm(Number(km));
+            }}
+          />
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setPoint(null);
+              // Sin ubicación no hay distancia: el backend responde 400 a sort=distance.
+              if (sort === 'distance') setSort('unit_price');
+            }}
+          >
+            Comparar por municipio
+          </button>
+        </>
+      ) : (
+        <>
+          <SelectField
+            label="Municipio"
+            value={municipality}
+            options={MUNICIPALITY_OPTIONS}
+            onChange={(chosen) => {
+              saveMunicipality(chosen);
+              setMunicipality(chosen);
+            }}
+          />
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setLocationProblem('');
+              askLocation()
+                .then(setPoint)
+                .catch(() => {
+                  setLocationProblem(
+                    'Activa la ubicación del navegador para ver las tiendas cercanas.',
+                  );
+                });
+            }}
+          >
+            Usar mi ubicación
+          </button>
+        </>
+      )}
       <label className="check">
         <input
           type="checkbox"
@@ -111,22 +179,6 @@ export function ComparePrices() {
         />
         Solo precios vigentes
       </label>
-      <button
-        type="button"
-        className="btn ghost"
-        onClick={() => {
-          setLocationProblem('');
-          askLocation()
-            .then(setPoint)
-            .catch(() => {
-              setLocationProblem(
-                'Activa la ubicación del navegador para ver las tiendas cercanas.',
-              );
-            });
-        }}
-      >
-        Usar mi ubicación
-      </button>
       {locationProblem && (
         <p role="alert" className="banner warn">
           {locationProblem}

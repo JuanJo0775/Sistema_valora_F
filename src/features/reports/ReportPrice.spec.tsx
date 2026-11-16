@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
+import { stubLocation, stubNoGeolocation } from '../../test/location';
 import { openReportQueue } from '../../pwa/reportQueue';
 import { ReportQueueProvider } from '../../pwa/ReportQueueProvider';
 import { ReportPrice } from './ReportPrice';
@@ -25,20 +26,6 @@ const donPepe = {
   lng: -75.6811,
   municipality: 'armenia',
   distanceM: 350,
-};
-
-// El teléfono responde la ubicación al instante, o la niega.
-const stubLocation = (answer: 'allow' | 'deny') => {
-  const geolocation = {
-    getCurrentPosition: (ok: PositionCallback, fail: PositionErrorCallback) => {
-      if (answer === 'allow') {
-        ok({ coords: { latitude: 4.53, longitude: -75.68 } } as GeolocationPosition);
-      } else {
-        fail({ code: 1, message: 'User denied Geolocation' } as GeolocationPositionError);
-      }
-    },
-  };
-  vi.stubGlobal('navigator', Object.assign(Object.create(navigator) as Navigator, { geolocation }));
 };
 
 const productRoute = { [`GET /v1/products/${rice.id}`]: { status: 200, body: rice } };
@@ -428,10 +415,7 @@ describe('registrar un precio', () => {
 
   it('si el navegador no tiene ubicación pide activarla, sin romperse', async () => {
     stubApi(productRoute);
-    vi.stubGlobal(
-      'navigator',
-      Object.assign(Object.create(navigator) as Navigator, { geolocation: undefined }),
-    );
+    stubNoGeolocation();
     renderReport();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
