@@ -61,32 +61,39 @@ export function ProductDetail() {
   if (!result) return <Loading />;
   const { product } = result;
   return (
-    <article className="detail">
-      <ProductImage name={product.name} image={product.image} />
-      <h1>{product.name}</h1>
-      <p className="muted">{[product.brand, product.category.name].filter(Boolean).join(' · ')}</p>
-      <h2 id="presentaciones">Presentaciones</h2>
-      <ul aria-labelledby="presentaciones" className="chips">
-        {product.presentations.map((presentation) => (
-          <li key={presentation.id} className="pill mute">
-            {formatPresentation(presentation)}
-          </li>
-        ))}
-      </ul>
-      {/* Prototipo: la acción principal (naranja) es comparar; las demás, secundarias. */}
-      <div className="actions">
-        <Link to={`/productos/${product.id}/comparar`} className="btn">
-          Comparar precios
-        </Link>
-        <Link to={`/productos/${product.id}/historial`} className="btn ghost">
-          Historial
-        </Link>
-        <Link to={`/registrar?producto=${product.id}`} className="btn ghost">
-          Registrar un precio
-        </Link>
-      </div>
-      <CheapestOffers product={product} />
-    </article>
+    <div className="with-side">
+      <article className="detail">
+        <ProductImage name={product.name} image={product.image} />
+        <h1>{product.name}</h1>
+        <p className="muted">
+          {[product.brand, product.category.name].filter(Boolean).join(' · ')}
+        </p>
+        <h2 id="presentaciones">Presentaciones</h2>
+        <ul aria-labelledby="presentaciones" className="chips">
+          {product.presentations.map((presentation) => (
+            <li key={presentation.id} className="pill mute">
+              {formatPresentation(presentation)}
+            </li>
+          ))}
+        </ul>
+      </article>
+      {/* #48: en escritorio, el panel fijo de la derecha; en el celular, debajo del producto. */}
+      <aside className="side" aria-label="Precios y acciones">
+        <CheapestOffers product={product} />
+        {/* Prototipo: la acción principal (naranja) es comparar; las demás, secundarias. */}
+        <div className="actions">
+          <Link to={`/productos/${product.id}/comparar`} className="btn">
+            Comparar precios
+          </Link>
+          <Link to={`/productos/${product.id}/historial`} className="btn ghost">
+            Historial
+          </Link>
+          <Link to={`/registrar?producto=${product.id}`} className="btn ghost">
+            Registrar un precio
+          </Link>
+        </div>
+      </aside>
+    </div>
   );
 }
 

@@ -214,3 +214,28 @@ button {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* #48: contenido principal y panel lateral. En el celular, uno debajo del otro; desde 960 px, dos
+   columnas (1,5 : 1) con el panel fijo al desplazarse, como en el prototipo de referencia. */
+.with-side {
+  display: grid;
+  gap: 24px;
+}
+
+.side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+@media (width >= 960px) {
+  .with-side {
+    grid-template-columns: 1.5fr 1fr;
+    align-items: start;
+  }
+
+  .side {
+    position: sticky;
+    top: 88px;
+  }
+}
