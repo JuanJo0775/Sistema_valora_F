@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { type FakeReply, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { SessionProvider } from '../auth/SessionProvider';
 import { MyReports } from './MyReports';
 
 const report = (productName: string, status: string, extra: Record<string, unknown> = {}) => ({
@@ -105,5 +106,24 @@ describe('mis aportes', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
 
     expect(await screen.findByText('Banano')).toBeInTheDocument();
+  });
+
+  it('con la cuenta suspendida avisa hasta cuándo y que puede apelar', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante', '2026-11-20T17:00:00Z'),
+      'GET /v1/me/reports': page([report('Banano', 'descartado')]),
+    });
+
+    render(
+      <SessionProvider>
+        <MemoryRouter>
+          <MyReports />
+        </MemoryRouter>
+      </SessionProvider>,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Tu cuenta está suspendida hasta el 20 de noviembre de 2026. Mientras tanto puedes ver el estado de tus aportes y apelar.',
+    );
   });
 });
