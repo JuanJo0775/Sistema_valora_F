@@ -9,18 +9,22 @@ export class ApiError extends Error {
   readonly code: string;
   // Solo en 429: cuántos segundos esperar antes de reintentar (cabecera Retry-After).
   readonly retryAfterSeconds: number | undefined;
+  // Solo en 409 DUPLICATE_REPORT: hora de observación desde la que se acepta otro reporte (#84).
+  readonly availableFrom: string | undefined;
 
   constructor(details: {
     status: number;
     code: string;
     message: string;
     retryAfterSeconds?: number;
+    availableFrom?: string;
   }) {
     super(details.message);
     this.name = 'ApiError';
     this.status = details.status;
     this.code = details.code;
     this.retryAfterSeconds = details.retryAfterSeconds;
+    this.availableFrom = details.availableFrom;
   }
 }
 
@@ -87,6 +91,7 @@ function needsCsrf(request: Request, baseUrl: string): boolean {
 interface ErrorBody {
   code?: unknown;
   message?: unknown;
+  availableFrom?: unknown;
 }
 
 export async function call<T>(
@@ -112,6 +117,7 @@ export async function call<T>(
       code: typeof body.code === 'string' ? body.code : 'REQUEST_ERROR',
       message: typeof body.message === 'string' ? body.message : 'La API respondió con un error.',
       ...(retryAfter > 0 ? { retryAfterSeconds: retryAfter } : {}),
+      ...(typeof body.availableFrom === 'string' ? { availableFrom: body.availableFrom } : {}),
     });
   }
   // 204 (por ejemplo, iniciar o cerrar sesión): no hay cuerpo.

@@ -425,4 +425,97 @@ describe('registrar un precio', () => {
       'Activa la ubicación del navegador para ver las tiendas cercanas.',
     );
   });
+
+  // #11: lo que el servidor responde al reportar en línea, explicado en la pantalla.
+  it('un reporte repetido dice desde qué hora de Colombia se acepta otro', async () => {
+    stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': {
+        status: 409,
+        body: {
+          code: 'DUPLICATE_REPORT',
+          message: 'Ya hay un reporte tuyo de esa presentación en esa tienda.',
+          availableFrom: '2026-11-16T15:30:00Z',
+        },
+      },
+    });
+    renderReport();
+
+    await fillAndSend();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Ya registraste este producto en esta tienda hace poco.');
+    expect(alert).toHaveTextContent(/Podrás registrar otro precio desde las 10:30/);
+  });
+
+  it.each([
+    [700, 'en 12 minutos'],
+    [45, 'en 1 minuto'],
+  ])(
+    'muchos reportes en una hora (Retry-After %i s) dicen cuándo se puede seguir: %s',
+    async (seconds, wait) => {
+      stubApi({
+        ...reportRoutes,
+        'POST /v1/reports': {
+          status: 429,
+          body: { code: 'TOO_MANY_REQUESTS', message: 'Demasiados reportes.' },
+          headers: { 'Retry-After': String(seconds) },
+        },
+      });
+      renderReport();
+
+      await fillAndSend();
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        `Registraste muchos precios en poco tiempo. Podrás registrar otro ${wait}.`,
+      );
+    },
+  );
+
+  it('una hora que el servidor no acepta pide revisar cuándo se vio', async () => {
+    stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': {
+        status: 422,
+        body: { code: 'INVALID_OBSERVATION_DATE', message: 'observedAt fuera de rango.' },
+      },
+    });
+    renderReport();
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La hora en que lo viste debe ser de las últimas 24 horas. Revisa «¿Cuándo lo viste?».',
+    );
+  });
+
+  it('con la cuenta suspendida dice que no puede registrar y lleva a sus aportes', async () => {
+    stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': {
+        status: 403,
+        body: { code: 'ACCOUNT_SUSPENDED', message: 'La cuenta está suspendida.' },
+      },
+    });
+    renderReport();
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Tu cuenta está suspendida: por ahora no puedes registrar precios.',
+    );
+    expect(screen.getByRole('link', { name: 'Ver mis aportes' })).toHaveAttribute(
+      'href',
+      '/mis-aportes',
+    );
+  });
+
+  it('si el servidor ya lo tenía (200, reintento con la misma clave) también dice «Recibido»', async () => {
+    stubApi({ ...reportRoutes, 'POST /v1/reports': { status: 200, body: receipt } });
+    renderReport();
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+  });
 });

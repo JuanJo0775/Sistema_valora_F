@@ -108,6 +108,40 @@ describe('cliente de la API', () => {
     });
   });
 
+  it('un reporte repetido (409 DUPLICATE_REPORT) dice desde qué hora se acepta otro', async () => {
+    const backend = fakeBackend({
+      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'POST /v1/reports': {
+        status: 409,
+        body: {
+          code: 'DUPLICATE_REPORT',
+          message: 'Ya registraste este precio hace poco.',
+          availableFrom: '2026-11-16T15:30:00Z',
+        },
+      },
+    });
+    const api = createApiClient({ fetch: backend.fetch });
+
+    const request = call(
+      api.POST('/reports', {
+        params: { header: { 'Idempotency-Key': '7e6d5c4b-3a29-4180-9f7e-6d5c4b3a2918' } },
+        body: {
+          presentationId: '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b',
+          establishmentId: '5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d',
+          priceCop: 2500,
+          priceType: 'normal',
+          observedAt: '2026-11-16T15:00:00Z',
+        },
+      }),
+    );
+
+    await expect(request).rejects.toMatchObject({
+      status: 409,
+      code: 'DUPLICATE_REPORT',
+      availableFrom: '2026-11-16T15:30:00Z',
+    });
+  });
+
   it('marcar un precio como dudoso envía el token CSRF de la sesión', async () => {
     const backend = fakeBackend({
       'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
