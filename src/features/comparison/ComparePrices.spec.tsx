@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, stubApi } from '../../test/fakeApi';
@@ -123,5 +123,20 @@ describe('comparar precios', () => {
     renderCompare();
 
     expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
+  it('ordenar por los más recientes vuelve a pedir la comparación con ese criterio', async () => {
+    const api = stubCompare([comparison([result()]), comparison([result()], { sort: 'recent' })]);
+    renderCompare();
+    await screen.findByText('Ordenado por precio por unidad · en Armenia');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Más recientes' }));
+
+    expect(
+      await screen.findByText('Ordenado por los más recientes · en Armenia'),
+    ).toBeInTheDocument();
+    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison'));
+    expect(asked.at(-1)?.searchParams.get('sort')).toBe('recent');
+    expect(screen.getByRole('radio', { name: 'Distancia' })).toBeDisabled();
   });
 });
