@@ -6,6 +6,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
+import { PresentationChoices } from '../catalog/PresentationChoices';
 import { ProductSearch } from '../catalog/ProductSearch';
 import { useReportQueue } from '../../pwa/queueContext';
 import { readLastStore, saveLastStore } from './lastStore';
@@ -169,23 +170,11 @@ function ReportForm({ productId }: { productId: string }) {
   return (
     <form className="report" onSubmit={submit}>
       <h1>{product.name}</h1>
-      <fieldset role="radiogroup" className="choices">
-        <legend>Presentación</legend>
-        {product.presentations.map((presentation) => (
-          <label key={presentation.id} className="choice">
-            <input
-              type="radio"
-              name="presentation"
-              value={presentation.id}
-              checked={presentationId === presentation.id}
-              onChange={() => {
-                setPresentationId(presentation.id);
-              }}
-            />
-            {formatPresentation(presentation)}
-          </label>
-        ))}
-      </fieldset>
+      <PresentationChoices
+        presentations={product.presentations}
+        value={presentationId}
+        onChange={setPresentationId}
+      />
       <StorePicker value={store} onChange={setStore} />
       <label className="field">
         Precio en pesos
