@@ -5,7 +5,7 @@ import { OfflineBanner } from '../shared/ui/OfflineBanner';
 import { Icon, type IconName } from './Icon';
 import './layout.css';
 
-// Barra principal del prototipo de MC-E4. El enlace a Moderación llega con la sesión (#22).
+// Barra principal del prototipo de MC-E4. Mis aportes y Moderación se abren desde «Yo».
 const SECTIONS: { to: string; label: string; icon: IconName; primary?: boolean }[] = [
   { to: '/', label: 'Inicio', icon: 'home' },
   { to: '/mapa', label: 'Mapa', icon: 'map' },
