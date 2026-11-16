@@ -10,6 +10,7 @@ import { BasketPage } from '../features/basket/BasketPage';
 import { BasketProvider } from '../features/basket/BasketProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ComparePrices } from '../features/comparison/ComparePrices';
+import { MyReports } from '../features/contributions/MyReports';
 import { PriceHistory } from '../features/history/PriceHistory';
 import { MapPage } from '../features/stores/MapPage';
 import { StorePage } from '../features/stores/StorePage';
@@ -67,7 +68,7 @@ export function App() {
                   path="/mis-aportes"
                   element={
                     <RequireRole role="reportante" allowSuspended>
-                      <Soon title="Mis aportes" issue={13} />
+                      <MyReports />
                     </RequireRole>
                   }
                 />
