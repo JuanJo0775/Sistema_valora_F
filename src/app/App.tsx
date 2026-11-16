@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import { Profile } from '../features/auth/Profile';
 import { SessionProvider } from '../features/auth/SessionProvider';
 import { SignIn } from '../features/auth/SignIn';
+import { SignUp } from '../features/auth/SignUp';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -50,6 +51,7 @@ export function App() {
             <Route path="/registrar" element={<Soon title="Registrar precio" issue={25} />} />
             <Route path="/yo" element={<Profile />} />
             <Route path="/entrar" element={<SignIn />} />
+            <Route path="/crear-cuenta" element={<SignUp />} />
           </Route>
         </Routes>
       </BrowserRouter>
