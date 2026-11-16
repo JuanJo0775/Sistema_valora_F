@@ -379,4 +379,35 @@ describe('registrar un precio', () => {
     expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
     expect(api.requested).toHaveLength(2);
   });
+
+  it.each([
+    [
+      'sin tiendas cerca lo dice',
+      { status: 200, body: { items: [] } },
+      'No hay tiendas registradas cerca de ti.',
+    ],
+    [
+      'si la búsqueda de tiendas falla lo dice',
+      { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+      'Ocurrió un error inesperado.',
+    ],
+  ])('%s', async (_case, nearby, message) => {
+    stubApi({ ...productRoute, 'GET /v1/establishments/nearby': nearby });
+    stubLocation('allow');
+    renderReport();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  });
+
+  it('mientras busca las tiendas cercanas dice «Buscando tiendas…»', async () => {
+    stubApi({ ...productRoute, 'GET /v1/establishments/nearby': { status: 200, pending: true } });
+    stubLocation('allow');
+    renderReport();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Buscando tiendas…');
+  });
 });
