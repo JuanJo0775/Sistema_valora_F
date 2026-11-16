@@ -103,4 +103,16 @@ describe('iniciar sesión', () => {
       '/crear-cuenta?volver=%2Fyo',
     );
   });
+
+  it('la contraseña no queda guardada en el navegador ni en la dirección', async () => {
+    stubLogin({ status: 204 });
+    renderSignIn('/entrar?volver=/yo');
+
+    signIn('ana@correo.co', 'una clave larga');
+    await screen.findByText('Entraste como reportante.');
+
+    const stored = JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage)]);
+    expect(stored).not.toContain('una clave larga');
+    expect(window.location.href).not.toContain('clave');
+  });
 });
