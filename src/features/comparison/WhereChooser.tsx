@@ -36,7 +36,7 @@ export function useWhere() {
       saveMunicipality(chosen);
       setMunicipality(chosen);
     },
-    useLocation: () => {
+    locateMe: () => {
       setProblem('');
       askLocation()
         .then(setPoint)
@@ -96,7 +96,7 @@ export function WhereChooser({
             options={MUNICIPALITY_OPTIONS}
             onChange={where.chooseMunicipality}
           />
-          <button type="button" className="btn ghost" onClick={where.useLocation}>
+          <button type="button" className="btn ghost" onClick={where.locateMe}>
             Usar mi ubicación
           </button>
         </>
