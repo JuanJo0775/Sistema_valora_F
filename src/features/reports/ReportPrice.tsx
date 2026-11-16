@@ -31,6 +31,7 @@ export function ReportPrice() {
   const [presentationId, setPresentationId] = useState('');
   const [store, setStore] = useState<Store | null>(null);
   const [price, setPrice] = useState('');
+  const [onSale, setOnSale] = useState(false);
   // EC-07: la clave nace con el reporte; un reintento del mismo reporte usa la misma.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [received, setReceived] = useState(false);
@@ -55,7 +56,7 @@ export function ReportPrice() {
           presentationId,
           establishmentId: store.id,
           priceCop,
-          priceType: 'normal',
+          priceType: onSale ? 'oferta' : 'normal',
           observedAt: new Date().toISOString(),
         },
       }),
@@ -99,6 +100,16 @@ export function ReportPrice() {
             setPrice(event.target.value);
           }}
         />
+      </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={onSale}
+          onChange={(event) => {
+            setOnSale(event.target.checked);
+          }}
+        />
+        Es oferta
       </label>
       {problem && (
         <p role="alert" className="banner warn">
