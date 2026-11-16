@@ -38,4 +38,15 @@ describe('pestaña Yo', () => {
       '/crear-cuenta',
     );
   });
+
+  it('con sesión dice con qué rol entraste', async () => {
+    stubApi({
+      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+    });
+
+    renderProfile();
+
+    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
+  });
 });
