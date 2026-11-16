@@ -41,7 +41,7 @@ const renderProposals = (routes: Record<string, FakeReply | FakeReply[]>) => {
 const caseOf = async (name: string) =>
   within((await screen.findByRole('heading', { name })).closest('li') as HTMLElement);
 
-const decide = (card: ReturnType<typeof within>, decision: string) => {
+const decide = (card: Awaited<ReturnType<typeof caseOf>>, decision: string) => {
   fireEvent.click(card.getByRole('radio', { name: decision }));
   fireEvent.change(card.getByRole('textbox', { name: 'Motivo de la decisión' }), {
     target: { value: 'Revisé la dirección en el mapa.' },
@@ -112,7 +112,7 @@ describe('tiendas propuestas', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Decisión registrada: Ara Centro.');
     expect(screen.queryByRole('heading', { name: 'Ara Centro' })).not.toBeInTheDocument();
     const sent = api.calls.find(({ method }) => method === 'POST');
-    expect(sent?.body).toEqual({
+    expect(JSON.parse(sent?.body ?? '{}')).toEqual({
       decision: 'fusionar',
       note: 'Revisé la dirección en el mapa.',
       mergeInto: ARA_ID,
@@ -129,7 +129,7 @@ describe('tiendas propuestas', () => {
     decide(await caseOf('Tienda Nueva'), 'Aprobar como tienda nueva');
 
     await screen.findByRole('status');
-    expect(api.calls.find(({ method }) => method === 'POST')?.body).toEqual({
+    expect(JSON.parse(api.calls.find(({ method }) => method === 'POST')?.body ?? '{}')).toEqual({
       decision: 'aprobar',
       note: 'Revisé la dirección en el mapa.',
     });
