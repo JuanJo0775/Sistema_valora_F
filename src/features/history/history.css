@@ -1,0 +1,33 @@
+.history {
+  display: grid;
+  gap: 16px;
+}
+
+.history table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.history caption {
+  margin-bottom: 8px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.history th,
+.history td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.history th[scope='row'],
+.history thead th:first-child {
+  text-align: left;
+}
+
+.history thead th {
+  color: var(--ink-3);
+  font-weight: 500;
+}
