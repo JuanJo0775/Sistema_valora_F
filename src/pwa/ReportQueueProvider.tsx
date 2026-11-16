@@ -17,6 +17,8 @@ const send = (report: QueuedReport) =>
     }),
   );
 
+const RETRY_MS = 30_000;
+
 // ADR-010: la cola de reportes en IndexedDB, abierta una vez para toda la app.
 export function ReportQueueProvider({ children }: { children: ReactNode }) {
   const queue = useRef<Promise<ReportQueue> | null>(null);
@@ -42,8 +44,12 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
       void syncNow();
     };
     window.addEventListener('online', onOnline);
+    // Con la red arriba pero el servidor fallando (5xx) no llega «online»: se reintenta cada 30 s.
+    // Si no hay pendientes, solo se lee IndexedDB; no sale nada a la red.
+    const every = setInterval(onOnline, RETRY_MS);
     return () => {
       window.removeEventListener('online', onOnline);
+      clearInterval(every);
     };
   }, [syncNow]);
 
