@@ -236,4 +236,18 @@ describe('comparar precios', () => {
     expect(old).toHaveTextContent('Minimercado La 14');
     expect(old).toHaveTextContent('Supermercado Éxito');
   });
+
+  it('«Cómo llegar» abre la app de mapas con las coordenadas de la tienda', async () => {
+    stubCompare(comparison([result()]));
+
+    renderCompare();
+
+    const link = await screen.findByRole('link', { name: 'Cómo llegar a Tienda Don Pepe' });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/dir/?api=1&destination=4.5339%2C-75.6811',
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
 });
