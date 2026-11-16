@@ -4,6 +4,7 @@ import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
 import { ProductSearch } from '../catalog/ProductSearch';
 import { readLastStore, saveLastStore } from './lastStore';
@@ -61,6 +62,8 @@ export function ReportPrice() {
 
 function ReportForm({ productId }: { productId: string }) {
   const [product, setProduct] = useState<Product | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [presentationId, setPresentationId] = useState('');
   const [store, setStore] = useState<Store | null>(readLastStore);
   const [price, setPrice] = useState('');
@@ -78,15 +81,17 @@ function ReportForm({ productId }: { productId: string }) {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
-      (found) => {
+    call(api.GET('/products/{productId}', { params: { path: { productId } } }))
+      .then((found) => {
         setProduct(found);
         // Un toque menos (EC-01): si solo hay una presentación, es esa.
         const [only, ...others] = found.presentations;
         if (only && others.length === 0) setPresentationId(only.id);
-      },
-    );
-  }, [productId]);
+      })
+      .catch((failure: unknown) => {
+        setLoadError(failure);
+      });
+  }, [productId, loadAttempt]);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -132,7 +137,18 @@ function ReportForm({ productId }: { productId: string }) {
       />
     );
   }
-  if (!product) return null;
+  if (loadError !== null) {
+    return (
+      <ErrorState
+        error={loadError}
+        onRetry={() => {
+          setLoadError(null);
+          setLoadAttempt((current) => current + 1);
+        }}
+      />
+    );
+  }
+  if (!product) return <Loading />;
   return (
     <form className="report" onSubmit={submit}>
       <h1>{product.name}</h1>
