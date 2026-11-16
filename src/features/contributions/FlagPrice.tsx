@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { api, call } from '../../shared/api';
+import { Link, useLocation } from 'react-router';
+import { api, ApiError, call } from '../../shared/api';
 import type { paths } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { withReturn } from '../auth/safeReturn';
 import { useSession } from '../auth/session';
 
 type Reason = NonNullable<
@@ -19,17 +21,26 @@ const REASONS: { value: Reason; label: string }[] = [
 // moderación; quién marcó no se muestra a nadie (EC-08).
 export function FlagPrice({ reportId, storeName }: { reportId: string; storeName: string }) {
   const { session } = useSession();
+  const { pathname, search } = useLocation();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<Reason | ''>('');
   const [comment, setComment] = useState('');
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState<'' | 'gracias' | 'ya'>('');
   const [error, setError] = useState<unknown>(null);
 
+  if (session.status === 'anonymous') {
+    // Sin sesión: entrar y volver a la misma pantalla para marcarlo.
+    return (
+      <Link to={withReturn('/entrar', pathname + search)} className="link-button">
+        ¿Este precio está mal?
+      </Link>
+    );
+  }
   if (session.status !== 'active' || session.role !== 'reportante') return null;
   if (sent) {
     return (
       <p role="status" className="muted">
-        Gracias: lo revisará un moderador.
+        {sent === 'ya' ? 'Ya marcaste este precio.' : 'Gracias: lo revisará un moderador.'}
       </p>
     );
   }
@@ -58,10 +69,12 @@ export function FlagPrice({ reportId, storeName }: { reportId: string; storeName
       }),
     )
       .then(() => {
-        setSent(true);
+        setSent('gracias');
       })
       .catch((failure: unknown) => {
-        setError(failure);
+        // RN1: una marca por cuenta y reporte.
+        if (failure instanceof ApiError && failure.code === 'ALREADY_FLAGGED') setSent('ya');
+        else setError(failure);
       });
   };
 
@@ -95,7 +108,14 @@ export function FlagPrice({ reportId, storeName }: { reportId: string; storeName
           }}
         />
       </label>
-      {error !== null && <ErrorState error={error} />}
+      {error instanceof ApiError && error.code === 'ACCOUNT_SUSPENDED' ? (
+        <p role="alert" className="banner warn">
+          Tu cuenta está suspendida: por ahora no puedes marcar precios.{' '}
+          <Link to="/mis-aportes">Ver mis aportes</Link>
+        </p>
+      ) : (
+        error !== null && <ErrorState error={error} />
+      )}
       <button type="button" className="btn" disabled={!reason} onClick={send}>
         Enviar
       </button>
