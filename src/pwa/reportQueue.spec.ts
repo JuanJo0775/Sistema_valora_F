@@ -136,4 +136,14 @@ describe('cola de reportes sin conexión', () => {
       expect((await queue.list()).every(({ status: state }) => state === 'pendiente')).toBe(true);
     },
   );
+
+  it('dos sincronizaciones a la vez no envían dos veces el mismo reporte', async () => {
+    const queue = await openReportQueue(freshName());
+    await queue.add(report());
+    const send = answers('ok');
+
+    await Promise.all([queue.sync(send), queue.sync(send), queue.sync(send)]);
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
 });
