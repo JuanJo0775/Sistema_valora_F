@@ -327,4 +327,23 @@ describe('comparar precios', () => {
     const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
     expect(asked?.searchParams.get('radiusKm')).toBe('0.5');
   });
+
+  it('con la ubicación no se elige municipio, y se puede volver a comparar por municipio', async () => {
+    const api = stubCompare([
+      comparison([result()]),
+      comparison([result()], { municipality: undefined, radiusKm: 2 }),
+      comparison([result()]),
+    ]);
+    stubLocation();
+    renderCompare();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    await screen.findByRole('combobox', { name: 'Radio' });
+    expect(screen.queryByRole('combobox', { name: 'Municipio' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Comparar por municipio' }));
+
+    expect(await screen.findByRole('combobox', { name: 'Municipio' })).toHaveValue('armenia');
+    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    expect(asked?.searchParams.has('lat')).toBe(false);
+  });
 });
