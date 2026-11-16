@@ -14,6 +14,8 @@ import './comparison.css';
 type Product = components['schemas']['Product'];
 type Comparison = components['schemas']['Comparison'];
 type Sort = Comparison['criteria']['sort'];
+const RADII = [0.5, 1, 2, 3];
+
 const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: 'unit_price', label: 'Precio por unidad' },
   { value: 'recent', label: 'Más recientes' },
@@ -31,6 +33,7 @@ export function ComparePrices() {
   // ubicación solo va en la consulta y no se guarda).
   const [point, setPoint] = useState<Point | null>(null);
   const [municipality, setMunicipality] = useState<Municipality>('armenia');
+  const [radiusKm, setRadiusKm] = useState(2);
   const [locationProblem, setLocationProblem] = useState('');
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
@@ -38,7 +41,7 @@ export function ComparePrices() {
     { key: string; comparison: Comparison } | { key: string; error: unknown } | null
   >(null);
   const [attempt, setAttempt] = useState(0);
-  const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : municipality}`;
+  const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : municipality}|${String(radiusKm)}`;
 
   useEffect(() => {
     call(api.GET('/products/{productId}', { params: { path: { productId } } }))
@@ -54,7 +57,7 @@ export function ComparePrices() {
       api.GET('/products/{productId}/comparison', {
         params: {
           path: { productId },
-          query: { ...(point ?? { municipality }), sort, onlyCurrent },
+          query: { ...(point ? { ...point, radiusKm } : { municipality }), sort, onlyCurrent },
         },
       }),
     )
@@ -67,7 +70,7 @@ export function ComparePrices() {
     return () => {
       current = false;
     };
-  }, [productId, sort, point, municipality, onlyCurrent, key]);
+  }, [productId, sort, point, municipality, radiusKm, onlyCurrent, key]);
 
   const retry = () => {
     setProductError(null);
@@ -118,6 +121,24 @@ export function ComparePrices() {
           ))}
         </select>
       </label>
+      {point && (
+        // ADR-019: radio calibrable de 0,5 a 3 km; 2 km por defecto.
+        <label className="field">
+          Radio
+          <select
+            value={String(radiusKm)}
+            onChange={(event) => {
+              setRadiusKm(Number(event.target.value));
+            }}
+          >
+            {RADII.map((km) => (
+              <option key={km} value={String(km)}>
+                {`${String(km).replace('.', ',')} km`}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label className="check">
         <input
           type="checkbox"
