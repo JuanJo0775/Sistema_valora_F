@@ -46,7 +46,9 @@ describe('panel del moderador', () => {
 
     expect(screen.getByRole('tab', { name: tab })).toHaveAttribute('aria-selected', 'true');
     expect(
-      within(screen.getByRole('tabpanel', { name: tab })).getByRole('heading', { name: empty }),
+      await within(screen.getByRole('tabpanel', { name: tab })).findByRole('heading', {
+        name: empty,
+      }),
     ).toBeInTheDocument();
   });
 
