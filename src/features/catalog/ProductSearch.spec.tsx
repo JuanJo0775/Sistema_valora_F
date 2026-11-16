@@ -65,4 +65,18 @@ describe('buscar productos', () => {
     expect(screen.getByText('Escribe al menos 2 letras.')).toBeInTheDocument();
     expect(api.requested).toHaveLength(0);
   });
+
+  it('sin resultados lo dice y sugiere revisar la escritura', async () => {
+    stubApi({ 'GET /v1/products': { status: 200, body: { items: [] } } });
+    renderSearch();
+
+    search('aguacate hass');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Sin resultados para «aguacate hass»' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Revisa la escritura o pide que lo agreguemos al catálogo.'),
+    ).toBeInTheDocument();
+  });
 });
