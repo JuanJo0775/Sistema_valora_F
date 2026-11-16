@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, stubApi } from '../../test/fakeApi';
+import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { MyReports } from './MyReports';
 
 const report = (productName: string, status: string, extra: Record<string, unknown> = {}) => ({
@@ -51,5 +51,59 @@ describe('mis aportes', () => {
     expect(rowOf('Arroz blanco').getByText('Ara · $4.500 · oferta')).toBeInTheDocument();
     expect(rowOf('Arroz blanco').getByText('Descartado')).toBeInTheDocument();
     expect(rowOf('Leche entera').getByText('Apelación en revisión')).toBeInTheDocument();
+  });
+
+  it('dice cuándo se vio cada precio y «Ver más» trae los anteriores', async () => {
+    const api = stubApi({
+      'GET /v1/me/reports': [
+        page([report('Banano', 'normal')], '2026-11-16T15:00:00Z'),
+        page([report('Panela', 'normal', { observedAt: '2026-11-10T20:00:00Z' })]),
+      ],
+    });
+    renderMine();
+    expect(await screen.findByText(/Visto el 16 nov/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver más' }));
+
+    expect(await screen.findByText('Panela')).toBeInTheDocument();
+    expect(screen.getByText('Banano')).toBeInTheDocument();
+    expect(api.requested.at(-1)?.searchParams.get('before')).toBe('2026-11-16T15:00:00Z');
+    expect(screen.queryByRole('button', { name: 'Ver más' })).not.toBeInTheDocument();
+  });
+
+  it('sin aportes invita a registrar el primer precio', async () => {
+    stubApi({ 'GET /v1/me/reports': page([]) });
+
+    renderMine();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Todavía no has registrado precios' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Registrar precio' })).toHaveAttribute(
+      'href',
+      '/registrar',
+    );
+  });
+
+  it('mientras carga dice «Cargando…»', () => {
+    stubPendingApi();
+
+    renderMine();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+  });
+
+  it('si falla muestra el error y permite reintentar', async () => {
+    stubApi({
+      'GET /v1/me/reports': [
+        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        page([report('Banano', 'normal')]),
+      ],
+    });
+    renderMine();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByText('Banano')).toBeInTheDocument();
   });
 });
