@@ -67,4 +67,41 @@ describe('proponer un producto', () => {
       packCount: 1,
     });
   });
+
+  it.each([
+    ['la categoría', 'category', 'Elige la categoría.'],
+    ['la cantidad', 'quantity', 'Escribe la cantidad, por ejemplo 500.'],
+  ])('sin %s lo dice y no envía', async (_field, missing, message) => {
+    const api = renderPropose();
+    await fill();
+    if (missing === 'category') {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Categoría' }), {
+        target: { value: '' },
+      });
+    } else {
+      fireEvent.change(screen.getByLabelText('Cantidad'), { target: { value: '' } });
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+    expect(api.calls.some(({ method }) => method === 'POST')).toBe(false);
+  });
+
+  it('si el código de barras ya es de otro producto, lo dice', async () => {
+    renderPropose({
+      status: 409,
+      body: { code: 'BARCODE_TAKEN', message: 'El código ya es de «Arroz blanco Diana 500 g».' },
+    });
+    await fill();
+    fireEvent.change(screen.getByLabelText('Código de barras (opcional)'), {
+      target: { value: '7702511000014' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'El código ya es de «Arroz blanco Diana 500 g».',
+    );
+  });
 });
