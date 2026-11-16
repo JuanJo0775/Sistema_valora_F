@@ -66,3 +66,13 @@
 .history-chart .hit {
   fill: transparent;
 }
+
+.history-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.history-summary h2 {
+  margin: 0;
+  font-size: 1rem;
+}
