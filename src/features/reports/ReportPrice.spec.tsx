@@ -447,4 +447,28 @@ describe('registrar un precio', () => {
     expect(alert).toHaveTextContent('Ya registraste este producto en esta tienda hace poco.');
     expect(alert).toHaveTextContent(/Podrás registrar otro precio desde las 10:30/);
   });
+
+  it.each([
+    [700, 'en 12 minutos'],
+    [45, 'en 1 minuto'],
+  ])(
+    'muchos reportes en una hora (Retry-After %i s) dicen cuándo se puede seguir: %s',
+    async (seconds, wait) => {
+      stubApi({
+        ...reportRoutes,
+        'POST /v1/reports': {
+          status: 429,
+          body: { code: 'TOO_MANY_REQUESTS', message: 'Demasiados reportes.' },
+          headers: { 'Retry-After': String(seconds) },
+        },
+      });
+      renderReport();
+
+      await fillAndSend();
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        `Registraste muchos precios en poco tiempo. Podrás registrar otro ${wait}.`,
+      );
+    },
+  );
 });
