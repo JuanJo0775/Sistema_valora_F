@@ -7,7 +7,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
-import { describeCriteria, MUNICIPALITIES } from './criteria';
+import { describeCriteria, type Municipality, MUNICIPALITIES } from './criteria';
 import { Offer } from './Offer';
 import './comparison.css';
 
@@ -30,6 +30,7 @@ export function ComparePrices() {
   // Por defecto Armenia, sin pedir permisos; con la ubicación, las tiendas cercanas (EC-08: la
   // ubicación solo va en la consulta y no se guarda).
   const [point, setPoint] = useState<Point | null>(null);
+  const [municipality, setMunicipality] = useState<Municipality>('armenia');
   const [locationProblem, setLocationProblem] = useState('');
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
@@ -37,7 +38,7 @@ export function ComparePrices() {
     { key: string; comparison: Comparison } | { key: string; error: unknown } | null
   >(null);
   const [attempt, setAttempt] = useState(0);
-  const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : 'armenia'}`;
+  const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : municipality}`;
 
   useEffect(() => {
     call(api.GET('/products/{productId}', { params: { path: { productId } } }))
@@ -53,7 +54,7 @@ export function ComparePrices() {
       api.GET('/products/{productId}/comparison', {
         params: {
           path: { productId },
-          query: { ...(point ?? { municipality: 'armenia' as const }), sort, onlyCurrent },
+          query: { ...(point ?? { municipality }), sort, onlyCurrent },
         },
       }),
     )
@@ -66,7 +67,7 @@ export function ComparePrices() {
     return () => {
       current = false;
     };
-  }, [productId, sort, point, onlyCurrent, key]);
+  }, [productId, sort, point, municipality, onlyCurrent, key]);
 
   const retry = () => {
     setProductError(null);
@@ -101,6 +102,22 @@ export function ComparePrices() {
           </label>
         ))}
       </fieldset>
+      {/* #15: por defecto Armenia (las tiendas de la semilla), sin pedir la ubicación (EC-08). */}
+      <label className="field">
+        Municipio
+        <select
+          value={municipality}
+          onChange={(event) => {
+            setMunicipality(event.target.value as Municipality);
+          }}
+        >
+          {Object.entries(MUNICIPALITIES).map(([value, name]) => (
+            <option key={value} value={value}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className="check">
         <input
           type="checkbox"
