@@ -8,6 +8,7 @@ import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
 import { ProductSearch } from '../catalog/ProductSearch';
 import { readLastStore, saveLastStore } from './lastStore';
+import { ReportProblem } from './ReportProblem';
 import { type Store, StorePicker } from './StorePicker';
 import './reports.css';
 
@@ -117,7 +118,6 @@ function ReportForm({ productId }: { productId: string }) {
         saveLastStore(store);
         setReceived(true);
       })
-      // Los mensajes propios de cada respuesta (duplicado, ráfaga, fecha) llegan con la #11.
       .catch((failure: unknown) => {
         setError(failure);
         setSending(false);
@@ -218,7 +218,7 @@ function ReportForm({ productId }: { productId: string }) {
           {problem}
         </p>
       )}
-      {error !== null && <ErrorState error={error} />}
+      {error !== null && <ReportProblem error={error} />}
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Enviando…' : 'Enviar'}
       </button>
