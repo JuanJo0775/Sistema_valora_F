@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi } from '../test/fakeApi';
+import { NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
 import { App } from './App';
 
 const rice = {
@@ -53,5 +53,65 @@ describe('inicio', () => {
     expect(nav.queryByRole('link', { name: 'Canasta' })).not.toBeInTheDocument();
     expect(nav.getByRole('link', { name: 'Mapa' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('la pestaña Yo muestra la cuenta de quien entró', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+    });
+    window.history.pushState({}, '', '/yo');
+
+    render(<App />);
+
+    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+  });
+
+  it('desde Yo, «Iniciar sesión» lleva al formulario para entrar', async () => {
+    stubApi({
+      'GET /v1/auth/session': NO_SESSION,
+    });
+    window.history.pushState({}, '', '/yo');
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Iniciar sesión' }));
+
+    expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
+  });
+
+  it('desde Yo, «Crear cuenta» lleva al formulario de registro', async () => {
+    stubApi({
+      'GET /v1/auth/session': NO_SESSION,
+    });
+    window.history.pushState({}, '', '/yo');
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Crear cuenta' }));
+
+    expect(screen.getByRole('heading', { name: 'Crear cuenta' })).toBeInTheDocument();
+  });
+
+  it('«Registrar precio» sin sesión pide entrar', async () => {
+    stubApi({
+      'GET /v1/auth/session': NO_SESSION,
+    });
+    window.history.pushState({}, '', '/registrar');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
+    expect(window.location.search).toBe('?volver=%2Fregistrar');
+  });
+
+  it('la moderación es solo para moderadores', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+    });
+    window.history.pushState({}, '', '/moderacion');
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Esta sección es para cuentas de moderador' }),
+    ).toBeInTheDocument();
   });
 });

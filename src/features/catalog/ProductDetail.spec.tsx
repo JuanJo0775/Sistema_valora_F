@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi } from '../../test/fakeApi';
+import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { ProductDetail } from './ProductDetail';
 
 const rice = {
@@ -68,10 +68,7 @@ describe('detalle del producto', () => {
   });
 
   it('mientras llega el producto dice «Cargando…»', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise<Response>(() => undefined)),
-    );
+    stubPendingApi();
 
     renderDetail(rice.id);
 

@@ -196,6 +196,7 @@ La CI corre en cada pull request hacia `dev` o `main` con los jobs **Calidad** (
 public/                 # íconos de la PWA (logo naranja de «Identidad de marca»)
 src/
   app/                  # rutas y página de inicio
+  features/auth/        # sesión: crear cuenta, entrar, salir y secciones por rol
   features/catalog/     # buscar productos y ver su detalle
   shared/api/           # cliente de la API con los tipos del contrato
   shared/ui/            # colores, fuentes, etiquetas y estados comunes (prototipo de MC-E4)

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi } from '../../test/fakeApi';
+import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { ProductSearch } from './ProductSearch';
 
 const rice = {
@@ -99,10 +99,7 @@ describe('buscar productos', () => {
   });
 
   it('mientras busca dice «Buscando…»', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise<Response>(() => undefined)),
-    );
+    stubPendingApi();
     renderSearch();
 
     search('arroz');
