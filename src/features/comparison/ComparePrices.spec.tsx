@@ -306,4 +306,25 @@ describe('comparar precios', () => {
     const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
     expect(asked?.searchParams.get('municipality')).toBe('calarca');
   });
+
+  it('con la ubicación se elige el radio y la comparación lo usa', async () => {
+    const api = stubCompare([
+      comparison([result()]),
+      comparison([result()], { municipality: undefined, radiusKm: 2 }),
+      comparison([result()], { municipality: undefined, radiusKm: 0.5 }),
+    ]);
+    stubLocation();
+    renderCompare();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    const radius = await screen.findByRole('combobox', { name: 'Radio' });
+    expect(radius).toHaveValue('2');
+
+    fireEvent.change(radius, { target: { value: '0.5' } });
+
+    expect(
+      await screen.findByText('Ordenado por precio por unidad · a menos de 0,5 km de ti'),
+    ).toBeInTheDocument();
+    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    expect(asked?.searchParams.get('radiusKm')).toBe('0.5');
+  });
 });
