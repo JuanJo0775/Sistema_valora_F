@@ -1,4 +1,5 @@
 import { type DBSchema, openDB } from 'idb';
+import { ApiError } from '../shared/api';
 import type { components } from '../shared/api/schema';
 
 // ADR-010: los reportes se guardan en el teléfono ANTES de intentar enviarlos. Solo lo necesario
@@ -10,14 +11,23 @@ export interface NewReport {
   label: { product: string; store: string };
 }
 
-export type QueueStatus = 'pendiente' | 'sincronizado';
+export type QueueStatus = 'pendiente' | 'sincronizado' | 'requiere_atencion';
+
+// El motivo como dato simple: IndexedDB no conserva los campos propios de un Error al guardarlo.
+export interface QueueProblem {
+  status: number;
+  code: string;
+  message: string;
+  availableFrom?: string;
+  retryAfterSeconds?: number;
+}
 
 export interface QueuedReport extends NewReport {
   status: QueueStatus;
   savedAt: string;
   // syncedAt: cuándo lo confirmó el servidor; aparte de observedAt (OFFLINE_FIRST.md).
   syncedAt?: string;
-  problem?: unknown;
+  problem?: QueueProblem;
 }
 
 interface QueueDb extends DBSchema {
@@ -54,7 +64,17 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
       for (const report of pending) {
         try {
           await send(report);
-        } catch {
+        } catch (error) {
+          // #9: 400, 409, 422 o 429 son finales. Reenviar el mismo reporte nunca pasa: su hora de
+          // observación no cambia. Sale de la cola de envío y avisa por qué.
+          if (error instanceof ApiError && FINAL.has(error.status)) {
+            await db.put('reports', {
+              ...report,
+              status: 'requiere_atencion',
+              problem: plain(error),
+            });
+            continue;
+          }
           // Sin red o 5xx: queda pendiente y se reintenta después con la misma clave. Se detiene
           // aquí: si el servidor no contesta a este, tampoco contestará a los siguientes.
           return;
@@ -68,3 +88,13 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
     },
   };
 }
+
+const FINAL = new Set([400, 409, 422, 429]);
+
+const plain = ({ status, code, message, availableFrom, retryAfterSeconds }: ApiError) => ({
+  status,
+  code,
+  message,
+  ...(availableFrom ? { availableFrom } : {}),
+  ...(retryAfterSeconds ? { retryAfterSeconds } : {}),
+});
