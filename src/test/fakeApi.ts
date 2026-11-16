@@ -35,3 +35,26 @@ function nextReply(route: FakeReply | FakeReply[] | undefined): FakeReply {
   if (route.length > 1) return route.shift() ?? NOT_FOUND;
   return route[0] ?? NOT_FOUND;
 }
+
+// Respuestas de sesión que usan muchas pruebas.
+export const NO_SESSION: FakeReply = {
+  status: 401,
+  body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
+};
+
+export const sessionAs = (role: string, suspendedUntil?: string): FakeReply => ({
+  status: 200,
+  body: { role, csrfToken: 'token-1', suspendedUntil },
+});
+
+// Una API que todavía no responde (para ver «Cargando…»), salvo las rutas indicadas.
+export function stubPendingApi(answered: Record<string, FakeReply> = {}) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: Request) => {
+      const reply = answered[`${input.method} ${new URL(input.url).pathname}`];
+      if (!reply) return new Promise<Response>(() => undefined);
+      return Promise.resolve(new Response(JSON.stringify(reply.body), { status: reply.status }));
+    }),
+  );
+}

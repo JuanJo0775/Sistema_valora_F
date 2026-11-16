@@ -1,16 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, stubApi } from '../../test/fakeApi';
+import { type FakeReply, NO_SESSION, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { Profile } from './Profile';
 import { SessionProvider } from './SessionProvider';
 import { SignIn } from './SignIn';
-
-const unauthorized = {
-  status: 401,
-  body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
-};
-const reporter = { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } };
 
 const renderSignIn = (path: string) =>
   render(
@@ -32,7 +26,10 @@ const signIn = (email: string, password: string) => {
 };
 
 const stubLogin = (login: FakeReply) =>
-  stubApi({ 'GET /v1/auth/session': [unauthorized, reporter], 'POST /v1/auth/login': login });
+  stubApi({
+    'GET /v1/auth/session': [NO_SESSION, sessionAs('reportante')],
+    'POST /v1/auth/login': login,
+  });
 
 describe('iniciar sesión', () => {
   afterEach(() => {
@@ -79,14 +76,7 @@ describe('iniciar sesión', () => {
   });
 
   it('mientras entra el botón dice «Entrando…» y no se puede volver a enviar', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((input: Request) =>
-        input.url.endsWith('/auth/session')
-          ? Promise.resolve(new Response(JSON.stringify(unauthorized.body), { status: 401 }))
-          : new Promise<Response>(() => undefined),
-      ),
-    );
+    stubPendingApi({ 'GET /v1/auth/session': NO_SESSION });
     renderSignIn('/entrar');
 
     signIn('ana@correo.co', 'una clave larga');
@@ -95,7 +85,7 @@ describe('iniciar sesión', () => {
   });
 
   it('lleva a crear cuenta sin perder a dónde volver', async () => {
-    stubApi({ 'GET /v1/auth/session': unauthorized });
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
     renderSignIn('/entrar?volver=/yo');
 
     expect(await screen.findByRole('link', { name: 'Crea una cuenta' })).toHaveAttribute(

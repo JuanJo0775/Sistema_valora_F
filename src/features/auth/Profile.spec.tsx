@@ -1,14 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi } from '../../test/fakeApi';
+import { NO_SESSION, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { Profile } from './Profile';
 import { SessionProvider } from './SessionProvider';
-
-const unauthorized = {
-  status: 401,
-  body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
-};
 
 const renderProfile = () =>
   render(
@@ -25,7 +20,7 @@ describe('pestaña Yo', () => {
   });
 
   it('sin sesión invita a iniciar sesión o a crear una cuenta', async () => {
-    stubApi({ 'GET /v1/auth/session': unauthorized });
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
 
     renderProfile();
 
@@ -41,7 +36,7 @@ describe('pestaña Yo', () => {
 
   it('con sesión dice con qué rol entraste', async () => {
     stubApi({
-      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'GET /v1/auth/session': sessionAs('reportante'),
     });
 
     renderProfile();
@@ -67,7 +62,7 @@ describe('pestaña Yo', () => {
 
   it('cerrar sesión la termina en el servidor y vuelve a invitar a entrar', async () => {
     const api = stubApi({
-      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'GET /v1/auth/session': sessionAs('reportante'),
       'POST /v1/auth/logout': { status: 204 },
     });
     renderProfile();
@@ -81,10 +76,7 @@ describe('pestaña Yo', () => {
   });
 
   it('mientras pregunta por la sesión dice «Cargando…»', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise<Response>(() => undefined)),
-    );
+    stubPendingApi();
 
     renderProfile();
 
@@ -94,7 +86,7 @@ describe('pestaña Yo', () => {
 
   it('si cerrar sesión falla lo dice y la sesión sigue abierta', async () => {
     stubApi({
-      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'GET /v1/auth/session': sessionAs('reportante'),
       'POST /v1/auth/logout': {
         status: 500,
         body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' },
@@ -118,7 +110,7 @@ describe('pestaña Yo', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No hay conexión con Valora');
     expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
     stubApi({
-      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'GET /v1/auth/session': sessionAs('reportante'),
     });
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();

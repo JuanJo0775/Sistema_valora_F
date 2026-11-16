@@ -2,18 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api, call } from '../../shared/api';
-import { stubApi } from '../../test/fakeApi';
+import { NO_SESSION, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { RequireRole } from './RequireRole';
 import { SessionProvider } from './SessionProvider';
-
-const unauthorized = {
-  status: 401,
-  body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
-};
-const sessionOf = (role: string, suspendedUntil?: string) => ({
-  status: 200,
-  body: { role, csrfToken: 'token-1', suspendedUntil },
-});
 
 // Una sección cualquiera que consulta la API con la sesión.
 function MyReports() {
@@ -70,7 +61,7 @@ describe('secciones con sesión', () => {
   });
 
   it('sin sesión lleva a iniciar sesión y recuerda a dónde volver', async () => {
-    stubApi({ 'GET /v1/auth/session': unauthorized });
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
 
     renderAt('/registrar?producto=abc');
 
@@ -80,7 +71,7 @@ describe('secciones con sesión', () => {
   });
 
   it('con el rol pedido muestra la sección', async () => {
-    stubApi({ 'GET /v1/auth/session': sessionOf('reportante') });
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
 
     renderAt('/registrar');
 
@@ -88,7 +79,7 @@ describe('secciones con sesión', () => {
   });
 
   it('con otro rol dice para quién es la sección y no la muestra', async () => {
-    stubApi({ 'GET /v1/auth/session': sessionOf('comercio') });
+    stubApi({ 'GET /v1/auth/session': sessionAs('comercio') });
 
     renderAt('/registrar');
 
@@ -99,10 +90,7 @@ describe('secciones con sesión', () => {
   });
 
   it('mientras pregunta por la sesión dice «Cargando…» y no muestra la sección', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => new Promise<Response>(() => undefined)),
-    );
+    stubPendingApi();
 
     renderAt('/registrar');
 
@@ -124,7 +112,7 @@ describe('secciones con sesión', () => {
   });
 
   it('una cuenta suspendida no puede registrar y ve hasta cuándo', async () => {
-    stubApi({ 'GET /v1/auth/session': sessionOf('reportante', '2026-11-20T17:00:00Z') });
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante', '2026-11-20T17:00:00Z') });
 
     renderAt('/registrar');
 
@@ -135,7 +123,7 @@ describe('secciones con sesión', () => {
   });
 
   it('una cuenta suspendida sí ve sus aportes, para poder apelar', async () => {
-    stubApi({ 'GET /v1/auth/session': sessionOf('reportante', '2026-11-20T17:00:00Z') });
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante', '2026-11-20T17:00:00Z') });
 
     renderAt('/mis-aportes');
 
@@ -144,8 +132,8 @@ describe('secciones con sesión', () => {
 
   it('si la sesión vence mientras la usa, lleva a entrar y recuerda dónde estaba', async () => {
     stubApi({
-      'GET /v1/auth/session': sessionOf('reportante'),
-      'GET /v1/me/reports': unauthorized,
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': NO_SESSION,
     });
     renderAt('/mis-aportes');
 

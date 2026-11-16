@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi } from '../test/fakeApi';
+import { NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
 import { App } from './App';
 
 const rice = {
@@ -57,7 +57,7 @@ describe('inicio', () => {
 
   it('la pestaña Yo muestra la cuenta de quien entró', async () => {
     stubApi({
-      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'GET /v1/auth/session': sessionAs('reportante'),
     });
     window.history.pushState({}, '', '/yo');
 
@@ -68,10 +68,7 @@ describe('inicio', () => {
 
   it('desde Yo, «Iniciar sesión» lleva al formulario para entrar', async () => {
     stubApi({
-      'GET /v1/auth/session': {
-        status: 401,
-        body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
-      },
+      'GET /v1/auth/session': NO_SESSION,
     });
     window.history.pushState({}, '', '/yo');
     render(<App />);
@@ -83,10 +80,7 @@ describe('inicio', () => {
 
   it('desde Yo, «Crear cuenta» lleva al formulario de registro', async () => {
     stubApi({
-      'GET /v1/auth/session': {
-        status: 401,
-        body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
-      },
+      'GET /v1/auth/session': NO_SESSION,
     });
     window.history.pushState({}, '', '/yo');
     render(<App />);
@@ -98,10 +92,7 @@ describe('inicio', () => {
 
   it('«Registrar precio» sin sesión pide entrar', async () => {
     stubApi({
-      'GET /v1/auth/session': {
-        status: 401,
-        body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
-      },
+      'GET /v1/auth/session': NO_SESSION,
     });
     window.history.pushState({}, '', '/registrar');
 
@@ -113,7 +104,7 @@ describe('inicio', () => {
 
   it('la moderación es solo para moderadores', async () => {
     stubApi({
-      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'GET /v1/auth/session': sessionAs('reportante'),
     });
     window.history.pushState({}, '', '/moderacion');
 

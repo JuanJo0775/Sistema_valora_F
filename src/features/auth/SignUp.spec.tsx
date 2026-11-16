@@ -1,16 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, stubApi } from '../../test/fakeApi';
+import { type FakeReply, NO_SESSION, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { Profile } from './Profile';
 import { SessionProvider } from './SessionProvider';
 import { SignUp } from './SignUp';
-
-const unauthorized = {
-  status: 401,
-  body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
-};
-const reporter = { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } };
 
 const renderSignUp = (path = '/crear-cuenta?volver=/yo') =>
   render(
@@ -34,7 +28,7 @@ const fill = ({ password = 'una clave larga', accept = true } = {}) => {
 
 const stubSignUp = (register: FakeReply, login: FakeReply = { status: 204 }) =>
   stubApi({
-    'GET /v1/auth/session': [unauthorized, reporter],
+    'GET /v1/auth/session': [NO_SESSION, sessionAs('reportante')],
     'POST /v1/auth/register': register,
     'POST /v1/auth/login': login,
   });
@@ -116,14 +110,7 @@ describe('crear cuenta', () => {
   });
 
   it('mientras crea la cuenta el botón dice «Creando cuenta…» y no se reenvía', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((input: Request) =>
-        input.url.endsWith('/auth/session')
-          ? Promise.resolve(new Response(JSON.stringify(unauthorized.body), { status: 401 }))
-          : new Promise<Response>(() => undefined),
-      ),
-    );
+    stubPendingApi({ 'GET /v1/auth/session': NO_SESSION });
     renderSignUp();
 
     fill();
@@ -132,7 +119,7 @@ describe('crear cuenta', () => {
   });
 
   it('lleva a iniciar sesión sin perder a dónde volver', () => {
-    stubApi({ 'GET /v1/auth/session': unauthorized });
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
     renderSignUp();
 
     expect(screen.getByRole('link', { name: 'Inicia sesión' })).toHaveAttribute(
