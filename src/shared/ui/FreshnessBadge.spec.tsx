@@ -24,4 +24,12 @@ describe('etiqueta de vigencia', () => {
 
     expect(screen.getByText('Por confirmar · 10 días')).toBeInTheDocument();
   });
+
+  it('un precio desactualizado lo dice sin contar días', () => {
+    render(
+      <FreshnessBadge freshness="desactualizado" observedAt="2026-10-01T15:00:00Z" now={now} />,
+    );
+
+    expect(screen.getByText('Desactualizado')).toBeInTheDocument();
+  });
 });
