@@ -13,6 +13,7 @@ function daysAgo(observedAt: string, now: Date): number {
 
 // La vigencia la decide el backend (RF-010); aquí solo se dice hace cuánto se vio el precio.
 export function FreshnessBadge({
+  freshness,
   observedAt,
   now = new Date(),
 }: {
@@ -21,6 +22,9 @@ export function FreshnessBadge({
   now?: Date;
 }) {
   const days = daysAgo(observedAt, now);
+  if (freshness === 'por_confirmar') {
+    return <span className="pill warn">{`Por confirmar · ${String(days)} días`}</span>;
+  }
   const text = days === 0 ? 'Hoy' : days === 1 ? 'Ayer' : `Hace ${String(days)} días`;
   return <span className="pill ok">{text}</span>;
 }
