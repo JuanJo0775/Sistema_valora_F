@@ -36,4 +36,10 @@ describe('imagen del producto', () => {
     expect(screen.getByRole('img', { name: 'Arroz blanco' })).toBeInTheDocument();
     expect(screen.queryByText(/^Foto:/)).not.toBeInTheDocument();
   });
+
+  it('sin foto muestra una ilustración genérica', () => {
+    render(<ProductImage name="Arroz blanco" />);
+
+    expect(screen.getByRole('img', { name: 'Arroz blanco (sin foto)' })).toBeInTheDocument();
+  });
 });
