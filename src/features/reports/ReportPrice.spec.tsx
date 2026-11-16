@@ -203,4 +203,24 @@ describe('registrar un precio', () => {
     const [first, retry] = sentReports(api).map(({ headers }) => headers.get('Idempotency-Key'));
     expect(retry).toBe(first);
   });
+
+  it('el reintento envía exactamente el mismo reporte, con la misma hora', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': [
+        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        { status: 201, body: receipt },
+      ],
+    });
+    renderReport();
+    await fillAndSend();
+    await screen.findByRole('alert');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    await screen.findByRole('heading', { name: 'Recibido' });
+    const [first, retry] = sentReports(api).map(({ body }) => body);
+    expect(retry).toBe(first);
+  });
 });
