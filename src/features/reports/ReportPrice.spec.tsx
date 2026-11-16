@@ -64,6 +64,12 @@ const fillAndSend = async (price = '2500') => {
   fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
 };
 
+// Una hora como la escribe el campo datetime-local: «2026-11-16T09:30», en la hora del teléfono.
+const localTime = (date: Date) => {
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${String(date.getFullYear())}-${two(date.getMonth() + 1)}-${two(date.getDate())}T${two(date.getHours())}:${two(date.getMinutes())}`;
+};
+
 const sentReports = (api: ReturnType<typeof stubApi>) =>
   api.calls.filter(({ method, path }) => method === 'POST' && path === '/v1/reports');
 
@@ -304,5 +310,21 @@ describe('registrar un precio', () => {
     expect(
       await screen.findByRole('link', { name: 'Registrar otro en esta tienda' }),
     ).toHaveAttribute('href', '/registrar');
+  });
+
+  it('«Lo vi antes» permite elegir la hora en que se vio el precio', async () => {
+    const api = stubApi(reportRoutes);
+    renderReport();
+    const twoHoursAgo = new Date(Date.now() - 2 * 3600_000);
+    fireEvent.click(await screen.findByRole('button', { name: 'Lo vi antes' }));
+    fireEvent.change(screen.getByLabelText('¿Cuándo lo viste?'), {
+      target: { value: localTime(twoHoursAgo) },
+    });
+
+    await fillAndSend();
+
+    await screen.findByRole('heading', { name: 'Recibido' });
+    const body = JSON.parse(sentReports(api)[0]?.body ?? '{}') as { observedAt: string };
+    expect(Math.abs(Date.parse(body.observedAt) - twoHoursAgo.getTime())).toBeLessThan(60_000);
   });
 });
