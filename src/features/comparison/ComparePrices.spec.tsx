@@ -179,4 +179,20 @@ describe('comparar precios', () => {
     expect(asked?.searchParams.get('lat')).toBe('4.53');
     expect(asked?.searchParams.has('municipality')).toBe(false);
   });
+
+  it('si se niega la ubicación lo dice y sigue comparando en Armenia', async () => {
+    stubCompare(comparison([result()]));
+    vi.stubGlobal(
+      'navigator',
+      Object.assign(Object.create(navigator) as Navigator, { geolocation: undefined }),
+    );
+    renderCompare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Activa la ubicación del navegador para ver las tiendas cercanas.',
+    );
+    expect(screen.getByText('Ordenado por precio por unidad · en Armenia')).toBeInTheDocument();
+  });
 });
