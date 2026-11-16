@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, stubApi } from '../../test/fakeApi';
+import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { StorePage } from './StorePage';
 
 vi.mock('./StoreMap', () => ({
@@ -74,5 +74,59 @@ describe('página de una tienda', () => {
     expect(row.getByText('$4.500')).toBeInTheDocument();
     expect(row.getByText('$450 por 100 g')).toBeInTheDocument();
     expect(row.getByText('Confiabilidad alta')).toBeInTheDocument();
+  });
+
+  it('«Solo precios vigentes» vuelve a pedir los precios sin los viejos', async () => {
+    const api = stubStore(storeReply([banana]));
+    renderStore();
+    await screen.findByRole('heading', { name: 'Ara' });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Solo precios vigentes' }));
+
+    await vi.waitFor(() => {
+      expect(api.requested.at(-1)?.searchParams.get('onlyCurrent')).toBe('true');
+    });
+  });
+
+  it('sin precios lo dice', async () => {
+    stubStore(storeReply([]));
+
+    renderStore();
+
+    expect(await screen.findByText('Todavía no hay precios en esta tienda.')).toBeInTheDocument();
+  });
+
+  it('si la tienda no existe lo dice y lleva al mapa', async () => {
+    stubApi({});
+
+    renderStore();
+
+    expect(
+      await screen.findByRole('heading', { name: 'No encontramos esta tienda' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver el mapa de tiendas' })).toHaveAttribute(
+      'href',
+      '/mapa',
+    );
+  });
+
+  it('mientras carga dice «Cargando…»', () => {
+    stubPendingApi();
+
+    renderStore();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+  });
+
+  it('si falla muestra el error y permite reintentar', async () => {
+    stubStore([
+      { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+      storeReply([banana]),
+    ]);
+    renderStore();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Ara' })).toBeInTheDocument();
   });
 });
