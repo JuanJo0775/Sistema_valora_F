@@ -425,4 +425,26 @@ describe('registrar un precio', () => {
       'Activa la ubicación del navegador para ver las tiendas cercanas.',
     );
   });
+
+  // #11: lo que el servidor responde al reportar en línea, explicado en la pantalla.
+  it('un reporte repetido dice desde qué hora de Colombia se acepta otro', async () => {
+    stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': {
+        status: 409,
+        body: {
+          code: 'DUPLICATE_REPORT',
+          message: 'Ya hay un reporte tuyo de esa presentación en esa tienda.',
+          availableFrom: '2026-11-16T15:30:00Z',
+        },
+      },
+    });
+    renderReport();
+
+    await fillAndSend();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Ya registraste este producto en esta tienda hace poco.');
+    expect(alert).toHaveTextContent(/Podrás registrar otro precio desde las 10:30/);
+  });
 });
