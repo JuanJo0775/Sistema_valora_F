@@ -239,3 +239,36 @@ button {
     top: 88px;
   }
 }
+
+/* Tarjetas de precio: la comparación y la página de una tienda. */
+.offers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.offer {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+}
+
+.offer p {
+  margin: 0;
+}
+
+.offer .unit {
+  font-family: var(--f-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.offer h2,
+.offer h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}

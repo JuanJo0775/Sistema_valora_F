@@ -427,4 +427,15 @@ describe('comparar precios', () => {
       'del 30 de octubre al 5 de noviembre de 2026',
     );
   });
+
+  it('el nombre de cada tienda lleva a su página con todos sus precios', async () => {
+    stubCompare(comparison([result()]));
+
+    renderCompare();
+
+    expect(await screen.findByRole('link', { name: 'Tienda Don Pepe' })).toHaveAttribute(
+      'href',
+      '/tiendas/5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d',
+    );
+  });
 });

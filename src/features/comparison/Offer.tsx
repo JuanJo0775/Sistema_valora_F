@@ -1,4 +1,6 @@
+import { Link } from 'react-router';
 import type { components } from '../../shared/api/schema';
+import { directionsTo } from '../../shared/directions';
 import { formatDistance } from '../../shared/location';
 import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
@@ -13,17 +15,13 @@ const SOURCE: Record<Item['source'], string> = {
   siembra: 'Dato inicial',
 };
 
-const directions = ({ lat, lng }: { lat: number; lng: number }) =>
-  `https://www.google.com/maps/dir/?${new URLSearchParams({
-    api: '1',
-    destination: `${String(lat)},${String(lng)}`,
-  }).toString()}`;
-
 // Un precio de la comparación: tienda, presentación, precio por unidad y qué tan confiable es.
 export function Offer({ offer, size }: { offer: Item; size: string }) {
   return (
     <li className="offer">
-      <h3>{offer.establishment.name}</h3>
+      <h3>
+        <Link to={`/tiendas/${offer.establishment.id}`}>{offer.establishment.name}</Link>
+      </h3>
       {offer.establishment.distanceM !== undefined && (
         <p className="muted">{formatDistance(offer.establishment.distanceM)}</p>
       )}
@@ -37,9 +35,8 @@ export function Offer({ offer, size }: { offer: Item; size: string }) {
         <ReliabilityBadge level={offer.reliability} />
         <span className="pill mute">{SOURCE[offer.source]}</span>
       </p>
-      {/* ADR-019: el mapa es OpenStreetMap; Google solo como enlace externo. Solo va la tienda. */}
       <a
-        href={directions(offer.establishment)}
+        href={directionsTo(offer.establishment)}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Cómo llegar a ${offer.establishment.name}`}

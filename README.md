@@ -202,6 +202,7 @@ src/
   features/comparison/  # comparar precios entre tiendas con el criterio declarado
   features/history/     # historial y gráfica de los últimos 30 días
   features/reports/     # registrar un precio: producto, tienda cercana, precio y hora
+  features/stores/      # mapa de tiendas (Leaflet + OpenStreetMap) y página de cada tienda
   pwa/                  # cola sin conexión (IndexedDB), reportes pendientes y aviso de versión nueva
   shared/api/           # cliente de la API con los tipos del contrato
   shared/ui/            # colores, fuentes, etiquetas y estados comunes (prototipo de MC-E4)

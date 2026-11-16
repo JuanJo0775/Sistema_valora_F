@@ -4,6 +4,9 @@ import { NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
 import { openReportQueue } from '../pwa/reportQueue';
 import { App } from './App';
 
+// Leaflet necesita un navegador de verdad para dibujar el mapa.
+vi.mock('../features/stores/StoreMap', () => ({ StoreMap: () => null }));
+
 const rice = {
   id: '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d',
   name: 'Arroz blanco',
@@ -264,5 +267,29 @@ describe('inicio', () => {
     expect(
       await screen.findByRole('heading', { name: 'Historial de precios · Arroz blanco' }),
     ).toBeInTheDocument();
+  });
+
+  it('la pestaña Mapa muestra las tiendas y cada una lleva a su página', async () => {
+    const store = {
+      id: '5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d',
+      name: 'Ara',
+      type: 'descuento',
+      lat: 4.5339,
+      lng: -75.6811,
+      municipality: 'armenia',
+    };
+    stubApi({
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+      [`GET /v1/establishments/${store.id}/prices`]: {
+        status: 200,
+        body: { establishment: store, prices: [] },
+      },
+    });
+    window.history.pushState({}, '', '/mapa');
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Ver precios de Ara' }));
+
+    expect(await screen.findByText('Todavía no hay precios en esta tienda.')).toBeInTheDocument();
   });
 });
