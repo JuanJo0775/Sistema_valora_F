@@ -27,11 +27,33 @@ export class ApiError extends Error {
 // Siempre el mismo sitio que la app: en desarrollo, el proxy de Vite reenvía /v1 al backend; en
 // producción, una regla de Vercel (ADR-012). Así viaja la cookie de sesión (SameSite=Lax).
 export function createApiClient(options: { fetch?: Fetch } = {}) {
-  return createClient<paths>({
-    baseUrl: `${window.location.origin}/v1`,
-    credentials: 'same-origin',
-    ...(options.fetch ? { fetch: options.fetch } : {}),
+  const baseUrl = `${window.location.origin}/v1`;
+  const send: Fetch = options.fetch ?? ((input) => fetch(input));
+  const client = createClient<paths>({ baseUrl, credentials: 'same-origin', fetch: send });
+
+  // ADR-014: las rutas con sesión que modifican datos exigen X-CSRF-Token. Lo entrega
+  // GET /auth/session y se guarda solo en memoria. Iniciar sesión y registrarse no lo necesitan.
+  client.use({
+    async onRequest({ request }) {
+      if (!needsCsrf(request, baseUrl)) return request;
+      const session = await send(
+        new Request(`${baseUrl}/auth/session`, { credentials: 'same-origin' }),
+      );
+      if (!session.ok) return request;
+      const { csrfToken } = (await session.json()) as { csrfToken?: string };
+      if (csrfToken) request.headers.set('X-CSRF-Token', csrfToken);
+      return request;
+    },
   });
+  return client;
+}
+
+const WITHOUT_SESSION = new Set(['/auth/login', '/auth/register']);
+
+function needsCsrf(request: Request, baseUrl: string): boolean {
+  if (request.method === 'GET' || request.method === 'HEAD') return false;
+  const path = request.url.slice(baseUrl.length).split('?')[0] ?? '';
+  return !WITHOUT_SESSION.has(path);
 }
 
 interface ErrorBody {
