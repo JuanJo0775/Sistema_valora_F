@@ -1,0 +1,117 @@
+/* Celular primero: barra principal abajo, como en el prototipo; en pantallas anchas va arriba. */
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.logo-link {
+  display: inline-flex;
+  min-height: var(--touch);
+  align-items: center;
+}
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px 16px 96px;
+}
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--touch);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+
+.tab[aria-current='page'] {
+  color: var(--ink);
+}
+
+.tab[aria-current='page'] .ico {
+  color: var(--accent);
+}
+
+/* El botón naranja de registrar: la acción principal de la app. */
+.tab.primary {
+  justify-self: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow);
+}
+
+.tab.primary[aria-current='page'] .ico {
+  color: var(--on-accent);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (width >= 900px) {
+  .tabbar {
+    position: sticky;
+    inset: 0 auto auto;
+    order: -1;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-top: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 4px 16px;
+  }
+
+  .tab {
+    flex-direction: row;
+    gap: 8px;
+    padding: 0 14px;
+    border-radius: var(--r-s);
+    font-size: 14px;
+  }
+
+  .tab[aria-current='page'] {
+    background: var(--bg-2);
+  }
+
+  .top {
+    border-bottom: 0;
+  }
+
+  .page {
+    padding-bottom: 32px;
+  }
+}
