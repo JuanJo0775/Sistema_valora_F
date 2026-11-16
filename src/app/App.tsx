@@ -1,13 +1,18 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
-import { ApiStatus } from '../features/health/ApiStatus';
+import { ProductDetail } from '../features/catalog/ProductDetail';
+import { ProductSearch } from '../features/catalog/ProductSearch';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { Layout } from './Layout';
 
+// Inicio del prototipo de MC-E4: una sola idea, buscar lo que se va a comprar.
 function Home() {
   return (
     <>
-      <h1>Valora</h1>
-      <ApiStatus />
+      <h1>¿Qué vas a comprar hoy?</h1>
+      <p className="muted">
+        Precios de tiendas de barrio, minimercados y supermercados cerca de ti.
+      </p>
+      <ProductSearch />
     </>
   );
 }
@@ -28,6 +33,15 @@ export function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/productos/:productId" element={<ProductDetail />} />
+          <Route
+            path="/productos/:productId/comparar"
+            element={<Soon title="Comparar precios" issue={24} />}
+          />
+          <Route
+            path="/productos/:productId/historial"
+            element={<Soon title="Historial de precios" issue={17} />}
+          />
           <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
           <Route path="/registrar" element={<Soon title="Registrar precio" issue={25} />} />
           <Route path="/canasta" element={<Soon title="Canasta" issue={31} />} />
