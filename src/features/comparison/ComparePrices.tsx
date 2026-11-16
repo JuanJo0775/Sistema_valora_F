@@ -1,27 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { api, call } from '../../shared/api';
-import { askLocation, formatDistance, type Point } from '../../shared/location';
+import { askLocation, type Point } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
-import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
-import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
 import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria } from './criteria';
-import { formatCop, formatUnitPrice } from './money';
+import { Offer } from './Offer';
 import './comparison.css';
 
 type Product = components['schemas']['Product'];
 type Comparison = components['schemas']['Comparison'];
 type Sort = Comparison['criteria']['sort'];
-type Source = components['schemas']['ComparisonItem']['source'];
-
-// Hoy todo es de la comunidad; «oficial» llega con el módulo comercial (Corte 3).
-const SOURCE: Record<Source, string> = {
-  comunidad: 'Comunidad',
-  oficial: 'Precio oficial',
-  siembra: 'Dato inicial',
-};
-
 const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: 'unit_price', label: 'Precio por unidad' },
   { value: 'recent', label: 'Más recientes' },
@@ -72,6 +61,10 @@ export function ComparePrices() {
     const presentation = product.presentations.find(({ id }) => id === presentationId);
     return presentation ? formatPresentation(presentation) : '';
   };
+  const competes = (offer: Comparison['results'][number]) =>
+    offer.freshness !== 'desactualizado' && offer.reliability !== 'en_revision';
+  const competing = comparison.results.filter(competes);
+  const others = comparison.results.filter((offer) => !competes(offer));
   return (
     <section className="compare">
       <h1>{product.name}</h1>
@@ -127,25 +120,21 @@ export function ComparePrices() {
       )}
       <p className="muted">{describeCriteria(comparison.criteria)}</p>
       <ul className="offers">
-        {comparison.results.map((offer) => (
-          <li key={offer.reportId} className="offer">
-            <h2>{offer.establishment.name}</h2>
-            {offer.establishment.distanceM !== undefined && (
-              <p className="muted">{formatDistance(offer.establishment.distanceM)}</p>
-            )}
-            <p>
-              {sizeOf(offer.presentationId)} · {formatCop(offer.priceCop)}
-            </p>
-            <p className="unit">{formatUnitPrice(offer.unitPrice)}</p>
-            <p className="badges">
-              {offer.isCheapest && <span className="pill ok">Más barato</span>}
-              <FreshnessBadge freshness={offer.freshness} observedAt={offer.observedAt} />
-              <ReliabilityBadge level={offer.reliability} />
-              <span className="pill mute">{SOURCE[offer.source]}</span>
-            </p>
-          </li>
+        {competing.map((offer) => (
+          <Offer key={offer.reportId} offer={offer} size={sizeOf(offer.presentationId)} />
         ))}
       </ul>
+      {/* El backend los pone al final y no compiten en el orden (RF-010, RF-012). */}
+      {others.length > 0 && (
+        <>
+          <h2>Precios viejos o en revisión</h2>
+          <ul className="offers">
+            {others.map((offer) => (
+              <Offer key={offer.reportId} offer={offer} size={sizeOf(offer.presentationId)} />
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }
