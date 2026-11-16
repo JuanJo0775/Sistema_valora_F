@@ -40,10 +40,38 @@ export function BasketProvider({ children }: { children: ReactNode }) {
     [save],
   );
 
-  const noop = useCallback(() => undefined, []);
+  const setQuantity = useCallback(
+    (presentationId: string, quantity: number) => {
+      save((current) =>
+        quantity <= 0
+          ? current.filter((saved) => saved.presentationId !== presentationId)
+          : current.map((saved) =>
+              saved.presentationId === presentationId ? { ...saved, quantity } : saved,
+            ),
+      );
+    },
+    [save],
+  );
+
+  // Para ir tachando en la tienda.
+  const toggleBought = useCallback(
+    (presentationId: string) => {
+      save((current) =>
+        current.map((saved) =>
+          saved.presentationId === presentationId ? { ...saved, bought: !saved.bought } : saved,
+        ),
+      );
+    },
+    [save],
+  );
+
+  const removeBought = useCallback(() => {
+    save((current) => current.filter(({ bought }) => !bought));
+  }, [save]);
+
   const value = useMemo(
-    () => ({ items, add, setQuantity: noop, toggleBought: noop, removeBought: noop }),
-    [items, add, noop],
+    () => ({ items, add, setQuantity, toggleBought, removeBought }),
+    [items, add, setQuantity, toggleBought, removeBought],
   );
   return <BasketContext value={value}>{children}</BasketContext>;
 }
