@@ -1,7 +1,7 @@
 import { type SyntheticEvent, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { safeReturn } from './safeReturn';
+import { safeReturn, withReturn } from './safeReturn';
 import { useSession } from './session';
 import './auth.css';
 
@@ -15,6 +15,7 @@ export function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
+  const volver = safeReturn(params.get('volver'));
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -22,7 +23,7 @@ export function SignIn() {
     setSending(true);
     signIn({ email, password })
       .then(() => {
-        void navigate(safeReturn(params.get('volver')), { replace: true });
+        void navigate(volver, { replace: true });
       })
       .catch((failure: unknown) => {
         setError(failure);
@@ -62,6 +63,9 @@ export function SignIn() {
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Entrando…' : 'Entrar'}
       </button>
+      <p className="muted">
+        ¿No tienes cuenta? <Link to={withReturn('/crear-cuenta', volver)}>Crea una cuenta</Link>
+      </p>
     </form>
   );
 }

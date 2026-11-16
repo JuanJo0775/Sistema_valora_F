@@ -2,7 +2,7 @@ import { type SyntheticEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { safeReturn } from './safeReturn';
+import { safeReturn, withReturn } from './safeReturn';
 import { useSession } from './session';
 import './auth.css';
 
@@ -75,7 +75,7 @@ export function SignUp() {
       {existing && (
         <p role="alert" className="banner warn">
           Si ya tenías una cuenta con ese correo, inicia sesión con tu contraseña.{' '}
-          <Link to={`/entrar?${new URLSearchParams({ volver }).toString()}`}>Iniciar sesión</Link>
+          <Link to={withReturn('/entrar', volver)}>Iniciar sesión</Link>
         </p>
       )}
       <label className="field">
@@ -116,6 +116,9 @@ export function SignUp() {
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Creando cuenta…' : 'Crear cuenta'}
       </button>
+      <p className="muted">
+        ¿Ya tienes cuenta? <Link to={withReturn('/entrar', volver)}>Inicia sesión</Link>
+      </p>
     </form>
   );
 }
