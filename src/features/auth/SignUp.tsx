@@ -31,6 +31,7 @@ export function SignUp() {
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [existing, setExisting] = useState(false);
+  const [sending, setSending] = useState(false);
   const volver = safeReturn(params.get('volver'));
 
   const submit = (event: SyntheticEvent) => {
@@ -43,6 +44,7 @@ export function SignUp() {
     setProblem('');
     setError(null);
     setExisting(false);
+    setSending(true);
     call(
       api.POST('/auth/register', {
         body: { email, password, acceptedPolicyVersion: POLICY_VERSION },
@@ -57,6 +59,7 @@ export function SignUp() {
         // luego la contraseña no coincide, se invita a entrar sin decir que la cuenta existía.
         if (failure instanceof ApiError && failure.status === 401) setExisting(true);
         else setError(failure);
+        setSending(false);
       });
   };
 
@@ -110,8 +113,8 @@ export function SignUp() {
         />
         Acepto la política de tratamiento de datos (versión {POLICY_VERSION}).
       </label>
-      <button type="submit" className="btn">
-        Crear cuenta
+      <button type="submit" className="btn" disabled={sending}>
+        {sending ? 'Creando cuenta…' : 'Crear cuenta'}
       </button>
     </form>
   );
