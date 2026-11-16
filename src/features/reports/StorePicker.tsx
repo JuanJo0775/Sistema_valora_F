@@ -37,9 +37,9 @@ export function StorePicker({
             .catch((failure: unknown) => {
               setError(failure);
             }),
-        // Sin ubicación todavía no hay otra forma de elegir la tienda (llega con B#116).
+        // Sin ubicación queda la búsqueda por nombre (B#116).
         () => {
-          setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
+          setProblem('Activa la ubicación del navegador o busca la tienda por su nombre.');
         },
       )
       .finally(() => {
