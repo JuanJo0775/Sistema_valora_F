@@ -33,3 +33,9 @@
   font-size: 1.2rem;
   font-weight: 700;
 }
+
+.offer .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
