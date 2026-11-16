@@ -195,4 +195,17 @@ describe('comparar precios', () => {
     );
     expect(screen.getByText('Ordenado por precio por unidad · en Armenia')).toBeInTheDocument();
   });
+
+  it('«Solo precios vigentes» vuelve a pedir la comparación sin los viejos', async () => {
+    const api = stubCompare(comparison([result()]));
+    renderCompare();
+    await screen.findByRole('listitem');
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Solo precios vigentes' }));
+
+    await vi.waitFor(() => {
+      const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+      expect(asked?.searchParams.get('onlyCurrent')).toBe('true');
+    });
+  });
 });
