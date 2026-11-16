@@ -126,4 +126,69 @@ describe('mis aportes', () => {
       'Tu cuenta está suspendida hasta el 20 de noviembre de 2026. Mientras tanto puedes ver el estado de tus aportes y apelar.',
     );
   });
+
+  // RF-013 RN4: apelar un descarte una sola vez y dentro del plazo.
+  const discarded = report('Arroz blanco', 'descartado', {
+    appealableUntil: '2026-11-23T17:00:00Z',
+  });
+  const appeal = (note: string) => {
+    fireEvent.click(rowOf('Arroz blanco').getByRole('button', { name: 'Apelar' }));
+    fireEvent.change(rowOf('Arroz blanco').getByLabelText('¿Por qué el precio era correcto?'), {
+      target: { value: note },
+    });
+    fireEvent.click(rowOf('Arroz blanco').getByRole('button', { name: 'Enviar apelación' }));
+  };
+
+  it('un descarte se apela dentro del plazo y queda en revisión', async () => {
+    const api = stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': page([discarded, report('Banano', 'descartado')]),
+      [`POST /v1/reports/${discarded.reportId}/appeal`]: { status: 202 },
+    });
+    renderMine();
+    expect(await screen.findByText('Puedes apelar hasta el 23 nov')).toBeInTheDocument();
+    expect(rowOf('Banano').queryByRole('button', { name: 'Apelar' })).not.toBeInTheDocument();
+
+    appeal('Lo vi en la góndola ese día, con el precio marcado.');
+
+    expect(await rowOf('Arroz blanco').findByText('Apelación en revisión')).toBeInTheDocument();
+    const sent = api.calls.find(({ method }) => method === 'POST');
+    expect(JSON.parse(sent?.body ?? '{}')).toEqual({
+      note: 'Lo vi en la góndola ese día, con el precio marcado.',
+    });
+  });
+
+  it('con menos de 10 letras pide explicar más, sin enviar', async () => {
+    const api = stubApi({
+      'GET /v1/me/reports': page([discarded]),
+    });
+    renderMine();
+    await screen.findByText('Arroz blanco');
+
+    appeal('Era así');
+
+    expect(rowOf('Arroz blanco').getByRole('alert')).toHaveTextContent(
+      'Cuéntanos un poco más: al menos 10 letras.',
+    );
+    expect(api.calls.some(({ method }) => method === 'POST')).toBe(false);
+  });
+
+  it('si el servidor no acepta la apelación muestra por qué', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': page([discarded]),
+      [`POST /v1/reports/${discarded.reportId}/appeal`]: {
+        status: 422,
+        body: { code: 'APPEAL_WINDOW_CLOSED', message: 'Pasaron 7 días desde el descarte.' },
+      },
+    });
+    renderMine();
+    await screen.findByText('Arroz blanco');
+
+    appeal('Lo vi en la góndola ese día, con el precio marcado.');
+
+    expect(await rowOf('Arroz blanco').findByRole('alert')).toHaveTextContent(
+      'Pasaron 7 días desde el descarte.',
+    );
+  });
 });
