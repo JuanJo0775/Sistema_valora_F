@@ -140,4 +140,14 @@ describe('registrar un precio', () => {
     expect(Object.keys(body)).not.toContain('lat');
     expect(report?.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
   });
+
+  it('el precio se puede escribir con puntos de miles: «2.500» son 2500 pesos', async () => {
+    const api = stubApi(reportRoutes);
+    renderReport();
+
+    await fillAndSend('2.500');
+
+    await screen.findByRole('heading', { name: 'Recibido' });
+    expect(JSON.parse(sentReports(api)[0]?.body ?? '{}')).toMatchObject({ priceCop: 2500 });
+  });
 });
