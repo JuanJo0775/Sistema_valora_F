@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { Loading } from '../../shared/ui/Loading';
 import { withReturn } from './safeReturn';
 import { type Role, useSession } from './session';
 
@@ -8,6 +9,7 @@ import { type Role, useSession } from './session';
 export function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
   const { session } = useSession();
   const { pathname, search } = useLocation();
+  if (session.status === 'loading') return <Loading />;
   if (session.status === 'anonymous') {
     return <Navigate to={withReturn('/entrar', pathname + search)} replace />;
   }
