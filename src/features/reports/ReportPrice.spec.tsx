@@ -223,4 +223,24 @@ describe('registrar un precio', () => {
     const [first, retry] = sentReports(api).map(({ body }) => body);
     expect(retry).toBe(first);
   });
+
+  it('si después de un fallo cambia el reporte, lo envía con una clave nueva', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': [
+        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        { status: 201, body: receipt },
+      ],
+    });
+    renderReport();
+    await fillAndSend('2500');
+    await screen.findByRole('alert');
+
+    fireEvent.change(screen.getByLabelText('Precio en pesos'), { target: { value: '2600' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    await screen.findByRole('heading', { name: 'Recibido' });
+    const [first, second] = sentReports(api).map(({ headers }) => headers.get('Idempotency-Key'));
+    expect(second).not.toBe(first);
+  });
 });
