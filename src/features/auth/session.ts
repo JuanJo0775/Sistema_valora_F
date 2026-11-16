@@ -8,16 +8,20 @@ export type Role = SessionBody['role'];
 export type Session =
   | { status: 'loading' }
   | { status: 'anonymous' }
+  // Sin respuesta del servidor (sin red, error 500): no se sabe si hay sesión.
+  | { status: 'unknown'; error: unknown }
   | { status: 'active'; role: Role; suspendedUntil?: string | undefined };
 
 export interface SessionState {
   session: Session;
   signOut: () => Promise<void>;
+  reload: () => void;
 }
 
 export const SessionContext = createContext<SessionState>({
   session: { status: 'loading' },
   signOut: () => Promise.resolve(),
+  reload: () => undefined,
 });
 
 export const useSession = () => useContext(SessionContext);

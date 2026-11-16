@@ -9,9 +9,10 @@ import { useSession } from './session';
 const DAY = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' });
 
 export function Profile() {
-  const { session, signOut } = useSession();
+  const { session, signOut, reload } = useSession();
   const [error, setError] = useState<unknown>(null);
   if (session.status === 'loading') return <Loading />;
+  if (session.status === 'unknown') return <ErrorState error={session.error} onRetry={reload} />;
   if (session.status === 'active') {
     return (
       <>
