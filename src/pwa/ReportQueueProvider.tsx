@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, call } from '../shared/api';
 import { QueueContext, type SubmitResult } from './queueContext';
 import {
@@ -26,6 +26,18 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
     queue.current ??= openReportQueue();
     return queue.current;
   }, []);
+
+  const syncNow = useCallback(async () => {
+    const reportQueue = await opened();
+    await reportQueue.sync(send);
+    setReports(await reportQueue.list());
+  }, [opened]);
+
+  // Al abrir la app se envía lo que quedó pendiente (OFFLINE_FIRST.md: el navegador no garantiza
+  // la sincronización en segundo plano).
+  useEffect(() => {
+    void syncNow();
+  }, [syncNow]);
 
   const submit = useCallback(
     async (report: NewReport): Promise<SubmitResult> => {
