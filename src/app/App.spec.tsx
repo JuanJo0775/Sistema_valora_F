@@ -65,4 +65,19 @@ describe('inicio', () => {
 
     expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
   });
+
+  it('desde Yo, «Iniciar sesión» lleva al formulario para entrar', async () => {
+    stubApi({
+      'GET /v1/auth/session': {
+        status: 401,
+        body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
+      },
+    });
+    window.history.pushState({}, '', '/yo');
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Iniciar sesión' }));
+
+    expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
+  });
 });
