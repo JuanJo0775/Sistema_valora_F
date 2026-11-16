@@ -1,0 +1,11 @@
+.moderation {
+  display: grid;
+  gap: 16px;
+}
+
+.appeal-note {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--line-2);
+  color: var(--ink-2);
+}
