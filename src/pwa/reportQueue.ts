@@ -44,6 +44,20 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
       });
     },
     list: () => db.getAll('reports'),
-    sync: () => Promise.resolve(),
+    // Un reporte por petición (no hay ruta de lotes), del más antiguo al más nuevo, siempre con su
+    // misma clave: si el servidor ya lo tenía responde 200 y no lo duplica (EC-07).
+    sync: async (send) => {
+      const pending = (await db.getAll('reports'))
+        .filter(({ status }) => status === 'pendiente')
+        .sort((a, b) => a.savedAt.localeCompare(b.savedAt));
+      for (const report of pending) {
+        await send(report);
+        await db.put('reports', {
+          ...report,
+          status: 'sincronizado',
+          syncedAt: new Date().toISOString(),
+        });
+      }
+    },
   };
 }
