@@ -53,7 +53,7 @@ describe('iniciar sesión', () => {
     });
   });
 
-  it.each(['//malo.example', 'https://malo.example/entrar'])(
+  it.each(['//malo.example', '/\\malo.example', 'https://malo.example/entrar'])(
     'si «volver» apunta a otro sitio (%s) lleva al inicio de Valora',
     async (volver) => {
       stubLogin({ status: 204 });
