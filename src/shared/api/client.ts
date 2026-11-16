@@ -30,18 +30,25 @@ export function createApiClient(options: { fetch?: Fetch } = {}) {
   const baseUrl = `${window.location.origin}/v1`;
   const send: Fetch = options.fetch ?? ((input) => fetch(input));
   const client = createClient<paths>({ baseUrl, credentials: 'same-origin', fetch: send });
+  let csrfToken: string | undefined;
+
+  const currentCsrfToken = async (): Promise<string | undefined> => {
+    if (csrfToken) return csrfToken;
+    const session = await send(
+      new Request(`${baseUrl}/auth/session`, { credentials: 'same-origin' }),
+    );
+    if (!session.ok) return undefined;
+    csrfToken = ((await session.json()) as { csrfToken?: string }).csrfToken;
+    return csrfToken;
+  };
 
   // ADR-014: las rutas con sesión que modifican datos exigen X-CSRF-Token. Lo entrega
   // GET /auth/session y se guarda solo en memoria. Iniciar sesión y registrarse no lo necesitan.
   client.use({
     async onRequest({ request }) {
       if (!needsCsrf(request, baseUrl)) return request;
-      const session = await send(
-        new Request(`${baseUrl}/auth/session`, { credentials: 'same-origin' }),
-      );
-      if (!session.ok) return request;
-      const { csrfToken } = (await session.json()) as { csrfToken?: string };
-      if (csrfToken) request.headers.set('X-CSRF-Token', csrfToken);
+      const token = await currentCsrfToken();
+      if (token) request.headers.set('X-CSRF-Token', token);
       return request;
     },
   });
