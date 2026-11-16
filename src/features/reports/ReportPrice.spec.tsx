@@ -123,7 +123,7 @@ describe('registrar un precio', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Activa la ubicación del navegador para ver las tiendas cercanas.',
     );
   });
@@ -421,7 +421,7 @@ describe('registrar un precio', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Activa la ubicación del navegador para ver las tiendas cercanas.',
     );
   });

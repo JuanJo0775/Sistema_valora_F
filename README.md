@@ -198,6 +198,7 @@ src/
   app/                  # rutas y página de inicio
   features/auth/        # sesión: crear cuenta, entrar, salir y secciones por rol
   features/catalog/     # buscar productos y ver su detalle
+  features/comparison/  # comparar precios entre tiendas con el criterio declarado
   features/reports/     # registrar un precio: producto, tienda cercana, precio y hora
   shared/api/           # cliente de la API con los tipos del contrato
   shared/ui/            # colores, fuentes, etiquetas y estados comunes (prototipo de MC-E4)

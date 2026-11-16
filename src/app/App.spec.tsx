@@ -123,4 +123,29 @@ describe('inicio', () => {
 
     expect(await screen.findByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
   });
+
+  it('desde el detalle, «Comparar precios» abre la comparación en Armenia', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: {
+        status: 200,
+        body: {
+          productId: rice.id,
+          criteria: { sort: 'unit_price', municipality: 'armenia' },
+          results: [],
+          promotions: [],
+        },
+      },
+    });
+    window.history.pushState({}, '', `/productos/${rice.id}`);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Comparar precios' }));
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Todavía nadie ha reportado este producto en Armenia',
+      }),
+    ).toBeInTheDocument();
+  });
 });

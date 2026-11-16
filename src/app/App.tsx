@@ -5,6 +5,7 @@ import { SessionProvider } from '../features/auth/SessionProvider';
 import { SignIn } from '../features/auth/SignIn';
 import { SignUp } from '../features/auth/SignUp';
 import { ProductDetail } from '../features/catalog/ProductDetail';
+import { ComparePrices } from '../features/comparison/ComparePrices';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportPrice } from '../features/reports/ReportPrice';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -41,10 +42,7 @@ export function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/productos/:productId" element={<ProductDetail />} />
-            <Route
-              path="/productos/:productId/comparar"
-              element={<Soon title="Comparar precios" issue={24} />}
-            />
+            <Route path="/productos/:productId/comparar" element={<ComparePrices />} />
             <Route
               path="/productos/:productId/historial"
               element={<Soon title="Historial de precios" issue={17} />}
