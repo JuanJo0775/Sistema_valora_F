@@ -9,3 +9,16 @@
   border-left: 3px solid var(--line-2);
   color: var(--ink-2);
 }
+
+.tab-choice {
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.tab-choice[aria-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
