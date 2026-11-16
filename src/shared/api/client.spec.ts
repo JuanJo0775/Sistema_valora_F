@@ -163,4 +163,32 @@ describe('cliente de la API', () => {
     const sessions = backend.requests.filter((request) => request.url.endsWith('/auth/session'));
     expect(sessions).toHaveLength(2);
   });
+
+  it('si el servidor rechaza el token CSRF, el siguiente intento pide uno nuevo', async () => {
+    const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
+    const backend = fakeBackend({
+      'GET /v1/auth/session': {
+        status: 200,
+        body: { role: 'reportante', csrfToken: 'token-viejo' },
+      },
+      [`POST /v1/reports/${reportId}/flag`]: {
+        status: 403,
+        body: { code: 'CSRF_TOKEN_INVALID', message: 'El token CSRF no es válido.' },
+      },
+    });
+    const api = createApiClient({ fetch: backend.fetch });
+    const flag = () =>
+      call(
+        api.POST('/reports/{reportId}/flag', {
+          params: { path: { reportId } },
+          body: { reason: 'precio_falso' },
+        }),
+      );
+
+    await expect(flag()).rejects.toMatchObject({ status: 403, code: 'CSRF_TOKEN_INVALID' });
+    await expect(flag()).rejects.toMatchObject({ code: 'CSRF_TOKEN_INVALID' });
+
+    const sessions = backend.requests.filter((request) => request.url.endsWith('/auth/session'));
+    expect(sessions).toHaveLength(2);
+  });
 });
