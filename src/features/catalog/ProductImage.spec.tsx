@@ -20,4 +20,20 @@ describe('imagen del producto', () => {
 
     expect(screen.getByText('Foto: Open Food Facts, licencia ODbL')).toBeInTheDocument();
   });
+
+  it('una foto del equipo no lleva atribución', () => {
+    render(
+      <ProductImage
+        name="Arroz blanco"
+        image={{
+          url: 'http://localhost:3000/media/products/arroz.webp',
+          source: 'equipo',
+          attribution: 'Equipo Valora',
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('img', { name: 'Arroz blanco' })).toBeInTheDocument();
+    expect(screen.queryByText(/^Foto:/)).not.toBeInTheDocument();
+  });
 });
