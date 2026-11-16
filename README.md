@@ -17,7 +17,7 @@ Esqueleto en marcha (#20): React + Vite + TypeScript, PWA instalable, Vitest, ES
 
 ## Primeros pasos (desde cero)
 
-Sigue los pasos en orden. Al final, `pnpm test` debe pasar y la página de inicio debe decir **«API conectada»**.
+Sigue los pasos en orden. Al final, `pnpm test` debe pasar y en la app, al buscar **«banano»**, debe aparecer el producto de la semilla.
 
 ### 1. Instala las herramientas
 
@@ -124,7 +124,7 @@ pnpm dev         # abre http://localhost:5173
 pnpm test        # todas las pruebas deben pasar
 ```
 
-- <http://localhost:5173> debe decir **«API conectada»**. Si dice «Sin conexión con la API», el backend está apagado o en otro puerto (paso 5).
+- En <http://localhost:5173> busca **«banano»**: debe aparecer el producto de la semilla y, al tocarlo, su detalle. Si dice «No hay conexión con Valora», el backend está apagado o en otro puerto (paso 5).
 - <http://localhost:5173/v1/health> debe responder `{"status":"ok"}`: es el backend visto a través del frontend.
 
 **Cómo llega el frontend al backend:** el servidor de desarrollo de Vite reenvía todo lo que empieza por `/v1` al backend (`API_PROXY_TARGET`). Para el navegador todo está en un solo sitio, y así la cookie de sesión (`SameSite=Lax`) funciona. En producción se hará lo mismo con una regla de reenvío de Vercel (ADR-012). El código siempre llama a rutas relativas (`/v1/...`), nunca a `http://localhost:3000`.
@@ -182,7 +182,7 @@ La CI corre en cada pull request hacia `dev` o `main` con los jobs **Calidad** (
 
 | Síntoma                                               | Causa y solución                                                                                                      |
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| La página dice «Sin conexión con la API»              | El backend no está encendido o está en otro puerto. Enciéndelo (`pnpm dev` en el backend) o cambia `API_PROXY_TARGET` |
+| La búsqueda dice «No hay conexión con Valora»         | El backend no está encendido o está en otro puerto. Enciéndelo (`pnpm dev` en el backend) o cambia `API_PROXY_TARGET` |
 | `corepack enable` falla con `EPERM` en Windows        | Usa `corepack prepare pnpm@10.18.3 --activate` y antepón `corepack` a cada comando                                    |
 | Las pruebas fallan con un error de `undici` o `jsdom` | Node es anterior a 22.12. Actualiza Node 22                                                                           |
 | El puerto 5173 está ocupado                           | Otro `pnpm dev` sigue abierto. Ciérralo o usa `pnpm dev --port 5174`                                                  |
@@ -196,7 +196,7 @@ La CI corre en cada pull request hacia `dev` o `main` con los jobs **Calidad** (
 public/                 # íconos de la PWA (logo naranja de «Identidad de marca»)
 src/
   app/                  # rutas y página de inicio
-  features/health/      # estado de la API
+  features/catalog/     # buscar productos y ver su detalle
   shared/api/           # cliente de la API con los tipos del contrato
   shared/ui/            # colores, fuentes, etiquetas y estados comunes (prototipo de MC-E4)
   test/                 # configuración de Vitest
