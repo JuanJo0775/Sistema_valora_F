@@ -11,6 +11,7 @@ import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, type Municipality, MUNICIPALITIES } from './criteria';
 import { readMunicipality, saveMunicipality } from './lastMunicipality';
 import { Offer } from './Offer';
+import { WholesaleReference } from './WholesaleReference';
 import './comparison.css';
 
 type Product = components['schemas']['Product'];
@@ -245,6 +246,9 @@ function Results({
             ))}
           </ul>
         </>
+      )}
+      {comparison.wholesaleReference && (
+        <WholesaleReference reference={comparison.wholesaleReference} />
       )}
     </>
   );
