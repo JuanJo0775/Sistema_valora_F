@@ -4,6 +4,7 @@ import { RequireRole } from '../features/auth/RequireRole';
 import { SessionProvider } from '../features/auth/SessionProvider';
 import { SignIn } from '../features/auth/SignIn';
 import { SignUp } from '../features/auth/SignUp';
+import { PendingReports } from '../pwa/PendingReports';
 import { ReportQueueProvider } from '../pwa/ReportQueueProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ComparePrices } from '../features/comparison/ComparePrices';
@@ -74,6 +75,7 @@ export function App() {
                   </RequireRole>
                 }
               />
+              <Route path="/pendientes" element={<PendingReports />} />
               <Route path="/yo" element={<Profile />} />
               <Route path="/entrar" element={<SignIn />} />
               <Route path="/crear-cuenta" element={<SignUp />} />
