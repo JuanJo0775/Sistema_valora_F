@@ -3,20 +3,22 @@
 ## Flujo de trabajo
 
 1. Revisa la épica, flujo y requisito asociado.
-2. Crea una rama corta desde `main`: `feat/<tema>`, `fix/<tema>`, `test/<tema>` o `docs/<tema>`.
-3. Implementa una unidad pequeña y accesible.
+2. Crea una rama corta desde `dev` actualizado: `feat/<tema>`, `fix/<tema>`, `test/<tema>`, `docs/<tema>`, `chore/<tema>` o `refactor/<tema>`.
+3. Implementa una unidad pequeña y accesible, con la prueba primero cuando haya una regla o un comportamiento (commits separados: `test(…)` en rojo, `feat(…)` en verde).
 4. Añade pruebas de interacción y flujos cuando corresponda.
-5. Abre un Pull Request y solicita revisión de otro integrante.
-6. Fusiona a `main` solo cuando las comprobaciones estén satisfechas.
+5. Abre un pull request **hacia `dev`** (nunca hacia `main`) con `Closes #N`.
+6. Quien abre el pull request puede mezclarlo solo con la CI en verde, con «Create a merge commit» (nunca «Squash and merge»). `main` solo recibe `dev` al cerrar una entrega.
 
 ## Commits
 
 Usar Conventional Commits con descripción concreta:
 
-- `feat(comparison): add neutral price ordering view`
-- `feat(reports): persist offline report queue`
-- `test(reports): cover reconnect synchronization`
-- `fix(a11y): label price input errors`
+- `feat(comparison): mostrar el orden con su criterio declarado`
+- `feat(reports): guardar la cola de reportes en IndexedDB`
+- `test(reports): al reconectar se envían los reportes sin duplicar`
+- `fix(a11y): etiquetar los errores del campo de precio`
+
+La descripción va en español. Ningún commit lleva líneas `Co-Authored-By` ni marcas de herramientas.
 
 Cada integrante debe usar su propia cuenta GitHub para que el historial refleje su contribución individual.
 
