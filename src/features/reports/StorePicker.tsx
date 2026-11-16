@@ -20,6 +20,7 @@ export function StorePicker({
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [searching, setSearching] = useState(false);
+  const [name, setName] = useState('');
 
   const findNearby = () => {
     setProblem('');
@@ -46,12 +47,49 @@ export function StorePicker({
       });
   };
 
+  // B#116: buscar por nombre no pide la ubicación (EC-08).
+  const findByName = () => {
+    setProblem('');
+    setError(null);
+    setSearching(true);
+    call(api.GET('/establishments', { params: { query: { q: name.trim() } } }))
+      .then(({ items }) => {
+        setStores(items);
+      })
+      .catch((failure: unknown) => {
+        setError(failure);
+      })
+      .finally(() => {
+        setSearching(false);
+      });
+  };
+
   return (
     <fieldset role="radiogroup" className="choices stores">
       <legend>Tienda</legend>
       <button type="button" className="btn ghost" onClick={findNearby}>
         Usar mi ubicación
       </button>
+      {/* Va dentro del formulario del reporte: Enter busca la tienda, no envía el reporte. */}
+      <div className="store-search">
+        <input
+          type="search"
+          aria-label="Buscar tienda por nombre"
+          placeholder="O busca la tienda por su nombre"
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            findByName();
+          }}
+        />
+        <button type="button" className="btn ghost" onClick={findByName}>
+          Buscar tienda
+        </button>
+      </div>
       {searching && <Loading text="Buscando tiendas…" />}
       {error !== null && <ErrorState error={error} />}
       {problem && (
