@@ -79,4 +79,22 @@ describe('buscar productos', () => {
       screen.getByText('Revisa la escritura o pide que lo agreguemos al catálogo.'),
     ).toBeInTheDocument();
   });
+
+  it('si la búsqueda falla muestra el error y «Reintentar» vuelve a consultar', async () => {
+    const api = stubApi({
+      'GET /v1/products': {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' },
+      },
+    });
+    renderSearch();
+    search('arroz');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    await vi.waitFor(() => {
+      expect(api.requested).toHaveLength(2);
+    });
+  });
 });
