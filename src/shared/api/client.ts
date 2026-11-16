@@ -35,7 +35,7 @@ export async function call<T>(
   request: Promise<{ data?: T; error?: unknown; response: Response }>,
 ): Promise<T> {
   const { data, error, response } = await request;
-  if (!response.ok || data === undefined) {
+  if (!response.ok) {
     const body = (error ?? {}) as ErrorBody;
     throw new ApiError({
       status: response.status,
@@ -43,5 +43,6 @@ export async function call<T>(
       message: typeof body.message === 'string' ? body.message : 'La API respondió con un error.',
     });
   }
-  return data;
+  // 204 (por ejemplo, iniciar o cerrar sesión): no hay cuerpo.
+  return data as T;
 }
