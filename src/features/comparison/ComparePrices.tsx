@@ -8,6 +8,7 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, type Municipality, MUNICIPALITIES } from './criteria';
+import { readMunicipality, saveMunicipality } from './lastMunicipality';
 import { Offer } from './Offer';
 import './comparison.css';
 
@@ -32,7 +33,7 @@ export function ComparePrices() {
   // Por defecto Armenia, sin pedir permisos; con la ubicación, las tiendas cercanas (EC-08: la
   // ubicación solo va en la consulta y no se guarda).
   const [point, setPoint] = useState<Point | null>(null);
-  const [municipality, setMunicipality] = useState<Municipality>('armenia');
+  const [municipality, setMunicipality] = useState<Municipality>(readMunicipality);
   const [radiusKm, setRadiusKm] = useState(2);
   const [locationProblem, setLocationProblem] = useState('');
   const [onlyCurrent, setOnlyCurrent] = useState(false);
@@ -144,7 +145,9 @@ export function ComparePrices() {
             <select
               value={municipality}
               onChange={(event) => {
-                setMunicipality(event.target.value as Municipality);
+                const chosen = event.target.value as Municipality;
+                saveMunicipality(chosen);
+                setMunicipality(chosen);
               }}
             >
               {Object.entries(MUNICIPALITIES).map(([value, name]) => (
