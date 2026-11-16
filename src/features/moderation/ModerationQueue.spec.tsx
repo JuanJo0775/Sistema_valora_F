@@ -1,10 +1,10 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, sessionAs, stubApi } from '../../test/fakeApi';
 import { ModerationQueue } from './ModerationQueue';
 
-export const item = (productName: string, reason: string, extra: Record<string, unknown> = {}) => ({
+const item = (productName: string, reason: string, extra: Record<string, unknown> = {}) => ({
   id: crypto.randomUUID(),
   reason,
   productName,
@@ -56,5 +56,70 @@ describe('precios en revisión', () => {
     const milk = caseOf('Leche Colanta · 1 l');
     expect(milk.getByText('Apelación')).toBeInTheDocument();
     expect(milk.getByText('«Lo vi en la góndola, el precio era ese.»')).toBeInTheDocument();
+  });
+
+  const decide = async (name: string, decision: string, note: string) => {
+    const row = within((await screen.findByText(name)).closest('li') as HTMLElement);
+    fireEvent.click(row.getByRole('radio', { name: decision }));
+    fireEvent.change(row.getByLabelText('Motivo de la decisión'), { target: { value: note } });
+    fireEvent.click(row.getByRole('button', { name: 'Registrar decisión' }));
+    return row;
+  };
+
+  it('se decide con un motivo y el caso sale de la cola', async () => {
+    const rice = item('Arroz Diana · 500 g', 'marcado');
+    const api = renderQueue({
+      'GET /v1/moderation/queue': queue(rice),
+      [`POST /v1/moderation/${rice.id}/decision`]: { status: 204 },
+    });
+
+    await decide(
+      'Arroz Diana · 500 g',
+      'Descartar',
+      'El precio está muy por debajo de la mediana.',
+    );
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Decisión registrada: Arroz Diana · 500 g.',
+    );
+    expect(screen.queryByText('Arroz Diana · 500 g')).not.toBeInTheDocument();
+    const sent = api.calls.find(({ method }) => method === 'POST');
+    expect(JSON.parse(sent?.body ?? '{}')).toEqual({
+      decision: 'descartar',
+      note: 'El precio está muy por debajo de la mediana.',
+    });
+  });
+
+  it('con un motivo de menos de 10 letras lo pide sin enviar', async () => {
+    const api = renderQueue({
+      'GET /v1/moderation/queue': queue(item('Arroz Diana · 500 g', 'marcado')),
+    });
+
+    const row = await decide('Arroz Diana · 500 g', 'Aprobar', 'Está bien');
+
+    expect(row.getByRole('alert')).toHaveTextContent('Escribe el motivo: al menos 10 letras.');
+    expect(api.calls.some(({ method }) => method === 'POST')).toBe(false);
+  });
+
+  it.each([
+    ['OWN_REPORT', 'Es tu propio reporte: lo decide otro moderador.'],
+    ['SAME_MODERATOR', 'Tú descartaste este reporte: su apelación la decide otro moderador.'],
+  ])('con %s explica que lo decide otro moderador', async (code, message) => {
+    const rice = item('Arroz Diana · 500 g', 'apelacion');
+    renderQueue({
+      'GET /v1/moderation/queue': queue(rice),
+      [`POST /v1/moderation/${rice.id}/decision`]: {
+        status: 409,
+        body: { code, message: 'Conflicto.' },
+      },
+    });
+
+    const row = await decide(
+      'Arroz Diana · 500 g',
+      'Aprobar',
+      'El precio coincide con la góndola.',
+    );
+
+    expect(await row.findByRole('alert')).toHaveTextContent(message);
   });
 });
