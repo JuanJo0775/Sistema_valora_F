@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api';
 import { ErrorState } from './ErrorState';
 
@@ -20,5 +20,15 @@ describe('estado de error', () => {
     render(<ErrorState error={new Error('undefined is not a function')} />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('Algo salió mal. Inténtalo de nuevo.');
+  });
+
+  it('con «Reintentar» se vuelve a intentar', () => {
+    const retry = vi.fn();
+    const offline = new ApiError({ status: 0, code: 'NETWORK_ERROR', message: 'Sin conexión.' });
+    render(<ErrorState error={offline} onRetry={retry} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    expect(retry).toHaveBeenCalledOnce();
   });
 });
