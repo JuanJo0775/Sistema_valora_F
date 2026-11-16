@@ -79,6 +79,11 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
             });
             continue;
           }
+          // 401 o 403: sin sesión (o vencida) los demás tampoco pasarán. Siguen pendientes y,
+          // después de iniciar sesión, se reintentan con la misma clave.
+          if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+            return { needsSession: true };
+          }
           // Sin red o 5xx: queda pendiente y se reintenta después con la misma clave. Se detiene
           // aquí: si el servidor no contesta a este, tampoco contestará a los siguientes.
           return { needsSession: false };
