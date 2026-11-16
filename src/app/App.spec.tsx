@@ -46,9 +46,11 @@ describe('inicio', () => {
     render(<App />);
 
     const nav = within(screen.getByRole('navigation', { name: 'Principal' }));
-    for (const name of ['Inicio', 'Mapa', 'Registrar precio', 'Canasta', 'Yo']) {
+    for (const name of ['Inicio', 'Mapa', 'Registrar precio', 'Yo']) {
       expect(nav.getByRole('link', { name })).toBeInTheDocument();
     }
+    // La canasta (#31) no la pide ningún RF: vuelve si el equipo decide construirla.
+    expect(nav.queryByRole('link', { name: 'Canasta' })).not.toBeInTheDocument();
     expect(nav.getByRole('link', { name: 'Mapa' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
   });
