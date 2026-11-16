@@ -10,7 +10,6 @@ const SECTIONS: { to: string; label: string; icon: IconName; primary?: boolean }
   { to: '/', label: 'Inicio', icon: 'home' },
   { to: '/mapa', label: 'Mapa', icon: 'map' },
   { to: '/registrar', label: 'Registrar precio', icon: 'plus', primary: true },
-  { to: '/canasta', label: 'Canasta', icon: 'basket' },
   { to: '/yo', label: 'Yo', icon: 'user' },
 ];
 

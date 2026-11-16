@@ -44,7 +44,6 @@ export function App() {
           />
           <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
           <Route path="/registrar" element={<Soon title="Registrar precio" issue={25} />} />
-          <Route path="/canasta" element={<Soon title="Canasta" issue={31} />} />
           <Route path="/yo" element={<Soon title="Yo" issue={22} />} />
         </Route>
       </Routes>
