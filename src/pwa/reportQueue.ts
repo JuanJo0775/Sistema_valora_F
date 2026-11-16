@@ -17,6 +17,7 @@ export interface QueuedReport extends NewReport {
   savedAt: string;
   // syncedAt: cuándo lo confirmó el servidor; aparte de observedAt (OFFLINE_FIRST.md).
   syncedAt?: string;
+  problem?: unknown;
 }
 
 interface QueueDb extends DBSchema {

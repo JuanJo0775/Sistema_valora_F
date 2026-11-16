@@ -77,4 +77,44 @@ describe('cola de reportes sin conexión', () => {
     );
     expect(keys).toEqual([report().idempotencyKey, report().idempotencyKey]);
   });
+
+  it.each([
+    [400, 'VALIDATION_ERROR'],
+    [409, 'DUPLICATE_REPORT'],
+    [422, 'INVALID_OBSERVATION_DATE'],
+    [429, 'TOO_MANY_REQUESTS'],
+  ])('con %i (%s) requiere atención: guarda por qué y no se reenvía', async (status, code) => {
+    const queue = await openReportQueue(freshName());
+    await queue.add(report());
+    const failure = new ApiError({
+      status,
+      code,
+      message: 'Motivo del servidor.',
+      ...(code === 'DUPLICATE_REPORT' ? { availableFrom: '2026-11-16T15:30:00Z' } : {}),
+    });
+    const send = answers(failure);
+
+    await queue.sync(send);
+    await queue.sync(send);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    const [saved] = await queue.list();
+    expect(saved?.status).toBe('requiere_atencion');
+    expect(saved?.problem).toMatchObject({ status, code, message: 'Motivo del servidor.' });
+  });
+
+  it('un reporte que requiere atención no detiene a los siguientes', async () => {
+    const queue = await openReportQueue(freshName());
+    await queue.add(report('11111111-1111-4111-8111-111111111111'));
+    await queue.add(report('22222222-2222-4222-8222-222222222222'));
+    const send = answers(
+      new ApiError({ status: 409, code: 'DUPLICATE_REPORT', message: 'Repetido.' }),
+      'ok',
+    );
+
+    await queue.sync(send);
+
+    const statuses = (await queue.list()).map(({ status }) => status).sort();
+    expect(statuses).toEqual(['requiere_atencion', 'sincronizado']);
+  });
 });
