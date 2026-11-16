@@ -567,4 +567,35 @@ describe('registrar un precio', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(api.requested.some(({ pathname }) => pathname === '/v1/establishments')).toBe(asks);
   });
+
+  it('Enter en el buscador de tiendas busca la tienda y no envía el reporte', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      'GET /v1/establishments': { status: 200, body: { items: [donPepe] } },
+    });
+    renderReport();
+    const box = await screen.findByRole('searchbox', { name: 'Buscar tienda por nombre' });
+
+    fireEvent.change(box, { target: { value: 'don pepe' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+
+    expect(await screen.findByRole('radio', { name: /Tienda Don Pepe/ })).toBeInTheDocument();
+    expect(sentReports(api)).toHaveLength(0);
+  });
+
+  it('si la búsqueda de tienda por nombre falla muestra el error', async () => {
+    stubApi({
+      ...productRoute,
+      'GET /v1/establishments': {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' },
+      },
+    });
+    renderReport();
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+
+    searchStore('don pepe');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
+  });
 });
