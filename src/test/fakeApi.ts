@@ -3,6 +3,8 @@ import { vi } from 'vitest';
 export interface FakeReply {
   status: number;
   body?: unknown;
+  // La respuesta nunca llega: para ver lo que muestra la pantalla mientras espera.
+  pending?: boolean;
 }
 
 // Backend falso para las pantallas: reemplaza fetch (la frontera con la API) y responde según
@@ -24,6 +26,7 @@ export function stubApi(routes: Record<string, FakeReply | FakeReply[]>) {
         headers: input.headers,
       });
       const reply = nextReply(routes[`${input.method} ${url.pathname}`]);
+      if (reply.pending) return new Promise<Response>(() => undefined);
       return new Response(reply.body === undefined ? null : JSON.stringify(reply.body), {
         status: reply.status,
         headers: { 'Content-Type': 'application/json' },
