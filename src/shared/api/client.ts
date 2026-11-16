@@ -51,16 +51,25 @@ export function createApiClient(options: { fetch?: Fetch } = {}) {
       if (token) request.headers.set('X-CSRF-Token', token);
       return request;
     },
+    onResponse({ request, response }) {
+      // Iniciar o cerrar sesión cambia la sesión: el token anterior ya no sirve.
+      if (response.ok && SESSION_CHANGES.has(pathOf(request, baseUrl))) csrfToken = undefined;
+      return response;
+    },
   });
   return client;
 }
 
 const WITHOUT_SESSION = new Set(['/auth/login', '/auth/register']);
+const SESSION_CHANGES = new Set(['/auth/login', '/auth/logout']);
+
+function pathOf(request: Request, baseUrl: string): string {
+  return request.url.slice(baseUrl.length).split('?')[0] ?? '';
+}
 
 function needsCsrf(request: Request, baseUrl: string): boolean {
   if (request.method === 'GET' || request.method === 'HEAD') return false;
-  const path = request.url.slice(baseUrl.length).split('?')[0] ?? '';
-  return !WITHOUT_SESSION.has(path);
+  return !WITHOUT_SESSION.has(pathOf(request, baseUrl));
 }
 
 interface ErrorBody {
