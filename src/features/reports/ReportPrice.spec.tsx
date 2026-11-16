@@ -518,4 +518,31 @@ describe('registrar un precio', () => {
 
     expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
   });
+
+  // B#116: elegir la tienda sin compartir la ubicación (EC-08).
+  const searchStore = (text: string) => {
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar tienda por nombre' }), {
+      target: { value: text },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar tienda' }));
+  };
+
+  it('sin dar la ubicación se busca la tienda por su nombre y se elige', async () => {
+    const api = stubApi({
+      ...productRoute,
+      'GET /v1/establishments': {
+        status: 200,
+        body: { items: [{ ...donPepe, distanceM: undefined }] },
+      },
+    });
+    renderReport();
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+
+    searchStore('don pepe');
+
+    fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
+    expect(screen.getByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+    const asked = api.requested.find(({ pathname }) => pathname === '/v1/establishments');
+    expect(asked?.searchParams.get('q')).toBe('don pepe');
+  });
 });
