@@ -1,0 +1,56 @@
+.basket {
+  display: grid;
+  gap: 16px;
+}
+
+.basket-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.basket-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+}
+
+.basket-name {
+  display: grid;
+}
+
+/* Lo comprado se tacha y se apaga, para ir marcando en la tienda. */
+.basket-row.bought .basket-name {
+  text-decoration: line-through;
+  color: var(--ink-3);
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stepper button {
+  min-width: var(--touch);
+  min-height: var(--touch);
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.stepper span {
+  min-width: 2ch;
+  text-align: center;
+  font-weight: 600;
+}
