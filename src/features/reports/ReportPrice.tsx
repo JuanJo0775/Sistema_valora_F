@@ -41,6 +41,7 @@ export function ReportPrice() {
   const [received, setReceived] = useState(false);
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
@@ -65,6 +66,7 @@ export function ReportPrice() {
     const body = JSON.stringify(report);
     const key = attempt.body === '' || attempt.body === body ? attempt.key : crypto.randomUUID();
     setAttempt({ key, body });
+    setSending(true);
     call(api.POST('/reports', { params: { header: { 'Idempotency-Key': key } }, body: report }))
       .then(() => {
         setReceived(true);
@@ -72,6 +74,7 @@ export function ReportPrice() {
       // Los mensajes propios de cada respuesta (duplicado, ráfaga, fecha) llegan con la #11.
       .catch((failure: unknown) => {
         setError(failure);
+        setSending(false);
       });
   };
 
@@ -127,8 +130,8 @@ export function ReportPrice() {
         </p>
       )}
       {error !== null && <ErrorState error={error} />}
-      <button type="submit" className="btn">
-        Enviar
+      <button type="submit" className="btn" disabled={sending}>
+        {sending ? 'Enviando…' : 'Enviar'}
       </button>
     </form>
   );
