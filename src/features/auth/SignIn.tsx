@@ -1,6 +1,7 @@
 import { type SyntheticEvent, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
+import { ErrorState } from '../../shared/ui/ErrorState';
 import { useSession } from './session';
 import './auth.css';
 
@@ -12,18 +13,26 @@ export function SignIn() {
   const { reload } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<unknown>(null);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    void call(api.POST('/auth/login', { body: { email, password } })).then(() => {
-      reload();
-      void navigate(safeReturn(params.get('volver')), { replace: true });
-    });
+    setError(null);
+    call(api.POST('/auth/login', { body: { email, password } }))
+      .then(() => {
+        reload();
+        void navigate(safeReturn(params.get('volver')), { replace: true });
+      })
+      .catch((failure: unknown) => {
+        setError(failure);
+      });
   };
 
   return (
     <form className="form" onSubmit={submit}>
       <h1>Iniciar sesión</h1>
+      {/* 401, 429 y sin red: el servidor y el cliente ya traen el mensaje en español. */}
+      {error !== null && <ErrorState error={error} />}
       <label className="field">
         Correo
         <input
