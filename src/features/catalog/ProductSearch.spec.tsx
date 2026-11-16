@@ -55,4 +55,14 @@ describe('buscar productos', () => {
     expect(api.requested[0]?.searchParams.get('barcode')).toBe('7702511000014');
     expect(api.requested[0]?.searchParams.has('q')).toBe(false);
   });
+
+  it('con menos de 2 letras pide escribir más y no consulta la API', () => {
+    const api = stubApi({});
+    renderSearch();
+
+    search('a');
+
+    expect(screen.getByText('Escribe al menos 2 letras.')).toBeInTheDocument();
+    expect(api.requested).toHaveLength(0);
+  });
 });
