@@ -15,3 +15,19 @@
   gap: 12px;
   border-radius: var(--r-m);
 }
+
+.store-search {
+  display: flex;
+  gap: 8px;
+}
+
+.store-search input {
+  flex: 1;
+  min-height: var(--touch);
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}

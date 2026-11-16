@@ -124,7 +124,7 @@ describe('registrar un precio', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Activa la ubicación del navegador para ver las tiendas cercanas.',
+      'Activa la ubicación del navegador o busca la tienda por su nombre.',
     );
   });
 
@@ -422,7 +422,7 @@ describe('registrar un precio', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Activa la ubicación del navegador para ver las tiendas cercanas.',
+      'Activa la ubicación del navegador o busca la tienda por su nombre.',
     );
   });
 
@@ -517,5 +517,85 @@ describe('registrar un precio', () => {
     await fillAndSend();
 
     expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+  });
+
+  // B#116: elegir la tienda sin compartir la ubicación (EC-08).
+  const searchStore = (text: string) => {
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar tienda por nombre' }), {
+      target: { value: text },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar tienda' }));
+  };
+
+  it('sin dar la ubicación se busca la tienda por su nombre y se elige', async () => {
+    const api = stubApi({
+      ...productRoute,
+      'GET /v1/establishments': {
+        status: 200,
+        body: { items: [{ ...donPepe, distanceM: undefined }] },
+      },
+    });
+    renderReport();
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+
+    searchStore('don pepe');
+
+    fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
+    expect(screen.getByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+    const asked = api.requested.find(({ pathname }) => pathname === '/v1/establishments');
+    expect(asked?.searchParams.get('q')).toBe('don pepe');
+  });
+
+  it.each([
+    [
+      'con menos de 2 letras avisa sin buscar',
+      'd',
+      'Escribe al menos 2 letras del nombre de la tienda.',
+      false,
+    ],
+    ['sin resultados lo dice', 'zzz', 'No encontramos tiendas con ese nombre.', true],
+  ])('la búsqueda de tienda %s', async (_case, text, message, asks) => {
+    const api = stubApi({
+      ...productRoute,
+      'GET /v1/establishments': { status: 200, body: { items: [] } },
+    });
+    renderReport();
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+
+    searchStore(text);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    expect(api.requested.some(({ pathname }) => pathname === '/v1/establishments')).toBe(asks);
+  });
+
+  it('Enter en el buscador de tiendas busca la tienda y no envía el reporte', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      'GET /v1/establishments': { status: 200, body: { items: [donPepe] } },
+    });
+    renderReport();
+    const box = await screen.findByRole('searchbox', { name: 'Buscar tienda por nombre' });
+
+    fireEvent.change(box, { target: { value: 'don pepe' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+
+    expect(await screen.findByRole('radio', { name: /Tienda Don Pepe/ })).toBeInTheDocument();
+    expect(sentReports(api)).toHaveLength(0);
+  });
+
+  it('si la búsqueda de tienda por nombre falla muestra el error', async () => {
+    stubApi({
+      ...productRoute,
+      'GET /v1/establishments': {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' },
+      },
+    });
+    renderReport();
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+
+    searchStore('don pepe');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
   });
 });

@@ -20,6 +20,7 @@ export function StorePicker({
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [searching, setSearching] = useState(false);
+  const [name, setName] = useState('');
 
   const findNearby = () => {
     setProblem('');
@@ -36,11 +37,35 @@ export function StorePicker({
             .catch((failure: unknown) => {
               setError(failure);
             }),
-        // Sin ubicación todavía no hay otra forma de elegir la tienda (llega con B#116).
+        // Sin ubicación queda la búsqueda por nombre (B#116).
         () => {
-          setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
+          setProblem('Activa la ubicación del navegador o busca la tienda por su nombre.');
         },
       )
+      .finally(() => {
+        setSearching(false);
+      });
+  };
+
+  // B#116: buscar por nombre no pide la ubicación (EC-08).
+  const findByName = () => {
+    setProblem('');
+    setError(null);
+    const wanted = name.trim();
+    // El contrato pide al menos 2 letras (minLength de q): se avisa sin llamar a la API.
+    if (wanted.length < 2) {
+      setProblem('Escribe al menos 2 letras del nombre de la tienda.');
+      return;
+    }
+    setSearching(true);
+    call(api.GET('/establishments', { params: { query: { q: wanted } } }))
+      .then(({ items }) => {
+        setStores(items);
+        if (items.length === 0) setProblem('No encontramos tiendas con ese nombre.');
+      })
+      .catch((failure: unknown) => {
+        setError(failure);
+      })
       .finally(() => {
         setSearching(false);
       });
@@ -52,6 +77,26 @@ export function StorePicker({
       <button type="button" className="btn ghost" onClick={findNearby}>
         Usar mi ubicación
       </button>
+      {/* Va dentro del formulario del reporte: Enter busca la tienda, no envía el reporte. */}
+      <div className="store-search">
+        <input
+          type="search"
+          aria-label="Buscar tienda por nombre"
+          placeholder="O busca la tienda por su nombre"
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            findByName();
+          }}
+        />
+        <button type="button" className="btn ghost" onClick={findByName}>
+          Buscar tienda
+        </button>
+      </div>
       {searching && <Loading text="Buscando tiendas…" />}
       {error !== null && <ErrorState error={error} />}
       {problem && (
