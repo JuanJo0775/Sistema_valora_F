@@ -19,13 +19,26 @@ const toPesos = (text: string) => Number(text.replace(/[.\s$]/g, ''));
 const toLocalInput = (date: Date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+
 // Lo que exige el contrato (ReportCreate), dicho antes de enviar: el servidor vuelve a validarlo.
-function problemOf(report: { presentationId: string; store: Store | null; priceCop: number }) {
+function problemOf(report: {
+  presentationId: string;
+  store: Store | null;
+  priceCop: number;
+  observedAt: Date;
+}) {
   if (!report.presentationId) return 'Elige la presentación.';
   if (!report.store) return 'Elige la tienda.';
   const { priceCop } = report;
   if (!Number.isInteger(priceCop) || priceCop < 1 || priceCop > 10_000_000) {
     return 'Escribe el precio en pesos.';
+  }
+  // El servidor acepta hasta 5 minutos en el futuro (relojes desfasados) y 24 horas atrás.
+  const age = Date.now() - report.observedAt.getTime();
+  if (Number.isNaN(age) || age < -5 * MINUTE || age > 24 * HOUR) {
+    return 'La hora debe ser de las últimas 24 horas.';
   }
   return '';
 }
@@ -73,7 +86,8 @@ function ReportForm({ productId }: { productId: string }) {
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     const priceCop = toPesos(price);
-    const found = problemOf({ presentationId, store, priceCop });
+    const observedAt = seenAt ? new Date(seenAt) : startedAt;
+    const found = problemOf({ presentationId, store, priceCop, observedAt });
     setProblem(found);
     if (found || !store) return;
     setError(null);
@@ -82,7 +96,7 @@ function ReportForm({ productId }: { productId: string }) {
       establishmentId: store.id,
       priceCop,
       priceType: onSale ? ('oferta' as const) : ('normal' as const),
-      observedAt: (seenAt ? new Date(seenAt) : startedAt).toISOString(),
+      observedAt: observedAt.toISOString(),
     };
     const body = JSON.stringify(report);
     const key = attempt.body === '' || attempt.body === body ? attempt.key : crypto.randomUUID();
