@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, sessionAs, stubApi } from '../../test/fakeApi';
+import { type FakeReply, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { ModerationQueue } from './ModerationQueue';
 
 const item = (productName: string, reason: string, extra: Record<string, unknown> = {}) => ({
@@ -121,5 +121,52 @@ describe('precios en revisión', () => {
     );
 
     expect(await row.findByRole('alert')).toHaveTextContent(message);
+  });
+
+  it('se filtra por motivo', async () => {
+    const api = renderQueue({
+      'GET /v1/moderation/queue': queue(item('Arroz Diana · 500 g', 'marcado')),
+    });
+    await screen.findByText('Arroz Diana · 500 g');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Motivo' }), {
+      target: { value: 'apelacion' },
+    });
+
+    await vi.waitFor(() => {
+      expect(api.requested.at(-1)?.searchParams.get('reason')).toBe('apelacion');
+    });
+  });
+
+  it('sin casos pendientes lo dice', async () => {
+    renderQueue({ 'GET /v1/moderation/queue': queue() });
+
+    expect(
+      await screen.findByRole('heading', { name: 'No hay precios en revisión' }),
+    ).toBeInTheDocument();
+  });
+
+  it('mientras carga dice «Cargando…»', () => {
+    stubPendingApi();
+    render(
+      <MemoryRouter>
+        <ModerationQueue />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+  });
+
+  it('si la cola no carga muestra el error y permite reintentar', async () => {
+    renderQueue({
+      'GET /v1/moderation/queue': [
+        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        queue(item('Arroz Diana · 500 g', 'marcado')),
+      ],
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByText('Arroz Diana · 500 g')).toBeInTheDocument();
   });
 });
