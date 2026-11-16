@@ -21,3 +21,17 @@
   font: inherit;
   font-weight: 400;
 }
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: var(--touch);
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
