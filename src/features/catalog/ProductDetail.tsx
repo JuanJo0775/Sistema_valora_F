@@ -4,6 +4,7 @@ import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
 import './catalog.css';
 
@@ -55,7 +56,7 @@ export function ProductDetail() {
       />
     );
   }
-  if (!result) return null;
+  if (!result) return <Loading />;
   const { product } = result;
   return (
     <article className="detail">
