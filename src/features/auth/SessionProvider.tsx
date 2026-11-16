@@ -1,3 +1,4 @@
+import type { Middleware } from 'openapi-fetch';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { api, ApiError, call } from '../../shared/api';
 import { type Session, SessionContext } from './session';
@@ -18,6 +19,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setSession(anonymous ? { status: 'anonymous' } : { status: 'unknown', error });
       });
   }, [attempt]);
+
+  // Una sesión vencida o revocada responde 401 en cualquier ruta: la app la da por cerrada y las
+  // secciones protegidas llevan a iniciar sesión (y luego de vuelta a donde estaba).
+  useEffect(() => {
+    const expired: Middleware = {
+      onResponse({ response }) {
+        if (response.status === 401) setSession({ status: 'anonymous' });
+        return response;
+      },
+    };
+    api.use(expired);
+    return () => {
+      api.eject(expired);
+    };
+  }, []);
 
   const value = useMemo(
     () => ({
