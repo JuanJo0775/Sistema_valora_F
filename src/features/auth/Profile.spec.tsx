@@ -123,4 +123,15 @@ describe('pestaña Yo', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
   });
+
+  it.each([
+    ['reportante', 'Mis aportes', '/mis-aportes'],
+    ['moderador', 'Moderación', '/moderacion'],
+  ])('un %s encuentra en Yo su sección «%s»', async (role, name, href) => {
+    stubApi({ 'GET /v1/auth/session': { status: 200, body: { role, csrfToken: 'token-1' } } });
+
+    renderProfile();
+
+    expect(await screen.findByRole('link', { name })).toHaveAttribute('href', href);
+  });
 });
