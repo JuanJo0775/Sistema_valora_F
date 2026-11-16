@@ -1,6 +1,16 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { stubApi } from '../test/fakeApi';
 import { App } from './App';
+
+const rice = {
+  id: '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d',
+  name: 'Arroz blanco',
+  category: { code: 'grains-groceries', name: 'Granos y abarrotes' },
+  presentations: [
+    { id: '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b', quantity: 500, unit: 'g', packCount: 1 },
+  ],
+};
 
 describe('inicio', () => {
   afterEach(() => {
@@ -8,16 +18,22 @@ describe('inicio', () => {
     window.history.pushState({}, '', '/');
   });
 
-  it('muestra el nombre de la app y si la API está conectada', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ status: 'ok' })))),
-    );
+  it('el inicio pregunta qué vas a comprar y busca; el resultado lleva al detalle', async () => {
+    stubApi({
+      'GET /v1/products': { status: 200, body: { items: [rice] } },
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+    });
 
     render(<App />);
+    expect(screen.getByRole('heading', { name: '¿Qué vas a comprar hoy?' })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
+      target: { value: 'arroz' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+    fireEvent.click(await screen.findByRole('link', { name: /Arroz blanco/ }));
 
-    expect(screen.getByRole('heading', { name: 'Valora' })).toBeInTheDocument();
-    expect(await screen.findByText('API conectada')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/productos/${rice.id}`);
   });
 
   it('la navegación principal lleva a cada sección y marca en la que está', () => {
