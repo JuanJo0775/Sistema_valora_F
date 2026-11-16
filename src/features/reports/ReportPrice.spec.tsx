@@ -327,4 +327,23 @@ describe('registrar un precio', () => {
     const body = JSON.parse(sentReports(api)[0]?.body ?? '{}') as { observedAt: string };
     expect(Math.abs(Date.parse(body.observedAt) - twoHoursAgo.getTime())).toBeLessThan(60_000);
   });
+
+  it.each([
+    ['de hace más de 24 horas', -25 * 3600_000],
+    ['en el futuro', 2 * 3600_000],
+  ])('una hora %s se avisa sin enviar', async (_when, offset) => {
+    const api = stubApi(reportRoutes);
+    renderReport();
+    fireEvent.click(await screen.findByRole('button', { name: 'Lo vi antes' }));
+    fireEvent.change(screen.getByLabelText('¿Cuándo lo viste?'), {
+      target: { value: localTime(new Date(Date.now() + offset)) },
+    });
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La hora debe ser de las últimas 24 horas.',
+    );
+    expect(sentReports(api)).toHaveLength(0);
+  });
 });
