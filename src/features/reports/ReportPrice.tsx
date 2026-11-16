@@ -29,6 +29,19 @@ function problemOf(report: { presentationId: string; store: Store | null; priceC
 export function ReportPrice() {
   const [params] = useSearchParams();
   const productId = params.get('producto') ?? '';
+  if (!productId) {
+    return (
+      <>
+        <h1>¿Qué precio viste?</h1>
+        <ProductSearch linkTo={(id) => `/registrar?producto=${id}`} />
+      </>
+    );
+  }
+  // Cada producto empieza un reporte nuevo: su propia clave, su hora y nada del anterior.
+  return <ReportForm key={productId} productId={productId} />;
+}
+
+function ReportForm({ productId }: { productId: string }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [presentationId, setPresentationId] = useState('');
   const [store, setStore] = useState<Store | null>(null);
@@ -45,7 +58,6 @@ export function ReportPrice() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!productId) return;
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
       setProduct,
     );
@@ -82,14 +94,6 @@ export function ReportPrice() {
 
   if (received) {
     return <EmptyState title="Recibido" text="Gracias: tu precio ayuda a otros a comparar." />;
-  }
-  if (!productId) {
-    return (
-      <>
-        <h1>¿Qué precio viste?</h1>
-        <ProductSearch linkTo={(id) => `/registrar?producto=${id}`} />
-      </>
-    );
   }
   if (!product) return null;
   return (
