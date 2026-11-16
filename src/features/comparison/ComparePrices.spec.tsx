@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, stubApi } from '../../test/fakeApi';
+import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { ComparePrices } from './ComparePrices';
 
 const rice = {
@@ -249,5 +249,42 @@ describe('comparar precios', () => {
     );
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('mientras llega la comparación dice «Cargando…»', () => {
+    stubPendingApi();
+
+    renderCompare();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+  });
+
+  it('sin precios lo dice e invita a registrar el primero', async () => {
+    stubCompare(comparison([]));
+
+    renderCompare();
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Todavía nadie ha reportado este producto en Armenia',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Registrar un precio' })).toHaveAttribute(
+      'href',
+      `/registrar?producto=${rice.id}`,
+    );
+  });
+
+  it('si la comparación falla muestra el error y «Reintentar» la vuelve a pedir', async () => {
+    stubCompare([
+      { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+      comparison([result()]),
+    ]);
+    renderCompare();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Tienda Don Pepe' })).toBeInTheDocument();
   });
 });
