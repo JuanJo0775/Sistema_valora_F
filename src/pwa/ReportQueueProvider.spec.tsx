@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sessionAs, stubApi } from '../test/fakeApi';
 import { useReportQueue } from './queueContext';
@@ -61,5 +61,29 @@ describe('sincronización de la cola', () => {
     renderQueue();
 
     expect(await screen.findByText('Arroz blanco · 500 g: sincronizado')).toBeInTheDocument();
+  });
+
+  it('al volver la red reintenta los pendientes con la misma clave', async () => {
+    await leftFromBefore();
+    const api = stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'POST /v1/reports': [
+        { status: 503, body: { code: 'REQUEST_ERROR', message: 'No disponible.' } },
+        { status: 201, body: receipt },
+      ],
+    });
+    renderQueue();
+    expect(await screen.findByText('Arroz blanco · 500 g: pendiente')).toBeInTheDocument();
+
+    fireEvent(window, new Event('online'));
+
+    expect(await screen.findByText('Arroz blanco · 500 g: sincronizado')).toBeInTheDocument();
+    const keys = api.calls
+      .filter(({ method }) => method === 'POST')
+      .map(({ headers }) => headers.get('Idempotency-Key'));
+    expect(keys).toEqual([
+      '11111111-1111-4111-8111-111111111111',
+      '11111111-1111-4111-8111-111111111111',
+    ]);
   });
 });
