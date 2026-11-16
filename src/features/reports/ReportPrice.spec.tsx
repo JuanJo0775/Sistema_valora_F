@@ -346,4 +346,13 @@ describe('registrar un precio', () => {
     );
     expect(sentReports(api)).toHaveLength(0);
   });
+
+  it('si el producto tiene una sola presentación ya viene elegida', async () => {
+    const banana = { ...rice, presentations: rice.presentations.slice(0, 1) };
+    stubApi({ [`GET /v1/products/${rice.id}`]: { status: 200, body: banana } });
+
+    renderReport();
+
+    expect(await screen.findByRole('radio', { name: '500 g' })).toBeChecked();
+  });
 });
