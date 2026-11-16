@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { useSession } from './session';
 
@@ -8,6 +10,7 @@ const DAY = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'Ame
 
 export function Profile() {
   const { session, signOut } = useSession();
+  const [error, setError] = useState<unknown>(null);
   if (session.status === 'loading') return <Loading />;
   if (session.status === 'active') {
     return (
@@ -18,11 +21,21 @@ export function Profile() {
             Mientras tanto puedes ver el estado de tus aportes y apelar.
           </p>
         )}
+        {error !== null && <ErrorState error={error} />}
         <EmptyState
           title="Tu cuenta"
           text={`Entraste como ${session.role}.`}
           action={
-            <button type="button" className="btn ghost" onClick={() => void signOut()}>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                setError(null);
+                signOut().catch((failure: unknown) => {
+                  setError(failure);
+                });
+              }}
+            >
               Cerrar sesión
             </button>
           }
