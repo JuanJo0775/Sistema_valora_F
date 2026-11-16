@@ -27,8 +27,18 @@ export function StorePicker({
   const findNearby = () => {
     setProblem('');
     setError(null);
+    const noLocation = () => {
+      setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
+      setSearching(false);
+    };
+    // Algunos navegadores (o páginas sin HTTPS) no tienen geolocation, aunque los tipos digan que sí.
+    const { geolocation } = navigator as Partial<Navigator>;
+    if (!geolocation) {
+      noLocation();
+      return;
+    }
     setSearching(true);
-    navigator.geolocation.getCurrentPosition(
+    geolocation.getCurrentPosition(
       ({ coords }) => {
         call(
           api.GET('/establishments/nearby', {
@@ -47,10 +57,7 @@ export function StorePicker({
           });
       },
       // Sin ubicación todavía no hay otra forma de elegir la tienda (llega con B#116).
-      () => {
-        setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
-        setSearching(false);
-      },
+      noLocation,
     );
   };
 
