@@ -184,4 +184,23 @@ describe('registrar un precio', () => {
     await screen.findByRole('heading', { name: 'Recibido' });
     expect(JSON.parse(sentReports(api)[0]?.body ?? '{}')).toMatchObject({ priceType: 'oferta' });
   });
+
+  it('si el envío falla muestra el error y al reintentar usa la misma clave', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': [
+        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        { status: 201, body: receipt },
+      ],
+    });
+    renderReport();
+    await fillAndSend();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    await screen.findByRole('heading', { name: 'Recibido' });
+    const [first, retry] = sentReports(api).map(({ headers }) => headers.get('Idempotency-Key'));
+    expect(retry).toBe(first);
+  });
 });
