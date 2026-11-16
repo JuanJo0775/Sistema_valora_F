@@ -410,4 +410,19 @@ describe('registrar un precio', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Buscando tiendas…');
   });
+
+  it('si el navegador no tiene ubicación pide activarla, sin romperse', async () => {
+    stubApi(productRoute);
+    vi.stubGlobal(
+      'navigator',
+      Object.assign(Object.create(navigator) as Navigator, { geolocation: undefined }),
+    );
+    renderReport();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Activa la ubicación del navegador para ver las tiendas cercanas.',
+    );
+  });
 });
