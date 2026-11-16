@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { api, call } from '../../shared/api';
+import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { ErrorState } from '../../shared/ui/ErrorState';
 import { formatPresentation } from './presentation';
 import './catalog.css';
 
@@ -14,22 +15,34 @@ type Outcome = { key: string; product: Product } | { key: string; error: unknown
 export function ProductDetail() {
   const { productId = '' } = useParams();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const key = `${productId}|${String(attempt)}`;
 
   useEffect(() => {
     let current = true;
     call(api.GET('/products/{productId}', { params: { path: { productId } } }))
       .then((product) => {
-        if (current) setOutcome({ key: productId, product });
+        if (current) setOutcome({ key, product });
       })
       .catch((error: unknown) => {
-        if (current) setOutcome({ key: productId, error });
+        if (current) setOutcome({ key, error });
       });
     return () => {
       current = false;
     };
-  }, [productId]);
+  }, [productId, key]);
 
-  const result = outcome?.key === productId ? outcome : null;
+  const result = outcome?.key === key ? outcome : null;
+  if (result && 'error' in result && !isNotFound(result.error)) {
+    return (
+      <ErrorState
+        error={result.error}
+        onRetry={() => {
+          setAttempt((current) => current + 1);
+        }}
+      />
+    );
+  }
   if (result && 'error' in result) {
     return (
       <EmptyState
@@ -59,3 +72,5 @@ export function ProductDetail() {
     </article>
   );
 }
+
+const isNotFound = (error: unknown) => error instanceof ApiError && error.status === 404;
