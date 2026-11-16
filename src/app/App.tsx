@@ -1,4 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
+import { Profile } from '../features/auth/Profile';
+import { SessionProvider } from '../features/auth/SessionProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -29,24 +31,26 @@ function Soon({ title, issue }: { title: string; issue: number }) {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/productos/:productId" element={<ProductDetail />} />
-          <Route
-            path="/productos/:productId/comparar"
-            element={<Soon title="Comparar precios" issue={24} />}
-          />
-          <Route
-            path="/productos/:productId/historial"
-            element={<Soon title="Historial de precios" issue={17} />}
-          />
-          <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
-          <Route path="/registrar" element={<Soon title="Registrar precio" issue={25} />} />
-          <Route path="/yo" element={<Soon title="Yo" issue={22} />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <SessionProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/productos/:productId" element={<ProductDetail />} />
+            <Route
+              path="/productos/:productId/comparar"
+              element={<Soon title="Comparar precios" issue={24} />}
+            />
+            <Route
+              path="/productos/:productId/historial"
+              element={<Soon title="Historial de precios" issue={17} />}
+            />
+            <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
+            <Route path="/registrar" element={<Soon title="Registrar precio" issue={25} />} />
+            <Route path="/yo" element={<Profile />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </SessionProvider>
   );
 }
