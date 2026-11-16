@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import { askLocation, formatDistance } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
@@ -104,6 +105,9 @@ export function StorePicker({
           {problem}
         </p>
       )}
+      <Link to="/proponer/tienda" className="link-button">
+        ¿No está la tienda? Sugiérela
+      </Link>
       {/* La tienda ya elegida (la última usada) aparece aunque no se haya pedido la ubicación. */}
       {withChosen(stores, value).map((store) => (
         <label key={store.id} className="choice store">

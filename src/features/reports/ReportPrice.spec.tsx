@@ -543,6 +543,10 @@ describe('registrar un precio', () => {
     expect(screen.getByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
     const asked = api.requested.find(({ pathname }) => pathname === '/v1/establishments');
     expect(asked?.searchParams.get('q')).toBe('don pepe');
+    expect(screen.getByRole('link', { name: '¿No está la tienda? Sugiérela' })).toHaveAttribute(
+      'href',
+      '/proponer/tienda',
+    );
   });
 
   it.each([

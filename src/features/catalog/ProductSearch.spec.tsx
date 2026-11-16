@@ -78,6 +78,10 @@ describe('buscar productos', () => {
     expect(
       screen.getByText('Revisa la escritura o pide que lo agreguemos al catálogo.'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Propón este producto' })).toHaveAttribute(
+      'href',
+      '/proponer/producto?nombre=aguacate+hass',
+    );
   });
 
   it('si la búsqueda falla muestra el error y «Reintentar» vuelve a consultar', async () => {

@@ -351,4 +351,28 @@ describe('inicio', () => {
       await screen.findByRole('heading', { name: 'Todavía no has registrado precios' }),
     ).toBeInTheDocument();
   });
+
+  it.each([
+    ['/proponer/tienda', 'Sugerir una tienda'],
+    ['/proponer/producto?nombre=Panela', 'Proponer un producto'],
+  ])('un reportante abre %s', async (path, heading) => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/categories': { status: 200, body: { items: [] } },
+    });
+    window.history.pushState({}, '', path);
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
+  });
+
+  it('sin sesión, proponer pide entrar primero', async () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    window.history.pushState({}, '', '/proponer/tienda');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
+  });
 });

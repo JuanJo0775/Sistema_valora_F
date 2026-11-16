@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
@@ -67,6 +68,10 @@ export function MapPage() {
       {stores.length === LIMIT && (
         <p className="muted">{`Se muestran ${String(LIMIT)} tiendas. Usa tu ubicación para ver las más cercanas.`}</p>
       )}
+      {/* #12: una tienda que nadie ha registrado se sugiere; la revisa un moderador. */}
+      <Link to="/proponer/tienda" className="link-button">
+        Sugerir una tienda que no aparece
+      </Link>
       <ul className="store-cards">
         {stores.map((store) => (
           <StoreCard key={store.id} store={store} />

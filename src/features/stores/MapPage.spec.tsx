@@ -55,6 +55,10 @@ describe('mapa de tiendas', () => {
       'href',
       'https://www.google.com/maps/dir/?api=1&destination=4.5339%2C-75.6811',
     );
+    expect(screen.getByRole('link', { name: 'Sugerir una tienda que no aparece' })).toHaveAttribute(
+      'href',
+      '/proponer/tienda',
+    );
     const asked = api.requested.find(({ pathname }) => pathname === '/v1/establishments');
     expect(asked?.searchParams.get('municipality')).toBe('armenia');
     expect(asked?.searchParams.get('limit')).toBe('50');

@@ -18,6 +18,14 @@ export const MUNICIPALITIES: Record<Municipality, string> = {
   salento: 'Salento',
 };
 
+// Para elegir el municipio (comparación, mapa y propuestas de tienda).
+export const MUNICIPALITY_OPTIONS = (Object.keys(MUNICIPALITIES) as Municipality[]).map(
+  (value) => ({
+    value,
+    label: MUNICIPALITIES[value],
+  }),
+);
+
 const SORTS: Record<Criteria['sort'], string> = {
   unit_price: 'precio por unidad',
   recent: 'los más recientes',

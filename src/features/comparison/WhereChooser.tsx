@@ -1,15 +1,10 @@
 import { useMemo, useState } from 'react';
 import { askLocation, type Point } from '../../shared/location';
 import { SelectField } from '../../shared/ui/SelectField';
-import { type Municipality, MUNICIPALITIES } from './criteria';
+import { type Municipality, MUNICIPALITY_OPTIONS } from './criteria';
 import { readMunicipality, saveMunicipality } from './lastMunicipality';
 
 const RADII = [0.5, 1, 2, 3];
-
-const MUNICIPALITY_OPTIONS = (Object.keys(MUNICIPALITIES) as Municipality[]).map((value) => ({
-  value,
-  label: MUNICIPALITIES[value],
-}));
 
 // #15 y ADR-019: dónde buscar. Por defecto el municipio elegido la última vez (sin pedir permisos,
 // EC-08); con la ubicación del momento, a la redonda con un radio. Las dos cosas no se mezclan.
