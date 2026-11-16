@@ -406,4 +406,25 @@ describe('comparar precios', () => {
     await screen.findByRole('heading', { name: 'Tienda Don Pepe' });
     expect(screen.queryByRole('region', { name: 'Referencia mayorista' })).not.toBeInTheDocument();
   });
+
+  it('sin precios de tiendas igual muestra la referencia mayorista, con su periodo', async () => {
+    stubCompare({
+      status: 200,
+      body: {
+        ...comparison([]).body,
+        wholesaleReference: { ...wholesale, periodStart: '2026-10-30', periodEnd: '2026-11-05' },
+      },
+    });
+
+    renderCompare();
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Todavía nadie ha reportado este producto en Armenia',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Referencia mayorista' })).toHaveTextContent(
+      'del 30 de octubre al 5 de noviembre de 2026',
+    );
+  });
 });
