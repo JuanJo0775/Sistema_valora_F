@@ -124,6 +124,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/establishments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Buscar tiendas por nombre o municipio, sin ubicación (RF-005,
+         * @description Para elegir la tienda sin compartir la ubicación (EC-08), por ejemplo al registrar un precio (RF-006). Se envía al menos uno de q o municipality; sin ninguno responde 400 VALIDATION_ERROR («Envía q o municipality»), para no devolver todo el directorio. Con q, cada palabra debe aparecer en el nombre de la tienda, en cualquier orden y también como pedazo, sin distinguir tildes ni mayúsculas (como la búsqueda de productos). Ordenadas por nombre. Sin ubicación no hay distancia: los items no traen distanceM. Caché pública de 5 minutos (valor inicial calibrable, EC-04).
+         */
+        get: operations["searchEstablishments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/establishments/nearby": {
         parameters: {
             query?: never;
@@ -1144,6 +1164,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    searchEstablishments: {
+        parameters: {
+            query?: {
+                /** @description Parte del nombre de la tienda; cada palabra debe aparecer, sin distinguir tildes. */
+                q?: string;
+                /** @description Solo las tiendas de ese municipio del Quindío. */
+                municipality?: components["schemas"]["Municipality"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tiendas encontradas, ordenadas por nombre */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Establishment"][];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
         };
     };
     listNearbyEstablishments: {
