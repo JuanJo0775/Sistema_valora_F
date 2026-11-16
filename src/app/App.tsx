@@ -12,6 +12,8 @@ import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ComparePrices } from '../features/comparison/ComparePrices';
 import { MyReports } from '../features/contributions/MyReports';
 import { PriceHistory } from '../features/history/PriceHistory';
+import { ProposeProduct } from '../features/proposals/ProposeProduct';
+import { ProposeStore } from '../features/proposals/ProposeStore';
 import { MapPage } from '../features/stores/MapPage';
 import { StorePage } from '../features/stores/StorePage';
 import { ProductSearch } from '../features/catalog/ProductSearch';
@@ -55,6 +57,22 @@ export function App() {
                 <Route path="/productos/:productId/comparar" element={<ComparePrices />} />
                 <Route path="/productos/:productId/historial" element={<PriceHistory />} />
                 <Route path="/mapa" element={<MapPage />} />
+                <Route
+                  path="/proponer/producto"
+                  element={
+                    <RequireRole role="reportante">
+                      <ProposeProduct />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/proponer/tienda"
+                  element={
+                    <RequireRole role="reportante">
+                      <ProposeStore />
+                    </RequireRole>
+                  }
+                />
                 <Route path="/tiendas/:establishmentId" element={<StorePage />} />
                 <Route
                   path="/registrar"
