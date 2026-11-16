@@ -97,4 +97,16 @@ describe('buscar productos', () => {
       expect(api.requested).toHaveLength(2);
     });
   });
+
+  it('mientras busca dice «Buscando…»', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    renderSearch();
+
+    search('arroz');
+
+    expect(screen.getByRole('status')).toHaveTextContent('Buscando…');
+  });
 });
