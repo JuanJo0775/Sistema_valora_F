@@ -35,6 +35,8 @@ export function ReportPrice() {
   const [onSale, setOnSale] = useState(false);
   // EC-07: la clave nace con el reporte; un reintento del mismo reporte usa la misma.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
+  // Por defecto «ahora»: la hora en que se empezó el reporte, fija para que un reintento sea igual.
+  const [observedAt] = useState(() => new Date().toISOString());
   const [received, setReceived] = useState(false);
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
@@ -60,7 +62,7 @@ export function ReportPrice() {
           establishmentId: store.id,
           priceCop,
           priceType: onSale ? 'oferta' : 'normal',
-          observedAt: new Date().toISOString(),
+          observedAt,
         },
       }),
     )
