@@ -51,10 +51,17 @@ export function StorePicker({
   const findByName = () => {
     setProblem('');
     setError(null);
+    const wanted = name.trim();
+    // El contrato pide al menos 2 letras (minLength de q): se avisa sin llamar a la API.
+    if (wanted.length < 2) {
+      setProblem('Escribe al menos 2 letras del nombre de la tienda.');
+      return;
+    }
     setSearching(true);
-    call(api.GET('/establishments', { params: { query: { q: name.trim() } } }))
+    call(api.GET('/establishments', { params: { query: { q: wanted } } }))
       .then(({ items }) => {
         setStores(items);
+        if (items.length === 0) setProblem('No encontramos tiendas con ese nombre.');
       })
       .catch((failure: unknown) => {
         setError(failure);
