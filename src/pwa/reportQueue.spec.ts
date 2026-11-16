@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../shared/api';
 import { openReportQueue, type QueuedReport } from './reportQueue';
