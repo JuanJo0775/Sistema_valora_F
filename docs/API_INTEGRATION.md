@@ -43,10 +43,12 @@ Todo lo que llama al backend pasa por `src/shared/api` (`import { api, call, Api
 | --- | --- | --- |
 | `VALIDATION_ERROR` (400) | Datos inválidos | Muestra el mensaje junto al campo |
 | `UNAUTHORIZED` (401) | Sin sesión o sesión vencida | Lleva a iniciar sesión (#22) |
-| `FORBIDDEN`, `ACCOUNT_SUSPENDED` (403) | Sin permiso o cuenta suspendida | Explica por qué (#13) |
+| `FORBIDDEN`, `ACCOUNT_SUSPENDED` (403) | Sin permiso o cuenta suspendida | Explica por qué; al registrar, «Tu cuenta está suspendida…» con enlace a «Mis aportes» (#11, #13) |
 | `CSRF_TOKEN_INVALID` (403) | Token vencido | Reintentar: el cliente ya pidió uno nuevo |
 | `NOT_FOUND` (404) | No existe | Estado vacío |
-| `DUPLICATE_REPORT` y otros (409) | Conflicto | Mensaje del servidor (#11) |
-| Código de la regla (422) | Regla de negocio | Mensaje del servidor |
-| `TOO_MANY_REQUESTS` (429) | Límite | «Inténtalo en N segundos» con `retryAfterSeconds` |
+| `DUPLICATE_REPORT` (409) | Reporte repetido | «Podrás registrar otro precio desde las …» con `availableFrom` en hora de Colombia (#11) |
+| Otros 409 | Conflicto | Mensaje del servidor |
+| `INVALID_OBSERVATION_DATE` (422) | Hora de observación fuera de rango | Pide revisar «¿Cuándo lo viste?» (#11) |
+| Otro código de regla (422) | Regla de negocio | Mensaje del servidor |
+| `TOO_MANY_REQUESTS` (429) | Límite | Con `retryAfterSeconds`; al registrar, «Podrás registrar otro en N minutos» (#11) |
 | `NETWORK_ERROR` (0) | Sin red | «Sin conexión»; el registro va a la cola (#26) |
