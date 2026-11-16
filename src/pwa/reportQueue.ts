@@ -1,17 +1,45 @@
+import { type DBSchema, openDB } from 'idb';
 import type { components } from '../shared/api/schema';
 
+// ADR-010: los reportes se guardan en el teléfono ANTES de intentar enviarlos. Solo lo necesario
+// para reenviarlos y mostrarlos: nunca la ubicación de quien reporta ni datos de su cuenta (EC-08).
 export interface NewReport {
   idempotencyKey: string;
   body: components['schemas']['ReportCreate'];
+  // Nombres públicos del catálogo y del directorio, para mostrar el reporte sin conexión.
   label: { product: string; store: string };
 }
 
-export interface ReportQueue {
-  name: string;
-  add: (report: NewReport) => Promise<void>;
-  list: () => Promise<unknown[]>;
+export type QueueStatus = 'pendiente';
+
+export interface QueuedReport extends NewReport {
+  status: QueueStatus;
+  savedAt: string;
 }
 
-export function openReportQueue(name: string): Promise<ReportQueue> {
-  return Promise.resolve({ name, add: () => Promise.resolve(), list: () => Promise.resolve([]) });
+interface QueueDb extends DBSchema {
+  reports: { key: string; value: QueuedReport };
+}
+
+export interface ReportQueue {
+  add: (report: NewReport) => Promise<void>;
+  list: () => Promise<QueuedReport[]>;
+}
+
+export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
+  const db = await openDB<QueueDb>(name, 1, {
+    upgrade(database) {
+      database.createObjectStore('reports', { keyPath: 'idempotencyKey' });
+    },
+  });
+  return {
+    add: async (report) => {
+      await db.put('reports', {
+        ...report,
+        status: 'pendiente',
+        savedAt: new Date().toISOString(),
+      });
+    },
+    list: () => db.getAll('reports'),
+  };
 }
