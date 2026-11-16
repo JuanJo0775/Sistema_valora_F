@@ -9,4 +9,8 @@ describe('presentación como se lee en el empaque', () => {
   ] as const)('%o se escribe «%s»', (presentation, text) => {
     expect(formatPresentation(presentation)).toBe(text);
   });
+
+  it('un empaque de varias unidades dice cuántas trae: «6 × 330 ml»', () => {
+    expect(formatPresentation({ quantity: 330, unit: 'ml', packCount: 6 })).toBe('6 × 330 ml');
+  });
 });
