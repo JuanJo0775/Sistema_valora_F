@@ -79,7 +79,12 @@ function ReportForm({ productId }: { productId: string }) {
 
   useEffect(() => {
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
-      setProduct,
+      (found) => {
+        setProduct(found);
+        // Un toque menos (EC-01): si solo hay una presentación, es esa.
+        const [only, ...others] = found.presentations;
+        if (only && others.length === 0) setPresentationId(only.id);
+      },
     );
   }, [productId]);
 
