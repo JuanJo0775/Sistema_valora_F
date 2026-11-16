@@ -58,4 +58,16 @@ describe('crear cuenta', () => {
       acceptedPolicyVersion: '2026-11',
     });
   });
+
+  it('sin aceptar la política no crea la cuenta y dice por qué', () => {
+    const api = stubSignUp({ status: 201 });
+    renderSignUp();
+
+    fill({ accept: false });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Para crear la cuenta debes aceptar la política de tratamiento de datos.',
+    );
+    expect(api.calls.some(({ path }) => path === '/v1/auth/register')).toBe(false);
+  });
 });
