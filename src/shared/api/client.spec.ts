@@ -20,6 +20,17 @@ function fakeBackend(routes: Record<string, Reply>) {
   return { fetch, requests };
 }
 
+const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
+
+// Marcar un precio como dudoso: la operación con sesión que usan las pruebas de CSRF.
+const flagWith = (api: ReturnType<typeof createApiClient>) =>
+  call(
+    api.POST('/reports/{reportId}/flag', {
+      params: { path: { reportId } },
+      body: { reason: 'precio_falso' },
+    }),
+  );
+
 const rice = {
   id: '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d',
   name: 'Arroz blanco',
@@ -98,38 +109,25 @@ describe('cliente de la API', () => {
   });
 
   it('marcar un precio como dudoso envía el token CSRF de la sesión', async () => {
-    const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
     const backend = fakeBackend({
       'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
       [`POST /v1/reports/${reportId}/flag`]: { status: 202 },
     });
     const api = createApiClient({ fetch: backend.fetch });
 
-    await call(
-      api.POST('/reports/{reportId}/flag', {
-        params: { path: { reportId } },
-        body: { reason: 'precio_falso' },
-      }),
-    );
+    await flagWith(api);
 
     const flag = backend.requests.find((request) => request.method === 'POST');
     expect(flag?.headers.get('X-CSRF-Token')).toBe('token-1');
   });
 
   it('pide el token CSRF una sola vez y lo reutiliza en las siguientes operaciones', async () => {
-    const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
     const backend = fakeBackend({
       'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
       [`POST /v1/reports/${reportId}/flag`]: { status: 202 },
     });
     const api = createApiClient({ fetch: backend.fetch });
-    const flag = () =>
-      call(
-        api.POST('/reports/{reportId}/flag', {
-          params: { path: { reportId } },
-          body: { reason: 'precio_falso' },
-        }),
-      );
+    const flag = () => flagWith(api);
 
     await flag();
     await flag();
@@ -139,20 +137,13 @@ describe('cliente de la API', () => {
   });
 
   it('después de iniciar sesión pide un token CSRF nuevo', async () => {
-    const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
     const backend = fakeBackend({
       'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
       'POST /v1/auth/login': { status: 204 },
       [`POST /v1/reports/${reportId}/flag`]: { status: 202 },
     });
     const api = createApiClient({ fetch: backend.fetch });
-    const flag = () =>
-      call(
-        api.POST('/reports/{reportId}/flag', {
-          params: { path: { reportId } },
-          body: { reason: 'precio_falso' },
-        }),
-      );
+    const flag = () => flagWith(api);
 
     await flag();
     await call(
@@ -165,7 +156,6 @@ describe('cliente de la API', () => {
   });
 
   it('si el servidor rechaza el token CSRF, el siguiente intento pide uno nuevo', async () => {
-    const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
     const backend = fakeBackend({
       'GET /v1/auth/session': {
         status: 200,
@@ -177,13 +167,7 @@ describe('cliente de la API', () => {
       },
     });
     const api = createApiClient({ fetch: backend.fetch });
-    const flag = () =>
-      call(
-        api.POST('/reports/{reportId}/flag', {
-          params: { path: { reportId } },
-          body: { reason: 'precio_falso' },
-        }),
-      );
+    const flag = () => flagWith(api);
 
     await expect(flag()).rejects.toMatchObject({ status: 403, code: 'CSRF_TOKEN_INVALID' });
     await expect(flag()).rejects.toMatchObject({ code: 'CSRF_TOKEN_INVALID' });
@@ -193,7 +177,6 @@ describe('cliente de la API', () => {
   });
 
   it('sin sesión, una operación que la exige llega como 401 UNAUTHORIZED', async () => {
-    const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
     const backend = fakeBackend({
       'GET /v1/auth/session': {
         status: 401,
@@ -206,12 +189,7 @@ describe('cliente de la API', () => {
     });
     const api = createApiClient({ fetch: backend.fetch });
 
-    const request = call(
-      api.POST('/reports/{reportId}/flag', {
-        params: { path: { reportId } },
-        body: { reason: 'precio_falso' },
-      }),
-    );
+    const request = flagWith(api);
 
     await expect(request).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
     const flag = backend.requests.find((sent) => sent.method === 'POST');
