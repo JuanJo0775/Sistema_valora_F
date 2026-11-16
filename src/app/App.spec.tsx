@@ -178,5 +178,9 @@ describe('inicio', () => {
       'href',
       '/pendientes',
     );
+    fireEvent.click(screen.getByRole('link', { name: '1 reporte por enviar' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Reportes en este teléfono' }),
+    ).toBeInTheDocument();
   });
 });
