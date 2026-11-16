@@ -509,4 +509,13 @@ describe('registrar un precio', () => {
       '/mis-aportes',
     );
   });
+
+  it('si el servidor ya lo tenía (200, reintento con la misma clave) también dice «Recibido»', async () => {
+    stubApi({ ...reportRoutes, 'POST /v1/reports': { status: 200, body: receipt } });
+    renderReport();
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+  });
 });
