@@ -179,4 +179,13 @@ describe('cola de reportes sin conexión', () => {
     expect(saved.filter(({ status }) => status === 'sincronizado')).toHaveLength(50);
     expect(created.size).toBe(50);
   });
+
+  it('un reporte se puede descartar y sale de la lista', async () => {
+    const queue = await openReportQueue(freshName());
+    await queue.add(report());
+
+    await queue.discard(report().idempotencyKey);
+
+    expect(await queue.list()).toEqual([]);
+  });
 });

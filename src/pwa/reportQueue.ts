@@ -41,6 +41,7 @@ export interface SyncOutcome {
 export interface ReportQueue {
   add: (report: NewReport) => Promise<void>;
   list: () => Promise<QueuedReport[]>;
+  discard: (idempotencyKey: string) => Promise<void>;
   sync: (send: (report: QueuedReport) => Promise<unknown>) => Promise<SyncOutcome>;
 }
 
@@ -101,6 +102,7 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
       });
     },
     list: () => db.getAll('reports'),
+    discard: () => Promise.resolve(),
     sync: (send) => {
       running ??= syncOnce(send).finally(() => {
         running = null;
