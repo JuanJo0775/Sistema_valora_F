@@ -252,4 +252,20 @@ describe('registrar un precio', () => {
 
     expect(await screen.findByRole('button', { name: 'Enviando…' })).toBeDisabled();
   });
+
+  it('sin producto pregunta qué precio viste y cada resultado vuelve al registro', async () => {
+    stubApi({ 'GET /v1/products': { status: 200, body: { items: [rice] } } });
+    renderReport('/registrar');
+
+    expect(screen.getByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
+      target: { value: 'arroz' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+
+    expect(await screen.findByRole('link', { name: /Arroz blanco/ })).toHaveAttribute(
+      'href',
+      `/registrar?producto=${rice.id}`,
+    );
+  });
 });
