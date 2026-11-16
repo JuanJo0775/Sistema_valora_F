@@ -51,9 +51,13 @@ export function createApiClient(options: { fetch?: Fetch } = {}) {
       if (token) request.headers.set('X-CSRF-Token', token);
       return request;
     },
-    onResponse({ request, response }) {
-      // Iniciar o cerrar sesión cambia la sesión: el token anterior ya no sirve.
+    async onResponse({ request, response }) {
+      // Iniciar o cerrar sesión cambia la sesión: el token anterior ya no sirve. Tampoco sirve si
+      // el servidor lo rechaza; el siguiente intento pide uno nuevo.
       if (response.ok && SESSION_CHANGES.has(pathOf(request, baseUrl))) csrfToken = undefined;
+      if (response.status === 403 && (await errorCodeOf(response)) === 'CSRF_TOKEN_INVALID') {
+        csrfToken = undefined;
+      }
       return response;
     },
   });
@@ -62,6 +66,14 @@ export function createApiClient(options: { fetch?: Fetch } = {}) {
 
 const WITHOUT_SESSION = new Set(['/auth/login', '/auth/register']);
 const SESSION_CHANGES = new Set(['/auth/login', '/auth/logout']);
+
+async function errorCodeOf(response: Response): Promise<unknown> {
+  try {
+    return ((await response.clone().json()) as ErrorBody).code;
+  } catch {
+    return undefined;
+  }
+}
 
 function pathOf(request: Request, baseUrl: string): string {
   return request.url.slice(baseUrl.length).split('?')[0] ?? '';
