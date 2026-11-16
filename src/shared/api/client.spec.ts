@@ -96,4 +96,23 @@ describe('cliente de la API', () => {
       retryAfterSeconds: 120,
     });
   });
+
+  it('marcar un precio como dudoso envía el token CSRF de la sesión', async () => {
+    const reportId = '9a2e7c10-1b2d-4e3f-8a9b-0c1d2e3f4a5b';
+    const backend = fakeBackend({
+      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      [`POST /v1/reports/${reportId}/flag`]: { status: 202 },
+    });
+    const api = createApiClient({ fetch: backend.fetch });
+
+    await call(
+      api.POST('/reports/{reportId}/flag', {
+        params: { path: { reportId } },
+        body: { reason: 'precio_falso' },
+      }),
+    );
+
+    const flag = backend.requests.find((request) => request.method === 'POST');
+    expect(flag?.headers.get('X-CSRF-Token')).toBe('token-1');
+  });
 });
