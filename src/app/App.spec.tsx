@@ -47,11 +47,9 @@ describe('inicio', () => {
     render(<App />);
 
     const nav = within(screen.getByRole('navigation', { name: 'Principal' }));
-    for (const name of ['Inicio', 'Mapa', 'Registrar precio', 'Yo']) {
+    for (const name of ['Inicio', 'Mapa', 'Registrar precio', 'Canasta', 'Yo']) {
       expect(nav.getByRole('link', { name })).toBeInTheDocument();
     }
-    // La canasta (#31) no la pide ningún RF: vuelve si el equipo decide construirla.
-    expect(nav.queryByRole('link', { name: 'Canasta' })).not.toBeInTheDocument();
     expect(nav.getByRole('link', { name: 'Mapa' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
   });
@@ -215,5 +213,38 @@ describe('inicio', () => {
 
     expect(await screen.findByRole('link', { name: /Arroz blanco/ })).toBeInTheDocument();
     expect(window.location.pathname + window.location.search).toBe('/?q=arroz');
+  });
+
+  // #31: la canasta vuelve como lista de compras.
+  it('la pestaña Canasta dice cuántos productos faltan por comprar y lleva a la lista', async () => {
+    localStorage.setItem(
+      'valora:canasta',
+      JSON.stringify([
+        {
+          productId: rice.id,
+          productName: 'Arroz blanco',
+          presentationId: 'arroz-500g',
+          presentationLabel: '500 g',
+          quantity: 2,
+          bought: false,
+        },
+        {
+          productId: rice.id,
+          productName: 'Arroz blanco',
+          presentationId: 'arroz-1kg',
+          presentationLabel: '1 kg',
+          quantity: 1,
+          bought: true,
+        },
+      ]),
+    );
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+    render(<App />);
+    const nav = within(screen.getByRole('navigation', { name: 'Principal' }));
+
+    fireEvent.click(nav.getByRole('link', { name: 'Canasta, 1 por comprar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Mi canasta' })).toBeInTheDocument();
+    localStorage.clear();
   });
 });

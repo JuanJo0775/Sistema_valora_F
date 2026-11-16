@@ -197,6 +197,7 @@ public/                 # íconos de la PWA (logo naranja de «Identidad de marc
 src/
   app/                  # rutas y página de inicio
   features/auth/        # sesión: crear cuenta, entrar, salir y secciones por rol
+  features/basket/      # canasta: lista de compras y dónde sale más barata
   features/catalog/     # buscar productos y ver su detalle
   features/comparison/  # comparar precios entre tiendas con el criterio declarado
   features/reports/     # registrar un precio: producto, tienda cercana, precio y hora
@@ -206,7 +207,7 @@ src/
   test/                 # configuración de Vitest
 ```
 
-Cada carpeta aparece cuando tiene su primer archivo (YAGNI). La organización prevista es por funcionalidad: `src/features/<tema>` (catalog, comparison, reports, map, auth, moderation, commerce en el Corte 3; basket solo si el equipo decide la canasta, #31), `src/shared` (componentes y cliente de la API generado) y `src/pwa` (cola sin conexión). Las pruebas van junto al archivo: `*.spec.tsx`; las de extremo a extremo, en `e2e/` (#27).
+Cada carpeta aparece cuando tiene su primer archivo (YAGNI). La organización prevista es por funcionalidad: `src/features/<tema>` (catalog, comparison, reports, basket, map, auth, moderation, commerce en el Corte 3), `src/shared` (componentes y cliente de la API generado) y `src/pwa` (cola sin conexión). Las pruebas van junto al archivo: `*.spec.tsx`; las de extremo a extremo, en `e2e/` (#27).
 
 ## Responsabilidades
 

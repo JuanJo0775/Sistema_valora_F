@@ -38,7 +38,7 @@
   inset: auto 0 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   align-items: center;
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   background: var(--bg);
@@ -60,6 +60,26 @@
 
 .tab[aria-current='page'] {
   color: var(--ink);
+}
+
+.tab {
+  position: relative;
+}
+
+/* Cuántos productos faltan por comprar en la canasta. */
+.badge {
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 6px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
 }
 
 .tab[aria-current='page'] .ico {
@@ -145,6 +165,10 @@
 
   .tab[aria-current='page'] {
     background: var(--bg-2);
+  }
+
+  .badge {
+    position: static;
   }
 
   /* En escritorio «Registrar precio» se lee completo: botón naranja con texto, al final. */
