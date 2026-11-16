@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ProductImage } from './ProductImage';
 
@@ -41,5 +41,14 @@ describe('imagen del producto', () => {
     render(<ProductImage name="Arroz blanco" />);
 
     expect(screen.getByRole('img', { name: 'Arroz blanco (sin foto)' })).toBeInTheDocument();
+  });
+
+  it('si la foto no carga muestra la ilustración genérica', () => {
+    render(<ProductImage name="Arroz blanco" image={offPhoto} />);
+
+    fireEvent.error(screen.getByRole('img', { name: 'Arroz blanco' }));
+
+    expect(screen.getByRole('img', { name: 'Arroz blanco (sin foto)' })).toBeInTheDocument();
+    expect(screen.queryByText(/^Foto:/)).not.toBeInTheDocument();
   });
 });
