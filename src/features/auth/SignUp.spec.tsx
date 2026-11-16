@@ -70,4 +70,16 @@ describe('crear cuenta', () => {
     );
     expect(api.calls.some(({ path }) => path === '/v1/auth/register')).toBe(false);
   });
+
+  it('con una contraseña de menos de 10 caracteres lo dice sin llamar al servidor', () => {
+    const api = stubSignUp({ status: 201 });
+    renderSignUp();
+
+    fill({ password: 'corta' });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'La contraseña debe tener al menos 10 caracteres.',
+    );
+    expect(api.calls.some(({ path }) => path === '/v1/auth/register')).toBe(false);
+  });
 });
