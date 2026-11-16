@@ -8,8 +8,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     call(api.GET('/auth/session'))
-      .then(({ role }) => {
-        setSession({ status: 'active', role });
+      .then(({ role, suspendedUntil }) => {
+        setSession({ status: 'active', role, suspendedUntil });
       })
       .catch(() => {
         setSession({ status: 'anonymous' });

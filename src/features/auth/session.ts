@@ -6,7 +6,9 @@ export type Role = SessionBody['role'];
 
 // Lo que la app sabe de quien la usa. El csrfToken no vive aquí: lo guarda el cliente de la API.
 export type Session =
-  { status: 'loading' } | { status: 'anonymous' } | { status: 'active'; role: Role };
+  | { status: 'loading' }
+  | { status: 'anonymous' }
+  | { status: 'active'; role: Role; suspendedUntil?: string | undefined };
 
 export const SessionContext = createContext<Session>({ status: 'loading' });
 

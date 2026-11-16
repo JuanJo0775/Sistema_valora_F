@@ -2,10 +2,23 @@ import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { useSession } from './session';
 
+// Las fechas se leen en la hora de Colombia, sin importar la zona del teléfono.
+const DAY = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' });
+
 export function Profile() {
   const session = useSession();
   if (session.status === 'active') {
-    return <EmptyState title="Tu cuenta" text={`Entraste como ${session.role}.`} />;
+    return (
+      <>
+        {session.suspendedUntil && (
+          <p role="alert" className="banner warn">
+            Tu cuenta está suspendida hasta el {DAY.format(new Date(session.suspendedUntil))}.
+            Mientras tanto puedes ver el estado de tus aportes y apelar.
+          </p>
+        )}
+        <EmptyState title="Tu cuenta" text={`Entraste como ${session.role}.`} />
+      </>
+    );
   }
   return (
     <EmptyState
