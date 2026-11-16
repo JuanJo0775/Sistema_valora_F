@@ -4,6 +4,7 @@ import { api, call } from '../../shared/api';
 import type { paths } from '../../shared/api/schema';
 import { formatCop } from '../../shared/money';
 import { shortDay } from './days';
+import { HistoryChart } from './HistoryChart';
 import './history.css';
 
 export type History =
@@ -25,6 +26,12 @@ export function PriceHistory() {
   if (!series) return null;
   return (
     <section className="history">
+      <HistoryChart
+        points={series.points}
+        from={history?.from ?? ''}
+        to={history?.to ?? ''}
+        label={series.label}
+      />
       <table>
         <caption>{`Precio por día · ${series.label}`}</caption>
         <thead>
