@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
+import { ErrorState } from '../../shared/ui/ErrorState';
+import { Loading } from '../../shared/ui/Loading';
 
 export type Store = components['schemas']['Establishment'];
 
@@ -19,22 +21,35 @@ export function StorePicker({
 }) {
   const [stores, setStores] = useState<Store[]>([]);
   const [problem, setProblem] = useState('');
+  const [error, setError] = useState<unknown>(null);
+  const [searching, setSearching] = useState(false);
 
   const findNearby = () => {
     setProblem('');
+    setError(null);
+    setSearching(true);
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        void call(
+        call(
           api.GET('/establishments/nearby', {
             params: { query: { lat: coords.latitude, lng: coords.longitude } },
           }),
-        ).then(({ items }) => {
-          setStores(items);
-        });
+        )
+          .then(({ items }) => {
+            setStores(items);
+            if (items.length === 0) setProblem('No hay tiendas registradas cerca de ti.');
+          })
+          .catch((failure: unknown) => {
+            setError(failure);
+          })
+          .finally(() => {
+            setSearching(false);
+          });
       },
       // Sin ubicación todavía no hay otra forma de elegir la tienda (llega con B#116).
       () => {
         setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
+        setSearching(false);
       },
     );
   };
@@ -45,6 +60,8 @@ export function StorePicker({
       <button type="button" className="btn ghost" onClick={findNearby}>
         Usar mi ubicación
       </button>
+      {searching && <Loading text="Buscando tiendas…" />}
+      {error !== null && <ErrorState error={error} />}
       {problem && (
         <p role="alert" className="banner warn">
           {problem}
