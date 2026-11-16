@@ -55,4 +55,15 @@ describe('cliente de la API', () => {
       new ApiError({ status: 404, code: 'NOT_FOUND', message: 'No existe el producto.' }),
     );
   });
+
+  it('iniciar sesión responde 204 sin cuerpo y termina sin error', async () => {
+    const backend = fakeBackend({ 'POST /v1/auth/login': { status: 204 } });
+    const api = createApiClient({ fetch: backend.fetch });
+
+    const request = call(
+      api.POST('/auth/login', { body: { email: 'ana@correo.com', password: 'una-clave-larga' } }),
+    );
+
+    await expect(request).resolves.toBeUndefined();
+  });
 });
