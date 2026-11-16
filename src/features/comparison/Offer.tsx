@@ -5,6 +5,7 @@ import { formatDistance } from '../../shared/location';
 import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
 import { formatCop, formatUnitPrice } from '../../shared/money';
+import { FlagPrice } from '../contributions/FlagPrice';
 
 type Item = components['schemas']['ComparisonItem'];
 
@@ -43,6 +44,7 @@ export function Offer({ offer, size }: { offer: Item; size: string }) {
       >
         Cómo llegar
       </a>
+      <FlagPrice reportId={offer.reportId} storeName={offer.establishment.name} />
     </li>
   );
 }

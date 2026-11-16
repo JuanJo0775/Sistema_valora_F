@@ -292,4 +292,63 @@ describe('inicio', () => {
 
     expect(await screen.findByText('Todavía no hay precios en esta tienda.')).toBeInTheDocument();
   });
+
+  it('un reportante puede marcar como dudoso un precio de la comparación', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: {
+        status: 200,
+        body: {
+          productId: rice.id,
+          criteria: { sort: 'unit_price', municipality: 'armenia' },
+          results: [
+            {
+              establishment: {
+                id: '5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d',
+                name: 'Ara',
+                type: 'descuento',
+                lat: 4.5339,
+                lng: -75.6811,
+                municipality: 'armenia',
+              },
+              reportId: '7e6d5c4b-3a29-4180-9f7e-6d5c4b3a2918',
+              presentationId: rice.presentations[0]?.id,
+              priceCop: 2500,
+              unitPrice: { valueCop: 500, per: '100g' },
+              source: 'comunidad',
+              freshness: 'vigente',
+              reliability: 'alta',
+              confirmations: 1,
+              isCheapest: true,
+              observedAt: new Date().toISOString(),
+            },
+          ],
+          promotions: [],
+        },
+      },
+    });
+    window.history.pushState({}, '', `/productos/${rice.id}/comparar`);
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole('button', { name: '¿Este precio está mal?' }),
+    ).toBeInTheDocument();
+  });
+
+  it('desde Yo, «Mis aportes» lleva a la lista de aportes', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
+    });
+    window.history.pushState({}, '', '/yo');
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Mis aportes' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Todavía no has registrado precios' }),
+    ).toBeInTheDocument();
+  });
 });

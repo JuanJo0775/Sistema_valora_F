@@ -145,7 +145,8 @@ button {
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   min-height: var(--touch);
   padding: 0 14px;
   border: 1px solid var(--line-2);
@@ -271,4 +272,23 @@ button {
 .offer h3 {
   margin: 0;
   font-size: 1.05rem;
+}
+
+/* Una acción secundaria que se lee como enlace (por ejemplo, «¿Este precio está mal?»). */
+.link-button {
+  justify-self: start;
+  min-height: var(--touch);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.field textarea {
+  padding: 10px 14px;
+  resize: vertical;
 }
