@@ -13,4 +13,8 @@ describe('presentación como se lee en el empaque', () => {
   it('un empaque de varias unidades dice cuántas trae: «6 × 330 ml»', () => {
     expect(formatPresentation({ quantity: 330, unit: 'ml', packCount: 6 })).toBe('6 × 330 ml');
   });
+
+  it('los decimales van con coma, como se escriben en Colombia: «1,5 l»', () => {
+    expect(formatPresentation({ quantity: 1.5, unit: 'l', packCount: 1 })).toBe('1,5 l');
+  });
 });
