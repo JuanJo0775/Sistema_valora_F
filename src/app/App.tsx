@@ -54,7 +54,7 @@ export function App() {
               <Route
                 path="/registrar"
                 element={
-                  <RequireRole role="reportante">
+                  <RequireRole role="reportante" allowOffline>
                     <ReportPrice />
                   </RequireRole>
                 }
