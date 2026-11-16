@@ -106,4 +106,22 @@ describe('comparar precios', () => {
     expect(other).not.toHaveTextContent('Más barato');
     expect(other).toHaveTextContent('Confiabilidad media');
   });
+
+  it.each([
+    [
+      { sort: 'unit_price', municipality: 'armenia' },
+      'Ordenado por precio por unidad · en Armenia',
+    ],
+    [{ sort: 'recent', municipality: 'calarca' }, 'Ordenado por los más recientes · en Calarcá'],
+    [
+      { sort: 'distance', municipality: undefined, radiusKm: 2 },
+      'Ordenado por distancia · a menos de 2 km de ti',
+    ],
+  ])('dice el criterio que declaró la API (%o)', async (criteria, text) => {
+    stubCompare(comparison([result()], criteria));
+
+    renderCompare();
+
+    expect(await screen.findByText(text)).toBeInTheDocument();
+  });
 });
