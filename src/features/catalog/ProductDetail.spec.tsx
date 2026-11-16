@@ -77,4 +77,23 @@ describe('detalle del producto', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
   });
+
+  it('desde el detalle se puede comparar precios, ver el historial y registrar un precio', async () => {
+    stubApi({ [`GET /v1/products/${rice.id}`]: { status: 200, body: rice } });
+
+    renderDetail(rice.id);
+
+    expect(await screen.findByRole('link', { name: 'Comparar precios' })).toHaveAttribute(
+      'href',
+      `/productos/${rice.id}/comparar`,
+    );
+    expect(screen.getByRole('link', { name: 'Historial' })).toHaveAttribute(
+      'href',
+      `/productos/${rice.id}/historial`,
+    );
+    expect(screen.getByRole('link', { name: 'Registrar un precio' })).toHaveAttribute(
+      'href',
+      `/registrar?producto=${rice.id}`,
+    );
+  });
 });
