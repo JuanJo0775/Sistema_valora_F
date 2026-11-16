@@ -1,0 +1,93 @@
+/* Tokens de color y tipografía en un solo lugar (regla del frontend). Paleta «Actual» del prototipo
+   final de MC-E4: superficies blancas o negras; el naranja solo para la acción principal y lo
+   seleccionado. */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --bg-2: #f6f5f3;
+  --bg-3: #efedea;
+  --line: #ece9e5;
+  --line-2: #dad6d0;
+  --ink: #17140f;
+  --ink-2: #5e5850;
+  --ink-3: #8c857c;
+  --accent: #f06a1a;
+  --accent-ink: #b84b0b;
+  --accent-soft: #fef1e8;
+  --accent-line: #f8cfb2;
+  --on-accent: #1a0e04;
+  --ok: #1d7a45;
+  --ok-soft: #e7f4ec;
+  --warn: #946000;
+  --warn-soft: #fff4da;
+  --bad: #b8382a;
+  --bad-soft: #fceae7;
+  --info: #2c5fb0;
+  --info-soft: #e9f0fb;
+  --promo: #7b3a8c;
+  --promo-soft: #f5eaf8;
+  --shadow: 0 1px 2px rgb(23 20 15 / 5%), 0 8px 24px rgb(23 20 15 / 6%);
+  --f-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --f-body: 'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r-s: 10px;
+  --r-m: 14px;
+  --r-l: 18px;
+  /* WCAG 2.2: blancos táctiles de 44 px o más. */
+  --touch: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d0e;
+    --bg-2: #151517;
+    --bg-3: #1d1d20;
+    --line: #242427;
+    --line-2: #36363a;
+    --ink: #f4f2ef;
+    --ink-2: #b5afa8;
+    --ink-3: #86807a;
+    --accent: #ff7a2e;
+    --accent-ink: #ff9152;
+    --accent-soft: #2a190e;
+    --accent-line: #5a3418;
+    --on-accent: #1a0b02;
+    --ok: #5cc98b;
+    --ok-soft: #10261a;
+    --warn: #f0b54a;
+    --warn-soft: #2e230c;
+    --bad: #ff8070;
+    --bad-soft: #341511;
+    --info: #86aef5;
+    --info-soft: #14203a;
+    --promo: #dda8ec;
+    --promo-soft: #2a1531;
+    --shadow: 0 1px 2px rgb(0 0 0 / 50%);
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0d0d0e;
+  --bg-2: #151517;
+  --bg-3: #1d1d20;
+  --line: #242427;
+  --line-2: #36363a;
+  --ink: #f4f2ef;
+  --ink-2: #b5afa8;
+  --ink-3: #86807a;
+  --accent: #ff7a2e;
+  --accent-ink: #ff9152;
+  --accent-soft: #2a190e;
+  --accent-line: #5a3418;
+  --on-accent: #1a0b02;
+  --ok: #5cc98b;
+  --ok-soft: #10261a;
+  --warn: #f0b54a;
+  --warn-soft: #2e230c;
+  --bad: #ff8070;
+  --bad-soft: #341511;
+  --info: #86aef5;
+  --info-soft: #14203a;
+  --promo: #dda8ec;
+  --promo-soft: #2a1531;
+  --shadow: 0 1px 2px rgb(0 0 0 / 50%);
+}

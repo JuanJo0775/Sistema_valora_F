@@ -23,6 +23,8 @@
     "api:types": "openapi-typescript ../Sistema_valora_B/docs/openapi.yaml -o src/shared/api/schema.d.ts"
   },
   "dependencies": {
+    "@fontsource/figtree": "^5.3.0",
+    "@fontsource/outfit": "^5.3.0",
     "openapi-fetch": "^0.17.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
