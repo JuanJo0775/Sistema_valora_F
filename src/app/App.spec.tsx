@@ -80,4 +80,19 @@ describe('inicio', () => {
 
     expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
   });
+
+  it('desde Yo, «Crear cuenta» lleva al formulario de registro', async () => {
+    stubApi({
+      'GET /v1/auth/session': {
+        status: 401,
+        body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
+      },
+    });
+    window.history.pushState({}, '', '/yo');
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Crear cuenta' }));
+
+    expect(screen.getByRole('heading', { name: 'Crear cuenta' })).toBeInTheDocument();
+  });
 });
