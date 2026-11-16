@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -14,6 +14,37 @@ const rice = {
     { id: '0b3f8d21-2c3e-4f40-9b0c-1d2e3f4a5b6c', quantity: 1, unit: 'kg', packCount: 1 },
   ],
 };
+
+const offer = (name: string, priceCop: number, isCheapest = false) => ({
+  establishment: {
+    id: crypto.randomUUID(),
+    name,
+    type: 'barrio',
+    lat: 4.5339,
+    lng: -75.6811,
+    municipality: 'armenia',
+  },
+  reportId: crypto.randomUUID(),
+  presentationId: rice.presentations[0]?.id,
+  priceCop,
+  unitPrice: { valueCop: priceCop / 5, per: '100g' },
+  source: 'comunidad',
+  freshness: 'vigente',
+  reliability: 'alta',
+  confirmations: 1,
+  isCheapest,
+  observedAt: new Date().toISOString(),
+});
+
+const comparisonOf = (results: unknown[]) => ({
+  status: 200,
+  body: {
+    productId: rice.id,
+    criteria: { sort: 'unit_price', municipality: 'armenia' },
+    results,
+    promotions: [],
+  },
+});
 
 const renderDetail = (productId: string) =>
   render(
@@ -100,5 +131,32 @@ describe('detalle del producto', () => {
     renderDetail(rice.id);
 
     expect(await screen.findByRole('img', { name: 'Arroz blanco (sin foto)' })).toBeInTheDocument();
+  });
+
+  it('muestra los 3 precios más baratos y lleva a ver todas las tiendas', async () => {
+    const api = stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([
+        offer('Ara', 2000, true),
+        offer('D1', 2100),
+        offer('Tienda Don Pepe', 2300),
+        offer('Éxito', 2600),
+      ]),
+    });
+
+    renderDetail(rice.id);
+
+    const cheapest = await screen.findByRole('list', { name: 'Más baratos en Armenia' });
+    const names = within(cheapest)
+      .getAllByRole('heading')
+      .map(({ textContent }) => textContent);
+    expect(names).toEqual(['Ara', 'D1', 'Tienda Don Pepe']);
+    expect(cheapest).toHaveTextContent('Más barato');
+    expect(screen.getByRole('link', { name: 'Ver todas las tiendas' })).toHaveAttribute(
+      'href',
+      `/productos/${rice.id}/comparar`,
+    );
+    const asked = api.requested.find(({ pathname }) => pathname.endsWith('/comparison'));
+    expect(asked?.searchParams.get('onlyCurrent')).toBe('true');
   });
 });
