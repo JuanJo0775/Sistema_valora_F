@@ -210,20 +210,24 @@ function Results({
   sizeOf: (presentationId: string) => string;
   register: string;
 }) {
-  const { criteria, results } = comparison;
+  const { criteria, results, wholesaleReference } = comparison;
+  const reference = wholesaleReference && <WholesaleReference reference={wholesaleReference} />;
   if (results.length === 0) {
     const where = criteria.municipality
       ? `en ${MUNICIPALITIES[criteria.municipality]}`
       : 'cerca de ti';
     return (
-      <EmptyState
-        title={`Todavía nadie ha reportado este producto ${where}`}
-        action={
-          <Link to={register} className="btn">
-            Registrar un precio
-          </Link>
-        }
-      />
+      <>
+        <EmptyState
+          title={`Todavía nadie ha reportado este producto ${where}`}
+          action={
+            <Link to={register} className="btn">
+              Registrar un precio
+            </Link>
+          }
+        />
+        {reference}
+      </>
     );
   }
   const competing = results.filter(competes);
@@ -247,9 +251,7 @@ function Results({
           </ul>
         </>
       )}
-      {comparison.wholesaleReference && (
-        <WholesaleReference reference={comparison.wholesaleReference} />
-      )}
+      {reference}
     </>
   );
 }
