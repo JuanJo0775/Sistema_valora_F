@@ -16,7 +16,12 @@ type Outcome = { key: string; products: Product[] } | { key: string; error: unkn
 const BARCODE = /^\d{8,14}$/;
 
 // El texto buscado vive en la dirección (?q=): «atrás» vuelve a los mismos resultados.
-export function ProductSearch() {
+// Por defecto cada resultado lleva a su detalle; el registro de precios lo trae de vuelta a sí mismo.
+export function ProductSearch({
+  linkTo = (productId) => `/productos/${productId}`,
+}: {
+  linkTo?: (productId: string) => string;
+}) {
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
   const [text, setText] = useState(query);
@@ -93,7 +98,7 @@ export function ProductSearch() {
         <ul className="results">
           {result.products.map((product) => (
             <li key={product.id}>
-              <Link to={`/productos/${product.id}`} className="result">
+              <Link to={linkTo(product.id)} className="result">
                 <strong>{product.name}</strong>
                 <span className="muted">
                   {[product.brand, product.category.name].filter(Boolean).join(' · ')}

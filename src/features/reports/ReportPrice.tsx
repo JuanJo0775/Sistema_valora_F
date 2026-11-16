@@ -5,6 +5,7 @@ import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { formatPresentation } from '../catalog/presentation';
+import { ProductSearch } from '../catalog/ProductSearch';
 import { type Store, StorePicker } from './StorePicker';
 import './reports.css';
 
@@ -44,6 +45,7 @@ export function ReportPrice() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
+    if (!productId) return;
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
       setProduct,
     );
@@ -80,6 +82,14 @@ export function ReportPrice() {
 
   if (received) {
     return <EmptyState title="Recibido" text="Gracias: tu precio ayuda a otros a comparar." />;
+  }
+  if (!productId) {
+    return (
+      <>
+        <h1>¿Qué precio viste?</h1>
+        <ProductSearch linkTo={(id) => `/registrar?producto=${id}`} />
+      </>
+    );
   }
   if (!product) return null;
   return (
