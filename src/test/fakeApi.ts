@@ -6,18 +6,23 @@ export interface FakeReply {
 }
 
 // Backend falso para las pantallas: reemplaza fetch (la frontera con la API) y responde según
-// «MÉTODO /v1/ruta». Guarda las URL pedidas (requested) y cada llamada con su método y su cuerpo
+// «MÉTODO /v1/ruta». Guarda las URL pedidas (requested) y cada llamada con su método, su cuerpo y sus cabeceras
 // (calls) para revisar qué se envió. Con una lista de respuestas, cada llamada usa la siguiente y la
 // última se repite (por ejemplo, sin sesión antes de entrar y con sesión después).
 export function stubApi(routes: Record<string, FakeReply | FakeReply[]>) {
   const requested: URL[] = [];
-  const calls: { method: string; path: string; body: string }[] = [];
+  const calls: { method: string; path: string; body: string; headers: Headers }[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: Request) => {
       const url = new URL(input.url);
       requested.push(url);
-      calls.push({ method: input.method, path: url.pathname, body: await input.clone().text() });
+      calls.push({
+        method: input.method,
+        path: url.pathname,
+        body: await input.clone().text(),
+        headers: input.headers,
+      });
       const reply = nextReply(routes[`${input.method} ${url.pathname}`]);
       return new Response(reply.body === undefined ? null : JSON.stringify(reply.body), {
         status: reply.status,
