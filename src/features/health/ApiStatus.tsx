@@ -6,9 +6,13 @@ export function ApiStatus() {
   const [status, setStatus] = useState<Status>('checking');
 
   useEffect(() => {
-    void fetch('/v1/health').then((response) => {
-      setStatus(response.ok ? 'connected' : 'disconnected');
-    });
+    fetch('/v1/health')
+      .then((response) => {
+        setStatus(response.ok ? 'connected' : 'disconnected');
+      })
+      .catch(() => {
+        setStatus('disconnected');
+      });
   }, []);
 
   if (status === 'checking') return null;
