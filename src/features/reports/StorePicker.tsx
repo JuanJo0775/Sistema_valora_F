@@ -50,7 +50,8 @@ export function StorePicker({
           {problem}
         </p>
       )}
-      {stores.map((store) => (
+      {/* La tienda ya elegida (la última usada) aparece aunque no se haya pedido la ubicación. */}
+      {withChosen(stores, value).map((store) => (
         <label key={store.id} className="choice store">
           <input
             type="radio"
@@ -70,3 +71,6 @@ export function StorePicker({
     </fieldset>
   );
 }
+
+const withChosen = (stores: Store[], chosen: Store | null) =>
+  chosen && !stores.some(({ id }) => id === chosen.id) ? [chosen, ...stores] : stores;

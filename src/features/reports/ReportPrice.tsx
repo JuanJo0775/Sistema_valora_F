@@ -1,11 +1,12 @@
 import { type SyntheticEvent, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { formatPresentation } from '../catalog/presentation';
 import { ProductSearch } from '../catalog/ProductSearch';
+import { readLastStore, saveLastStore } from './lastStore';
 import { type Store, StorePicker } from './StorePicker';
 import './reports.css';
 
@@ -44,7 +45,7 @@ export function ReportPrice() {
 function ReportForm({ productId }: { productId: string }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [presentationId, setPresentationId] = useState('');
-  const [store, setStore] = useState<Store | null>(null);
+  const [store, setStore] = useState<Store | null>(readLastStore);
   const [price, setPrice] = useState('');
   const [onSale, setOnSale] = useState(false);
   // EC-07: la clave nace con el reporte y un reintento del mismo reporte usa la misma. Si el reporte
@@ -83,6 +84,7 @@ function ReportForm({ productId }: { productId: string }) {
     setSending(true);
     call(api.POST('/reports', { params: { header: { 'Idempotency-Key': key } }, body: report }))
       .then(() => {
+        saveLastStore(store);
         setReceived(true);
       })
       // Los mensajes propios de cada respuesta (duplicado, ráfaga, fecha) llegan con la #11.
@@ -93,7 +95,17 @@ function ReportForm({ productId }: { productId: string }) {
   };
 
   if (received) {
-    return <EmptyState title="Recibido" text="Gracias: tu precio ayuda a otros a comparar." />;
+    return (
+      <EmptyState
+        title="Recibido"
+        text="Gracias: tu precio ayuda a otros a comparar."
+        action={
+          <Link to="/registrar" className="btn">
+            Registrar otro en esta tienda
+          </Link>
+        }
+      />
+    );
   }
   if (!product) return null;
   return (
