@@ -16,4 +16,12 @@ describe('etiqueta de vigencia', () => {
 
     expect(screen.getByText(text)).toBeInTheDocument();
   });
+
+  it('un precio por confirmar dice cuántos días tiene', () => {
+    render(
+      <FreshnessBadge freshness="por_confirmar" observedAt="2026-11-05T15:00:00Z" now={now} />,
+    );
+
+    expect(screen.getByText('Por confirmar · 10 días')).toBeInTheDocument();
+  });
 });
