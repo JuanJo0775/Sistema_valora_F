@@ -16,9 +16,16 @@ export function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accepted, setAccepted] = useState(false);
+  const [problem, setProblem] = useState('');
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
+    // Ley 1581: sin consentimiento no se crea la cuenta (el servidor también lo exige).
+    if (!accepted) {
+      setProblem('Para crear la cuenta debes aceptar la política de tratamiento de datos.');
+      return;
+    }
+    setProblem('');
     void call(
       api.POST('/auth/register', {
         body: { email, password, acceptedPolicyVersion: POLICY_VERSION },
@@ -33,6 +40,11 @@ export function SignUp() {
   return (
     <form className="form" onSubmit={submit}>
       <h1>Crear cuenta</h1>
+      {problem && (
+        <p role="alert" className="banner warn">
+          {problem}
+        </p>
+      )}
       <label className="field">
         Correo
         <input
