@@ -55,6 +55,16 @@ const stubCompare = (reply: FakeReply | FakeReply[]) =>
     [`GET /v1/products/${rice.id}/comparison`]: reply,
   });
 
+// El teléfono responde la ubicación al instante.
+const stubLocation = () => {
+  const geolocation = {
+    getCurrentPosition: (ok: PositionCallback) => {
+      ok({ coords: { latitude: 4.53, longitude: -75.68 } } as GeolocationPosition);
+    },
+  };
+  vi.stubGlobal('navigator', Object.assign(Object.create(navigator) as Navigator, { geolocation }));
+};
+
 const renderCompare = () =>
   render(
     <MemoryRouter initialEntries={[`/productos/${rice.id}/comparar`]}>
@@ -138,5 +148,35 @@ describe('comparar precios', () => {
     const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison'));
     expect(asked.at(-1)?.searchParams.get('sort')).toBe('recent');
     expect(screen.getByRole('radio', { name: 'Distancia' })).toBeDisabled();
+  });
+
+  it('«Usar mi ubicación» compara cerca de ti, dice la distancia y permite ordenar por ella', async () => {
+    const api = stubCompare([
+      comparison([result()]),
+      comparison(
+        [
+          result({
+            establishment: {
+              ...store('5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d', 'Tienda Don Pepe'),
+              distanceM: 350,
+            },
+          }),
+        ],
+        { municipality: undefined, radiusKm: 2 },
+      ),
+    ]);
+    stubLocation();
+    renderCompare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+
+    expect(
+      await screen.findByText('Ordenado por precio por unidad · a menos de 2 km de ti'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('listitem')).toHaveTextContent('350 m');
+    expect(screen.getByRole('radio', { name: 'Distancia' })).toBeEnabled();
+    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    expect(asked?.searchParams.get('lat')).toBe('4.53');
+    expect(asked?.searchParams.has('municipality')).toBe(false);
   });
 });
