@@ -82,4 +82,18 @@ describe('crear cuenta', () => {
     );
     expect(api.calls.some(({ path }) => path === '/v1/auth/register')).toBe(false);
   });
+
+  it('si el servidor rechaza el registro muestra su mensaje', async () => {
+    stubSignUp({
+      status: 429,
+      body: { code: 'TOO_MANY_REQUESTS', message: 'Demasiados intentos. Espera unos minutos.' },
+    });
+    renderSignUp();
+
+    fill();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Demasiados intentos. Espera unos minutos.',
+    );
+  });
 });
