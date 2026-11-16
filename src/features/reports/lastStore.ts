@@ -15,7 +15,8 @@ export function readLastStore(): Store | null {
 
 export function saveLastStore(store: Store) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(store));
+    // La distancia era desde donde estaba esa vez: no sirve para el próximo reporte.
+    localStorage.setItem(KEY, JSON.stringify({ ...store, distanceM: undefined }));
   } catch {
     // Sin almacenamiento, el siguiente reporte vuelve a pedir la tienda.
   }
