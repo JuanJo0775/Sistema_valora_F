@@ -6,6 +6,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
+import { CheapestOffers } from '../comparison/CheapestOffers';
 import { ProductImage } from './ProductImage';
 import './catalog.css';
 
@@ -84,6 +85,7 @@ export function ProductDetail() {
           Registrar un precio
         </Link>
       </div>
+      <CheapestOffers product={product} />
     </article>
   );
 }
