@@ -30,4 +30,15 @@ describe('estado de la API', () => {
 
     expect(await screen.findByText('Sin conexión con la API')).toBeInTheDocument();
   });
+
+  it('dice «Sin conexión con la API» cuando no hay red', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+
+    render(<ApiStatus />);
+
+    expect(await screen.findByText('Sin conexión con la API')).toBeInTheDocument();
+  });
 });
