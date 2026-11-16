@@ -130,4 +130,14 @@ describe('crear cuenta', () => {
 
     expect(screen.getByRole('button', { name: 'Creando cuenta…' })).toBeDisabled();
   });
+
+  it('lleva a iniciar sesión sin perder a dónde volver', () => {
+    stubApi({ 'GET /v1/auth/session': unauthorized });
+    renderSignUp();
+
+    expect(screen.getByRole('link', { name: 'Inicia sesión' })).toHaveAttribute(
+      'href',
+      '/entrar?volver=%2Fyo',
+    );
+  });
 });

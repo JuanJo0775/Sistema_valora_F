@@ -93,4 +93,14 @@ describe('iniciar sesión', () => {
 
     expect(screen.getByRole('button', { name: 'Entrando…' })).toBeDisabled();
   });
+
+  it('lleva a crear cuenta sin perder a dónde volver', async () => {
+    stubApi({ 'GET /v1/auth/session': unauthorized });
+    renderSignIn('/entrar?volver=/yo');
+
+    expect(await screen.findByRole('link', { name: 'Crea una cuenta' })).toHaveAttribute(
+      'href',
+      '/crear-cuenta?volver=%2Fyo',
+    );
+  });
 });
