@@ -15,6 +15,10 @@ type Product = components['schemas']['Product'];
 // En Colombia los miles se separan con punto: «2.500» son 2500 pesos (sin centavos).
 const toPesos = (text: string) => Number(text.replace(/[.\s$]/g, ''));
 
+// El campo datetime-local escribe la hora del teléfono sin zona: «2026-11-16T09:30».
+const toLocalInput = (date: Date) =>
+  new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+
 // Lo que exige el contrato (ReportCreate), dicho antes de enviar: el servidor vuelve a validarlo.
 function problemOf(report: { presentationId: string; store: Store | null; priceCop: number }) {
   if (!report.presentationId) return 'Elige la presentación.';
@@ -52,7 +56,9 @@ function ReportForm({ productId }: { productId: string }) {
   // cambia después de enviarlo, es otro: el servidor responde 409 a una clave con otro cuerpo.
   const [attempt, setAttempt] = useState(() => ({ key: crypto.randomUUID(), body: '' }));
   // Por defecto «ahora»: la hora en que se empezó el reporte, fija para que un reintento sea igual.
-  const [observedAt] = useState(() => new Date().toISOString());
+  const [startedAt] = useState(() => new Date());
+  // Si lo vio antes, la hora que escribe en el campo (en la hora del teléfono).
+  const [seenAt, setSeenAt] = useState<string | null>(null);
   const [received, setReceived] = useState(false);
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
@@ -76,7 +82,7 @@ function ReportForm({ productId }: { productId: string }) {
       establishmentId: store.id,
       priceCop,
       priceType: onSale ? ('oferta' as const) : ('normal' as const),
-      observedAt,
+      observedAt: (seenAt ? new Date(seenAt) : startedAt).toISOString(),
     };
     const body = JSON.stringify(report);
     const key = attempt.body === '' || attempt.body === body ? attempt.key : crypto.randomUUID();
@@ -140,6 +146,28 @@ function ReportForm({ productId }: { productId: string }) {
           }}
         />
       </label>
+      {seenAt === null ? (
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => {
+            setSeenAt(toLocalInput(startedAt));
+          }}
+        >
+          Lo vi antes
+        </button>
+      ) : (
+        <label className="field">
+          ¿Cuándo lo viste?
+          <input
+            type="datetime-local"
+            value={seenAt}
+            onChange={(event) => {
+              setSeenAt(event.target.value);
+            }}
+          />
+        </label>
+      )}
       <label className="check">
         <input
           type="checkbox"
