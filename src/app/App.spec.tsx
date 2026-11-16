@@ -95,4 +95,32 @@ describe('inicio', () => {
 
     expect(screen.getByRole('heading', { name: 'Crear cuenta' })).toBeInTheDocument();
   });
+
+  it('«Registrar precio» sin sesión pide entrar', async () => {
+    stubApi({
+      'GET /v1/auth/session': {
+        status: 401,
+        body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
+      },
+    });
+    window.history.pushState({}, '', '/registrar');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
+    expect(window.location.search).toBe('?volver=%2Fregistrar');
+  });
+
+  it('la moderación es solo para moderadores', async () => {
+    stubApi({
+      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+    });
+    window.history.pushState({}, '', '/moderacion');
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Esta sección es para cuentas de moderador' }),
+    ).toBeInTheDocument();
+  });
 });
