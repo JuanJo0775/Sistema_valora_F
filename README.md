@@ -200,6 +200,7 @@ src/
   features/catalog/     # buscar productos y ver su detalle
   features/comparison/  # comparar precios entre tiendas con el criterio declarado
   features/reports/     # registrar un precio: producto, tienda cercana, precio y hora
+  pwa/                  # cola sin conexión (IndexedDB), reportes pendientes y aviso de versión nueva
   shared/api/           # cliente de la API con los tipos del contrato
   shared/ui/            # colores, fuentes, etiquetas y estados comunes (prototipo de MC-E4)
   test/                 # configuración de Vitest
