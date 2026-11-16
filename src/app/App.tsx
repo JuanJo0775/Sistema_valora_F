@@ -6,6 +6,7 @@ import { SignIn } from '../features/auth/SignIn';
 import { SignUp } from '../features/auth/SignUp';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ProductSearch } from '../features/catalog/ProductSearch';
+import { ReportPrice } from '../features/reports/ReportPrice';
 import { EmptyState } from '../shared/ui/EmptyState';
 import { Layout } from './Layout';
 
@@ -53,7 +54,7 @@ export function App() {
               path="/registrar"
               element={
                 <RequireRole role="reportante">
-                  <Soon title="Registrar precio" issue={25} />
+                  <ReportPrice />
                 </RequireRole>
               }
             />
