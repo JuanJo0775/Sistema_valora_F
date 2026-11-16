@@ -287,4 +287,23 @@ describe('comparar precios', () => {
 
     expect(await screen.findByRole('heading', { name: 'Tienda Don Pepe' })).toBeInTheDocument();
   });
+
+  // #15: comparar en cualquier municipio del Quindío, sin pedir la ubicación (EC-08).
+  it('se elige el municipio y la comparación se hace allí', async () => {
+    const api = stubCompare([
+      comparison([result()]),
+      comparison([result()], { municipality: 'calarca' }),
+    ]);
+    renderCompare();
+    const where = await screen.findByRole('combobox', { name: 'Municipio' });
+    expect(within(where).getAllByRole('option')).toHaveLength(12);
+
+    fireEvent.change(where, { target: { value: 'calarca' } });
+
+    expect(
+      await screen.findByText('Ordenado por precio por unidad · en Calarcá'),
+    ).toBeInTheDocument();
+    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    expect(asked?.searchParams.get('municipality')).toBe('calarca');
+  });
 });
