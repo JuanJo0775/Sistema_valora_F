@@ -117,4 +117,23 @@ describe('cola de reportes sin conexión', () => {
     const statuses = (await queue.list()).map(({ status }) => status).sort();
     expect(statuses).toEqual(['requiere_atencion', 'sincronizado']);
   });
+
+  it.each([
+    [401, 'UNAUTHORIZED'],
+    [403, 'ACCOUNT_SUSPENDED'],
+  ])(
+    'con %i (%s) espera la sesión: sigue pendiente y avisa que hay que entrar',
+    async (status, code) => {
+      const queue = await openReportQueue(freshName());
+      await queue.add(report('11111111-1111-4111-8111-111111111111'));
+      await queue.add(report('22222222-2222-4222-8222-222222222222'));
+      const send = answers(new ApiError({ status, code, message: 'Sin sesión.' }));
+
+      const outcome = await queue.sync(send);
+
+      expect(outcome).toEqual({ needsSession: true });
+      expect(send).toHaveBeenCalledTimes(1);
+      expect((await queue.list()).every(({ status: state }) => state === 'pendiente')).toBe(true);
+    },
+  );
 });

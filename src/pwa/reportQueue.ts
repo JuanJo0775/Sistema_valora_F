@@ -34,10 +34,14 @@ interface QueueDb extends DBSchema {
   reports: { key: string; value: QueuedReport };
 }
 
+export interface SyncOutcome {
+  needsSession: boolean;
+}
+
 export interface ReportQueue {
   add: (report: NewReport) => Promise<void>;
   list: () => Promise<QueuedReport[]>;
-  sync: (send: (report: QueuedReport) => Promise<unknown>) => Promise<void>;
+  sync: (send: (report: QueuedReport) => Promise<unknown>) => Promise<SyncOutcome>;
 }
 
 export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
@@ -77,7 +81,7 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
           }
           // Sin red o 5xx: queda pendiente y se reintenta después con la misma clave. Se detiene
           // aquí: si el servidor no contesta a este, tampoco contestará a los siguientes.
-          return;
+          return { needsSession: false };
         }
         await db.put('reports', {
           ...report,
@@ -85,6 +89,7 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
           syncedAt: new Date().toISOString(),
         });
       }
+      return { needsSession: false };
     },
   };
 }
