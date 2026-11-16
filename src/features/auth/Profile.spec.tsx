@@ -79,4 +79,16 @@ describe('pestaña Yo', () => {
       api.calls.some(({ method, path }) => method === 'POST' && path === '/v1/auth/logout'),
     ).toBe(true);
   });
+
+  it('mientras pregunta por la sesión dice «Cargando…»', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+
+    renderProfile();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+    expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
+  });
 });
