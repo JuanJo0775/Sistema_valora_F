@@ -150,4 +150,27 @@ describe('registrar un precio', () => {
     await screen.findByRole('heading', { name: 'Recibido' });
     expect(JSON.parse(sentReports(api)[0]?.body ?? '{}')).toMatchObject({ priceCop: 2500 });
   });
+
+  it.each([
+    ['la presentación', { size: false, store: true, price: '2500' }, 'Elige la presentación.'],
+    ['la tienda', { size: true, store: false, price: '2500' }, 'Elige la tienda.'],
+    ['el precio', { size: true, store: true, price: '' }, 'Escribe el precio en pesos.'],
+    ['un precio válido', { size: true, store: true, price: '2,5' }, 'Escribe el precio en pesos.'],
+  ])('sin %s dice qué falta y no envía', async (_missing, steps, message) => {
+    const api = stubApi(reportRoutes);
+    renderReport();
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+
+    if (steps.size) fireEvent.click(screen.getByRole('radio', { name: '500 g' }));
+    if (steps.store) {
+      stubLocation('allow');
+      fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+      fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
+    }
+    fireEvent.change(screen.getByLabelText('Precio en pesos'), { target: { value: steps.price } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+    expect(sentReports(api)).toHaveLength(0);
+  });
 });
