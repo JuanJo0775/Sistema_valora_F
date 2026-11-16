@@ -49,6 +49,7 @@ const renderQueue = () =>
 describe('sincronización de la cola', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('al abrir la app envía los reportes que quedaron pendientes', async () => {
@@ -85,5 +86,23 @@ describe('sincronización de la cola', () => {
       '11111111-1111-4111-8111-111111111111',
       '11111111-1111-4111-8111-111111111111',
     ]);
+  });
+
+  it('si el servidor falla con la red arriba, reintenta cada 30 segundos mientras la app está abierta', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    await leftFromBefore();
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'POST /v1/reports': [
+        { status: 503, body: { code: 'REQUEST_ERROR', message: 'No disponible.' } },
+        { status: 201, body: receipt },
+      ],
+    });
+    renderQueue();
+    expect(await screen.findByText('Arroz blanco · 500 g: pendiente')).toBeInTheDocument();
+
+    vi.advanceTimersByTime(30_000);
+
+    expect(await screen.findByText('Arroz blanco · 500 g: sincronizado')).toBeInTheDocument();
   });
 });
