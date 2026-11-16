@@ -1,23 +1,49 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { formatPresentation } from './presentation';
 import './catalog.css';
 
 type Product = components['schemas']['Product'];
 
+// Resultado de la consulta, marcado con el producto que lo pidió.
+type Outcome = { key: string; product: Product } | { key: string; error: unknown };
+
 export function ProductDetail() {
   const { productId = '' } = useParams();
-  const [product, setProduct] = useState<Product | null>(null);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   useEffect(() => {
-    void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
-      setProduct,
-    );
+    let current = true;
+    call(api.GET('/products/{productId}', { params: { path: { productId } } }))
+      .then((product) => {
+        if (current) setOutcome({ key: productId, product });
+      })
+      .catch((error: unknown) => {
+        if (current) setOutcome({ key: productId, error });
+      });
+    return () => {
+      current = false;
+    };
   }, [productId]);
 
-  if (!product) return null;
+  const result = outcome?.key === productId ? outcome : null;
+  if (result && 'error' in result) {
+    return (
+      <EmptyState
+        title="No encontramos este producto"
+        action={
+          <Link to="/" className="btn ghost">
+            Buscar otro producto
+          </Link>
+        }
+      />
+    );
+  }
+  if (!result) return null;
+  const { product } = result;
   return (
     <article className="detail">
       <h1>{product.name}</h1>
