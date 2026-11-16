@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { Profile } from '../features/auth/Profile';
+import { RequireRole } from '../features/auth/RequireRole';
 import { SessionProvider } from '../features/auth/SessionProvider';
 import { SignIn } from '../features/auth/SignIn';
 import { SignUp } from '../features/auth/SignUp';
@@ -48,7 +49,30 @@ export function App() {
               element={<Soon title="Historial de precios" issue={17} />}
             />
             <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
-            <Route path="/registrar" element={<Soon title="Registrar precio" issue={25} />} />
+            <Route
+              path="/registrar"
+              element={
+                <RequireRole role="reportante">
+                  <Soon title="Registrar precio" issue={25} />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/mis-aportes"
+              element={
+                <RequireRole role="reportante" allowSuspended>
+                  <Soon title="Mis aportes" issue={13} />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/moderacion"
+              element={
+                <RequireRole role="moderador">
+                  <Soon title="Moderación" issue={14} />
+                </RequireRole>
+              }
+            />
             <Route path="/yo" element={<Profile />} />
             <Route path="/entrar" element={<SignIn />} />
             <Route path="/crear-cuenta" element={<SignUp />} />
