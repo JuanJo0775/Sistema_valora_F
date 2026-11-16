@@ -136,11 +136,15 @@ describe('historial de precios', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('mientras carga dice «Cargando…», y si falla permite reintentar', async () => {
+  it('mientras carga dice «Cargando…»', () => {
     stubPendingApi();
-    const waiting = renderHistory();
+
+    renderHistory();
+
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
-    waiting.unmount();
+  });
+
+  it('si el historial no carga muestra el error y «Reintentar» lo vuelve a pedir', async () => {
     stubApi({
       [`GET /v1/products/${RICE}`]: { status: 200, body: rice },
       [`GET /v1/products/${RICE}/history`]: [
@@ -152,8 +156,8 @@ describe('historial de precios', () => {
         }),
       ],
     });
-
     renderHistory();
+
     fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
 
     expect(
