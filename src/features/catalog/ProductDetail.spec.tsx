@@ -96,4 +96,12 @@ describe('detalle del producto', () => {
       `/registrar?producto=${rice.id}`,
     );
   });
+
+  it('muestra la foto del producto, o la ilustración si no tiene', async () => {
+    stubApi({ [`GET /v1/products/${rice.id}`]: { status: 200, body: rice } });
+
+    renderDetail(rice.id);
+
+    expect(await screen.findByRole('img', { name: 'Arroz blanco (sin foto)' })).toBeInTheDocument();
+  });
 });
