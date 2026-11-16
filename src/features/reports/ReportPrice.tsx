@@ -33,8 +33,9 @@ export function ReportPrice() {
   const [store, setStore] = useState<Store | null>(null);
   const [price, setPrice] = useState('');
   const [onSale, setOnSale] = useState(false);
-  // EC-07: la clave nace con el reporte; un reintento del mismo reporte usa la misma.
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  // EC-07: la clave nace con el reporte y un reintento del mismo reporte usa la misma. Si el reporte
+  // cambia después de enviarlo, es otro: el servidor responde 409 a una clave con otro cuerpo.
+  const [attempt, setAttempt] = useState(() => ({ key: crypto.randomUUID(), body: '' }));
   // Por defecto «ahora»: la hora en que se empezó el reporte, fija para que un reintento sea igual.
   const [observedAt] = useState(() => new Date().toISOString());
   const [received, setReceived] = useState(false);
@@ -54,18 +55,17 @@ export function ReportPrice() {
     setProblem(found);
     if (found || !store) return;
     setError(null);
-    call(
-      api.POST('/reports', {
-        params: { header: { 'Idempotency-Key': idempotencyKey } },
-        body: {
-          presentationId,
-          establishmentId: store.id,
-          priceCop,
-          priceType: onSale ? 'oferta' : 'normal',
-          observedAt,
-        },
-      }),
-    )
+    const report = {
+      presentationId,
+      establishmentId: store.id,
+      priceCop,
+      priceType: onSale ? ('oferta' as const) : ('normal' as const),
+      observedAt,
+    };
+    const body = JSON.stringify(report);
+    const key = attempt.body === '' || attempt.body === body ? attempt.key : crypto.randomUUID();
+    setAttempt({ key, body });
+    call(api.POST('/reports', { params: { header: { 'Idempotency-Key': key } }, body: report }))
       .then(() => {
         setReceived(true);
       })
