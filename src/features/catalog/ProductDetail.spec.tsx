@@ -66,4 +66,15 @@ describe('detalle del producto', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
   });
+
+  it('mientras llega el producto dice «Cargando…»', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+
+    renderDetail(rice.id);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+  });
 });
