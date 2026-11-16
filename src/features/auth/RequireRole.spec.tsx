@@ -71,4 +71,16 @@ describe('secciones con sesión', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
   });
+
+  it('mientras pregunta por la sesión dice «Cargando…» y no muestra la sección', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+
+    renderAt('/registrar');
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+    expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
+  });
 });
