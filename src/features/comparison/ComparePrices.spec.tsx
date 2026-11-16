@@ -346,4 +346,18 @@ describe('comparar precios', () => {
     const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
     expect(asked?.searchParams.has('lat')).toBe(false);
   });
+
+  it('al volver al municipio, el orden por distancia pasa a precio por unidad', async () => {
+    const api = stubCompare(comparison([result()]));
+    stubLocation();
+    renderCompare();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Distancia' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Comparar por municipio' }));
+
+    await screen.findByRole('combobox', { name: 'Municipio' });
+    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    expect(asked?.searchParams.get('sort')).toBe('unit_price');
+  });
 });
