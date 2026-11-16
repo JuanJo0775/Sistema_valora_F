@@ -159,4 +159,32 @@ describe('detalle del producto', () => {
     const asked = api.requested.find(({ pathname }) => pathname.endsWith('/comparison'));
     expect(asked?.searchParams.get('onlyCurrent')).toBe('true');
   });
+
+  it('sin precios vigentes en Armenia lo dice', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([]),
+    });
+
+    renderDetail(rice.id);
+
+    expect(
+      await screen.findByText('Todavía no hay precios vigentes de este producto en Armenia.'),
+    ).toBeInTheDocument();
+  });
+
+  it('si los precios no cargan lo dice y el producto se sigue viendo', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' },
+      },
+    });
+
+    renderDetail(rice.id);
+
+    expect(await screen.findByText('No pudimos cargar los precios.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+  });
 });
