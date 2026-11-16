@@ -243,4 +243,13 @@ describe('registrar un precio', () => {
     const [first, second] = sentReports(api).map(({ headers }) => headers.get('Idempotency-Key'));
     expect(second).not.toBe(first);
   });
+
+  it('mientras envía el botón dice «Enviando…» y no se reenvía', async () => {
+    stubApi({ ...reportRoutes, 'POST /v1/reports': { status: 201, pending: true } });
+    renderReport();
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('button', { name: 'Enviando…' })).toBeDisabled();
+  });
 });
