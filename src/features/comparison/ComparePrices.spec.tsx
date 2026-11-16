@@ -208,4 +208,32 @@ describe('comparar precios', () => {
       expect(asked?.searchParams.get('onlyCurrent')).toBe('true');
     });
   });
+
+  it('los precios desactualizados o en revisión van aparte, porque no compiten', async () => {
+    stubCompare(
+      comparison([
+        result(),
+        result({
+          reportId: '8f7e6d5c-4b3a-4291-8a0f-7e6d5c4b3a29',
+          establishment: store('6e3d2c1b-0a9f-4b8c-9d7e-6f5a4b3c2d1e', 'Minimercado La 14'),
+          freshness: 'desactualizado',
+        }),
+        result({
+          reportId: '9a8f7e6d-5c4b-43a2-9b1a-8f7e6d5c4b3a',
+          establishment: store('7f4e3d2c-1b0a-4c9d-8e7f-6a5b4c3d2e1f', 'Supermercado Éxito'),
+          reliability: 'en_revision',
+        }),
+      ]),
+    );
+
+    renderCompare();
+
+    const [current, old] = await screen.findAllByRole('list');
+    expect(within(current as HTMLElement).getAllByRole('listitem')).toHaveLength(1);
+    expect(
+      screen.getByRole('heading', { name: 'Precios viejos o en revisión' }),
+    ).toBeInTheDocument();
+    expect(old).toHaveTextContent('Minimercado La 14');
+    expect(old).toHaveTextContent('Supermercado Éxito');
+  });
 });
