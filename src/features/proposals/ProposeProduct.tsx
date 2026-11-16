@@ -32,6 +32,7 @@ export function ProposeProduct() {
   const [packCount, setPackCount] = useState('1');
   const [barcode, setBarcode] = useState('');
   const [error, setError] = useState<unknown>(null);
+  const [problem, setProblem] = useState('');
   const [received, setReceived] = useState(false);
 
   useEffect(() => {
@@ -42,6 +43,15 @@ export function ProposeProduct() {
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
+    const amount = Number(quantity.replace(',', '.'));
+    // Lo que exige el contrato, dicho antes de enviar: el servidor vuelve a validarlo.
+    const found = !categoryCode
+      ? 'Elige la categoría.'
+      : !(amount > 0)
+        ? 'Escribe la cantidad, por ejemplo 500.'
+        : '';
+    setProblem(found);
+    if (found) return;
     setError(null);
     call(
       api.POST('/product-requests', {
@@ -49,7 +59,7 @@ export function ProposeProduct() {
           name: name.trim(),
           ...(brand.trim() ? { brand: brand.trim() } : {}),
           categoryCode,
-          quantity: Number(quantity.replace(',', '.')),
+          quantity: amount,
           unit,
           packCount: Number(packCount),
           ...(barcode.trim() ? { barcode: barcode.trim() } : {}),
@@ -73,7 +83,7 @@ export function ProposeProduct() {
     );
   }
   return (
-    <form className="form proposal" onSubmit={submit}>
+    <form className="form proposal" onSubmit={submit} noValidate>
       <h1>Proponer un producto</h1>
       <Field label="Nombre del producto" value={name} onValue={setName} />
       <Field label="Marca (opcional)" value={brand} onValue={setBrand} required={false} />
@@ -103,6 +113,11 @@ export function ProposeProduct() {
         onValue={setBarcode}
         required={false}
       />
+      {problem && (
+        <p role="alert" className="banner warn">
+          {problem}
+        </p>
+      )}
       {error !== null && <ErrorState error={error} />}
       <button type="submit" className="btn">
         Enviar propuesta
