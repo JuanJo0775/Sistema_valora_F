@@ -217,11 +217,15 @@ describe('registrar un precio', () => {
   });
 
   it('el reporte se guarda en el teléfono antes de intentar enviarlo', async () => {
-    stubApi({ ...reportRoutes, 'POST /v1/reports': { status: 201, pending: true } });
+    const api = stubApi({ ...reportRoutes, 'POST /v1/reports': { status: 201, pending: true } });
     renderReport();
 
     await fillAndSend();
     await screen.findByRole('button', { name: 'Enviando…' });
+    // El envío queda colgado: se espera a que salga para que no llegue a la prueba siguiente.
+    await vi.waitFor(() => {
+      expect(sentReports(api)).toHaveLength(1);
+    });
 
     const [saved] = await (await openReportQueue()).list();
     expect(saved).toMatchObject({
@@ -259,12 +263,16 @@ describe('registrar un precio', () => {
   });
 
   it('mientras envía el botón dice «Enviando…» y no se reenvía', async () => {
-    stubApi({ ...reportRoutes, 'POST /v1/reports': { status: 201, pending: true } });
+    const api = stubApi({ ...reportRoutes, 'POST /v1/reports': { status: 201, pending: true } });
     renderReport();
 
     await fillAndSend();
 
     expect(await screen.findByRole('button', { name: 'Enviando…' })).toBeDisabled();
+    // El envío queda colgado: se espera a que salga para que no llegue a la prueba siguiente.
+    await vi.waitFor(() => {
+      expect(sentReports(api)).toHaveLength(1);
+    });
   });
 
   it('sin producto pregunta qué precio viste y cada resultado vuelve al registro', async () => {

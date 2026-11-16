@@ -36,6 +36,8 @@ interface QueueDb extends DBSchema {
 
 export interface SyncOutcome {
   needsSession: boolean;
+  // Por qué espera la sesión (por ejemplo, ACCOUNT_SUSPENDED), para explicarlo.
+  problem?: QueueProblem;
 }
 
 export interface ReportQueue {
@@ -79,7 +81,7 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
         // 401 o 403: sin sesión (o vencida) los demás tampoco pasarán. Siguen pendientes y,
         // después de iniciar sesión, se reintentan con la misma clave.
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-          return { needsSession: true };
+          return { needsSession: true, problem: plain(error) };
         }
         // Sin red o 5xx: queda pendiente y se reintenta después con la misma clave. Se detiene
         // aquí: si el servidor no contesta a este, tampoco contestará a los siguientes.

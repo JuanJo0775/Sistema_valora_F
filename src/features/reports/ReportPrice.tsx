@@ -7,6 +7,7 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
 import { ProductSearch } from '../catalog/ProductSearch';
+import { useReportQueue } from '../../pwa/queueContext';
 import { readLastStore, saveLastStore } from './lastStore';
 import { ReportProblem } from './ReportProblem';
 import { type Store, StorePicker } from './StorePicker';
@@ -76,7 +77,8 @@ function ReportForm({ productId }: { productId: string }) {
   const [startedAt] = useState(() => new Date());
   // Si lo vio antes, la hora que escribe en el campo (en la hora del teléfono).
   const [seenAt, setSeenAt] = useState<string | null>(null);
-  const [received, setReceived] = useState(false);
+  const [done, setDone] = useState<'recibido' | 'guardado' | null>(null);
+  const queue = useReportQueue();
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
@@ -113,22 +115,37 @@ function ReportForm({ productId }: { productId: string }) {
     const key = attempt.body === '' || attempt.body === body ? attempt.key : crypto.randomUUID();
     setAttempt({ key, body });
     setSending(true);
-    call(api.POST('/reports', { params: { header: { 'Idempotency-Key': key } }, body: report }))
-      .then(() => {
-        saveLastStore(store);
-        setReceived(true);
+    const size = product?.presentations.find(({ id }) => id === presentationId);
+    // ADR-010: se guarda en el teléfono antes de enviarlo; si no hay red, la cola lo envía sola.
+    void queue
+      .submit({
+        idempotencyKey: key,
+        body: report,
+        label: {
+          product: [product?.name, size && formatPresentation(size)].filter(Boolean).join(' · '),
+          store: store.name,
+        },
       })
-      .catch((failure: unknown) => {
-        setError(failure);
-        setSending(false);
+      .then((result) => {
+        if (result.kind === 'rechazado') {
+          setError(result.problem);
+          setSending(false);
+          return;
+        }
+        saveLastStore(store);
+        setDone(result.kind);
       });
   };
 
-  if (received) {
+  if (done) {
     return (
       <EmptyState
-        title="Recibido"
-        text="Gracias: tu precio ayuda a otros a comparar."
+        title={done === 'recibido' ? 'Recibido' : 'Guardado en tu teléfono'}
+        text={
+          done === 'recibido'
+            ? 'Gracias: tu precio ayuda a otros a comparar.'
+            : 'Se enviará solo cuando haya conexión.'
+        }
         action={
           <Link to="/registrar" className="btn">
             Registrar otro en esta tienda
