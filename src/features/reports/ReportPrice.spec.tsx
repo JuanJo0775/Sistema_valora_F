@@ -82,4 +82,16 @@ describe('registrar un precio', () => {
     const nearby = api.requested.find(({ pathname }) => pathname.endsWith('/nearby'));
     expect(nearby?.searchParams.get('lat')).toBe('4.53');
   });
+
+  it('si se niega la ubicación pide activarla para ver las tiendas cercanas', async () => {
+    stubApi(productRoute);
+    stubLocation('deny');
+    renderReport();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Activa la ubicación del navegador para ver las tiendas cercanas.',
+    );
+  });
 });
