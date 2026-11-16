@@ -54,4 +54,15 @@ describe('inicio', () => {
     expect(nav.getByRole('link', { name: 'Mapa' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
   });
+
+  it('la pestaña Yo muestra la cuenta de quien entró', async () => {
+    stubApi({
+      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+    });
+    window.history.pushState({}, '', '/yo');
+
+    render(<App />);
+
+    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+  });
 });
