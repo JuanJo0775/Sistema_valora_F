@@ -1,5 +1,6 @@
 import { type SyntheticEvent, useState } from 'react';
 import { api, call } from '../../shared/api';
+import { askLocation } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
@@ -28,11 +29,20 @@ export function ProposeStore() {
   const [address, setAddress] = useState('');
   const [point, setPoint] = useState<Point | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [problem, setProblem] = useState('');
   const [received, setReceived] = useState(false);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    if (!point) return;
+    // Lo que exige el contrato, dicho antes de enviar: el servidor vuelve a validarlo.
+    const found =
+      name.trim().length < 2
+        ? 'Escribe el nombre de la tienda.'
+        : !point
+          ? 'Toca el mapa para marcar dónde queda la tienda.'
+          : '';
+    setProblem(found);
+    if (found || !point) return;
     setError(null);
     call(
       api.POST('/establishment-proposals', {
@@ -72,6 +82,26 @@ export function ProposeStore() {
       <Field label="Dirección (opcional)" value={address} onValue={setAddress} required={false} />
       <p className="muted">Toca el mapa donde queda la tienda.</p>
       <StoreMap stores={[]} label="Ubicación de la tienda" onPick={setPoint} picked={point} />
+      {/* Solo si la persona lo toca: su ubicación en ese momento es la de la tienda. */}
+      <button
+        type="button"
+        className="btn ghost"
+        onClick={() => {
+          setProblem('');
+          askLocation()
+            .then(setPoint)
+            .catch(() => {
+              setProblem('Activa la ubicación del navegador o toca el mapa donde queda la tienda.');
+            });
+        }}
+      >
+        Estoy en la tienda
+      </button>
+      {problem && (
+        <p role="alert" className="banner warn">
+          {problem}
+        </p>
+      )}
       {error !== null && <ErrorState error={error} />}
       <button type="submit" className="btn">
         Enviar propuesta
