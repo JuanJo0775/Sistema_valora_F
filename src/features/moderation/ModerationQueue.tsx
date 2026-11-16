@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { formatCop } from '../../shared/money';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { ErrorState } from '../../shared/ui/ErrorState';
+import { Loading } from '../../shared/ui/Loading';
+import { SelectField } from '../../shared/ui/SelectField';
 import { DecisionForm } from './DecisionForm';
 import './moderation.css';
 
@@ -17,6 +21,11 @@ export const REASONS: Record<Reason, string> = {
   discrepancia_oficial: 'Distinto al precio oficial',
   verificacion_comercio: 'Verificación de comercio',
 };
+
+const REASON_OPTIONS: { value: Reason | ''; label: string }[] = [
+  { value: '', label: 'Todos los motivos' },
+  ...(Object.keys(REASONS) as Reason[]).map((value) => ({ value, label: REASONS[value] })),
+];
 
 const DECISIONS: { value: Decision; label: string }[] = [
   { value: 'aprobar', label: 'Aprobar' },
@@ -54,14 +63,25 @@ function comparison(item: Item) {
 
 // RF-012 y RF-013: la cola de precios en revisión. Nunca dice quién reportó ni quién marcó (EC-08).
 export function ModerationQueue() {
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<Item[] | null>(null);
   const [decided, setDecided] = useState('');
+  const [reason, setReason] = useState<Reason | ''>('');
+  const [error, setError] = useState<unknown>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    void call(api.GET('/moderation/queue')).then(({ items: pending }) => {
-      setItems(pending ?? []);
-    });
-  }, []);
+    let current = true;
+    call(api.GET('/moderation/queue', { params: { query: reason ? { reason } : {} } }))
+      .then(({ items: pending }) => {
+        if (current) setItems(pending ?? []);
+      })
+      .catch((failure: unknown) => {
+        if (current) setError(failure);
+      });
+    return () => {
+      current = false;
+    };
+  }, [reason, attempt]);
 
   const decide = (item: Item) => (decision: Decision, note: string) =>
     call(
@@ -70,19 +90,42 @@ export function ModerationQueue() {
         body: { decision, note },
       }),
     ).then(() => {
-      setItems((current) => current.filter(({ id }) => id !== item.id));
+      setItems((current) => (current ?? []).filter(({ id }) => id !== item.id));
       setDecided(`Decisión registrada: ${item.productName}.`);
     });
 
+  if (error !== null) {
+    return (
+      <ErrorState
+        error={error}
+        onRetry={() => {
+          setError(null);
+          setItems(null);
+          setAttempt((count) => count + 1);
+        }}
+      />
+    );
+  }
   return (
     <>
+      <SelectField
+        label="Motivo"
+        value={reason}
+        options={REASON_OPTIONS}
+        onChange={(chosen) => {
+          setItems(null);
+          setReason(chosen);
+        }}
+      />
       {decided && (
         <p role="status" className="muted">
           {decided}
         </p>
       )}
+      {!items && <Loading />}
+      {items?.length === 0 && <EmptyState title="No hay precios en revisión" />}
       <ul className="offers">
-        {items.map((item) => (
+        {items?.map((item) => (
           <li key={item.id} className="offer">
             <p className="badges">
               <span className="pill warn">{REASONS[item.reason]}</span>
