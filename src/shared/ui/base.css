@@ -126,3 +126,13 @@ button {
   padding: 32px 16px;
   text-align: center;
 }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actions .btn {
+  text-decoration: none;
+}

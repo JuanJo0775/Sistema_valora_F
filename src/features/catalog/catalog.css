@@ -51,16 +51,6 @@
   gap: 8px;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.actions .btn {
-  text-decoration: none;
-}
-
 .product-image {
   margin: 0;
   display: grid;
