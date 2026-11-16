@@ -7,6 +7,8 @@ import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { useSession } from '../auth/session';
+import { SuspendedNotice } from '../auth/SuspendedNotice';
 import './contributions.css';
 
 type MyReport =
@@ -28,6 +30,8 @@ export function MyReports() {
   const [nextBefore, setNextBefore] = useState<string | undefined>();
   const [error, setError] = useState<unknown>(null);
   const [attempt, setAttempt] = useState(0);
+  const { session } = useSession();
+  const suspendedUntil = session.status === 'active' ? session.suspendedUntil : undefined;
 
   const load = useCallback((before?: string) => {
     call(api.GET('/me/reports', { params: { query: before ? { before } : {} } }))
@@ -72,6 +76,8 @@ export function MyReports() {
   return (
     <section className="contributions">
       <h1>Mis aportes</h1>
+      {/* #71 del backend: suspendida, la cuenta solo ve el estado de sus aportes y apela. */}
+      {suspendedUntil && <SuspendedNotice until={suspendedUntil} />}
       <ul className="offers">
         {reports.map((report) => (
           <li key={report.reportId} className="offer">
