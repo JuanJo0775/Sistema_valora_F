@@ -41,6 +41,32 @@ const stubLocation = (answer: 'allow' | 'deny') => {
 
 const productRoute = { [`GET /v1/products/${rice.id}`]: { status: 200, body: rice } };
 
+const receipt = {
+  id: '7e6d5c4b-3a29-4180-9f7e-6d5c4b3a2918',
+  status: 'recibido',
+  receivedAt: '2026-11-16T15:00:00Z',
+};
+
+const reportRoutes = {
+  ...productRoute,
+  'GET /v1/establishments/nearby': { status: 200, body: { items: [donPepe] } },
+  'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+  'POST /v1/reports': { status: 201, body: receipt },
+};
+
+// Lo que hace quien reporta: presentación, tienda cercana, precio y «Enviar».
+const fillAndSend = async (price = '2500') => {
+  fireEvent.click(await screen.findByRole('radio', { name: '500 g' }));
+  stubLocation('allow');
+  fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+  fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
+  fireEvent.change(screen.getByLabelText('Precio en pesos'), { target: { value: price } });
+  fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+};
+
+const sentReports = (api: ReturnType<typeof stubApi>) =>
+  api.calls.filter(({ method, path }) => method === 'POST' && path === '/v1/reports');
+
 const renderReport = (path = `/registrar?producto=${rice.id}`) =>
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -93,5 +119,25 @@ describe('registrar un precio', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Activa la ubicación del navegador para ver las tiendas cercanas.',
     );
+  });
+
+  it('envía presentación, tienda, precio y hora con su clave, sin la ubicación, y dice «Recibido»', async () => {
+    const api = stubApi(reportRoutes);
+    renderReport();
+
+    await fillAndSend();
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+    const [report] = sentReports(api);
+    const body = JSON.parse(report?.body ?? '{}') as Record<string, unknown>;
+    expect(body).toMatchObject({
+      presentationId: rice.presentations[0]?.id,
+      establishmentId: donPepe.id,
+      priceCop: 2500,
+      priceType: 'normal',
+    });
+    expect(Date.now() - Date.parse(String(body['observedAt']))).toBeLessThan(60_000);
+    expect(Object.keys(body)).not.toContain('lat');
+    expect(report?.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
   });
 });
