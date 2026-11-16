@@ -1,4 +1,4 @@
-import type { components } from '../../shared/api/schema';
+import type { components } from './api/schema';
 
 type Per = components['schemas']['ComparisonItem']['unitPrice']['per'];
 
