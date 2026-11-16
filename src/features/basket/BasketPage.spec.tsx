@@ -164,11 +164,15 @@ describe('mi canasta', () => {
     ]);
   });
 
-  it('mientras busca los precios lo dice, y si fallan también', async () => {
+  it('mientras busca los precios dice «Buscando precios…»', async () => {
     stubPendingApi();
-    const waiting = renderBasket(milk);
+
+    renderBasket(milk);
+
     expect(within(await where()).getByRole('status')).toHaveTextContent('Buscando precios…');
-    waiting.unmount();
+  });
+
+  it('si los precios no cargan avisa que no se pudo calcular', async () => {
     stubApi({});
 
     renderBasket(milk);

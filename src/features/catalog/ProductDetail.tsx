@@ -8,6 +8,7 @@ import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
 import { AddToBasket } from '../basket/AddToBasket';
 import { CheapestOffers } from '../comparison/CheapestOffers';
+import { HistorySummary } from '../history/HistorySummary';
 import { ProductImage } from './ProductImage';
 import './catalog.css';
 
@@ -82,6 +83,7 @@ export function ProductDetail() {
       <aside className="side" aria-label="Precios y acciones">
         <CheapestOffers product={product} />
         <AddToBasket product={product} />
+        <HistorySummary productId={product.id} />
         {/* Prototipo: la acción principal (naranja) es comparar; las demás, secundarias. */}
         <div className="actions">
           <Link to={`/productos/${product.id}/comparar`} className="btn">

@@ -10,6 +10,7 @@ import { BasketPage } from '../features/basket/BasketPage';
 import { BasketProvider } from '../features/basket/BasketProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ComparePrices } from '../features/comparison/ComparePrices';
+import { PriceHistory } from '../features/history/PriceHistory';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportPrice } from '../features/reports/ReportPrice';
 import { EmptyState } from '../shared/ui/EmptyState';
@@ -49,10 +50,7 @@ export function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/productos/:productId" element={<ProductDetail />} />
                 <Route path="/productos/:productId/comparar" element={<ComparePrices />} />
-                <Route
-                  path="/productos/:productId/historial"
-                  element={<Soon title="Historial de precios" issue={17} />}
-                />
+                <Route path="/productos/:productId/historial" element={<PriceHistory />} />
                 <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
                 <Route
                   path="/registrar"

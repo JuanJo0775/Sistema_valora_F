@@ -221,4 +221,52 @@ describe('detalle del producto', () => {
     expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
     expect(within(side).queryByRole('heading', { name: 'Arroz blanco' })).not.toBeInTheDocument();
   });
+
+  it('el panel muestra la gráfica de los últimos 30 días y lleva al historial', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/history`]: {
+        status: 200,
+        body: {
+          from: '2026-10-18',
+          to: '2026-11-16',
+          presentations: [
+            {
+              presentationId: rice.presentations[0]?.id,
+              label: '500 g',
+              points: [
+                {
+                  date: '2026-11-15',
+                  minPriceCop: 2400,
+                  avgPriceCop: 2400,
+                  reports: 1,
+                  source: 'reportado',
+                },
+                {
+                  date: '2026-11-16',
+                  minPriceCop: 2300,
+                  avgPriceCop: 2300,
+                  reports: 1,
+                  source: 'reportado',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    renderDetail(rice.id);
+
+    const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
+    expect(
+      await within(side).findByRole('img', {
+        name: 'Precio más bajo por día · 500 g: de $2.400 el 15 nov a $2.300 el 16 nov',
+      }),
+    ).toBeInTheDocument();
+    expect(within(side).getByRole('link', { name: 'Ver el historial' })).toHaveAttribute(
+      'href',
+      `/productos/${rice.id}/historial`,
+    );
+  });
 });
