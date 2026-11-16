@@ -183,4 +183,18 @@ describe('inicio', () => {
       await screen.findByRole('heading', { name: 'Reportes en este teléfono' }),
     ).toBeInTheDocument();
   });
+
+  it('sin red, quien entró como reportante la última vez puede abrir «Registrar precio»', async () => {
+    localStorage.setItem('valora:ultimo-rol', 'reportante');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+    window.history.pushState({}, '', '/registrar');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
+    localStorage.clear();
+  });
 });
