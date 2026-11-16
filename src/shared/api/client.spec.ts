@@ -66,4 +66,13 @@ describe('cliente de la API', () => {
 
     await expect(request).resolves.toBeUndefined();
   });
+
+  it('sin red llega un error NETWORK_ERROR con status 0', async () => {
+    const offline = () => Promise.reject(new TypeError('Failed to fetch'));
+    const api = createApiClient({ fetch: offline });
+
+    const request = call(api.GET('/products', { params: { query: { q: 'arroz' } } }));
+
+    await expect(request).rejects.toMatchObject({ status: 0, code: 'NETWORK_ERROR' });
+  });
 });
