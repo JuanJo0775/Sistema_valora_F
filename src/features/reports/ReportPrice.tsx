@@ -9,6 +9,9 @@ import './reports.css';
 
 type Product = components['schemas']['Product'];
 
+// En Colombia los miles se separan con punto: «2.500» son 2500 pesos (sin centavos).
+const toPesos = (text: string) => Number(text.replace(/[.\s$]/g, ''));
+
 // EC-01: una sola pantalla con lo que ya se sabe lleno, para reportar en 15 segundos o menos.
 export function ReportPrice() {
   const [params] = useSearchParams();
@@ -36,7 +39,7 @@ export function ReportPrice() {
         body: {
           presentationId,
           establishmentId: store.id,
-          priceCop: Number(price),
+          priceCop: toPesos(price),
           priceType: 'normal',
           observedAt: new Date().toISOString(),
         },
