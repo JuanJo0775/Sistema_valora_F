@@ -6,6 +6,8 @@ import { SignIn } from '../features/auth/SignIn';
 import { SignUp } from '../features/auth/SignUp';
 import { PendingReports } from '../pwa/PendingReports';
 import { ReportQueueProvider } from '../pwa/ReportQueueProvider';
+import { BasketPage } from '../features/basket/BasketPage';
+import { BasketProvider } from '../features/basket/BasketProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ComparePrices } from '../features/comparison/ComparePrices';
 import { ProductSearch } from '../features/catalog/ProductSearch';
@@ -39,50 +41,53 @@ function Soon({ title, issue }: { title: string; issue: number }) {
 export function App() {
   return (
     <SessionProvider>
-      <ReportQueueProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/productos/:productId" element={<ProductDetail />} />
-              <Route path="/productos/:productId/comparar" element={<ComparePrices />} />
-              <Route
-                path="/productos/:productId/historial"
-                element={<Soon title="Historial de precios" issue={17} />}
-              />
-              <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
-              <Route
-                path="/registrar"
-                element={
-                  <RequireRole role="reportante" allowOffline>
-                    <ReportPrice />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/mis-aportes"
-                element={
-                  <RequireRole role="reportante" allowSuspended>
-                    <Soon title="Mis aportes" issue={13} />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="/moderacion"
-                element={
-                  <RequireRole role="moderador">
-                    <Soon title="Moderación" issue={14} />
-                  </RequireRole>
-                }
-              />
-              <Route path="/pendientes" element={<PendingReports />} />
-              <Route path="/yo" element={<Profile />} />
-              <Route path="/entrar" element={<SignIn />} />
-              <Route path="/crear-cuenta" element={<SignUp />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ReportQueueProvider>
+      <BasketProvider>
+        <ReportQueueProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/productos/:productId" element={<ProductDetail />} />
+                <Route path="/productos/:productId/comparar" element={<ComparePrices />} />
+                <Route
+                  path="/productos/:productId/historial"
+                  element={<Soon title="Historial de precios" issue={17} />}
+                />
+                <Route path="/mapa" element={<Soon title="Mapa" issue={18} />} />
+                <Route
+                  path="/registrar"
+                  element={
+                    <RequireRole role="reportante" allowOffline>
+                      <ReportPrice />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/mis-aportes"
+                  element={
+                    <RequireRole role="reportante" allowSuspended>
+                      <Soon title="Mis aportes" issue={13} />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/moderacion"
+                  element={
+                    <RequireRole role="moderador">
+                      <Soon title="Moderación" issue={14} />
+                    </RequireRole>
+                  }
+                />
+                <Route path="/pendientes" element={<PendingReports />} />
+                <Route path="/canasta" element={<BasketPage />} />
+                <Route path="/yo" element={<Profile />} />
+                <Route path="/entrar" element={<SignIn />} />
+                <Route path="/crear-cuenta" element={<SignUp />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </ReportQueueProvider>
+      </BasketProvider>
     </SessionProvider>
   );
 }
