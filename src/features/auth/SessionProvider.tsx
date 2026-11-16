@@ -1,6 +1,7 @@
 import type { Middleware } from 'openapi-fetch';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { api, ApiError, call } from '../../shared/api';
+import { readLastRole, saveLastRole } from './lastRole';
 import { type Session, SessionContext } from './session';
 
 // ADR-014: la sesión es una cookie del servidor; la app pregunta quién es al abrirse.
@@ -11,12 +12,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     call(api.GET('/auth/session'))
       .then(({ role, suspendedUntil }) => {
+        saveLastRole(role);
         setSession({ status: 'active', role, suspendedUntil });
       })
       .catch((error: unknown) => {
         // Solo un 401 dice que no hay sesión; sin red no se sabe.
         const anonymous = error instanceof ApiError && error.status === 401;
-        setSession(anonymous ? { status: 'anonymous' } : { status: 'unknown', error });
+        if (anonymous) saveLastRole(null);
+        setSession(
+          anonymous
+            ? { status: 'anonymous' }
+            : { status: 'unknown', error, lastRole: readLastRole() },
+        );
       });
   }, [attempt]);
 
@@ -25,7 +32,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const expired: Middleware = {
       onResponse({ response }) {
-        if (response.status === 401) setSession({ status: 'anonymous' });
+        if (response.status === 401) {
+          saveLastRole(null);
+          setSession({ status: 'anonymous' });
+        }
         return response;
       },
     };
@@ -46,6 +56,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       },
       signOut: async () => {
         await call(api.POST('/auth/logout'));
+        saveLastRole(null);
         setSession({ status: 'anonymous' });
       },
       reload: () => {

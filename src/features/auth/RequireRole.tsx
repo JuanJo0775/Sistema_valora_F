@@ -11,6 +11,7 @@ import { SuspendedNotice } from './SuspendedNotice';
 export function RequireRole({
   role,
   allowSuspended = false,
+  allowOffline = false,
   children,
 }: {
   role: Role;
@@ -21,7 +22,21 @@ export function RequireRole({
   const { session, reload } = useSession();
   const { pathname, search } = useLocation();
   if (session.status === 'loading') return <Loading />;
-  if (session.status === 'unknown') return <ErrorState error={session.error} onRetry={reload} />;
+  if (session.status === 'unknown') {
+    // #26: sin red no se sabe si la sesión sigue. Si la última vez entró con este rol, puede
+    // guardar en el teléfono; el servidor verifica la sesión al sincronizar (401: pide entrar).
+    if (allowOffline && session.lastRole === role) {
+      return (
+        <>
+          <p role="status" className="banner warn">
+            Sin conexión: tu reporte se guardará en el teléfono y se enviará solo.
+          </p>
+          {children}
+        </>
+      );
+    }
+    return <ErrorState error={session.error} onRetry={reload} />;
+  }
   if (session.status === 'anonymous') {
     return <Navigate to={withReturn('/entrar', pathname + search)} replace />;
   }
