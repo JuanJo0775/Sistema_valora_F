@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { stubLocation, stubNoGeolocation } from '../../test/location';
 import { ComparePrices } from './ComparePrices';
 
 const rice = {
@@ -55,15 +56,9 @@ const stubCompare = (reply: FakeReply | FakeReply[]) =>
     [`GET /v1/products/${rice.id}/comparison`]: reply,
   });
 
-// El teléfono responde la ubicación al instante.
-const stubLocation = () => {
-  const geolocation = {
-    getCurrentPosition: (ok: PositionCallback) => {
-      ok({ coords: { latitude: 4.53, longitude: -75.68 } } as GeolocationPosition);
-    },
-  };
-  vi.stubGlobal('navigator', Object.assign(Object.create(navigator) as Navigator, { geolocation }));
-};
+// La última consulta que hizo la pantalla a la comparación.
+const lastAsked = (api: ReturnType<typeof stubApi>) =>
+  api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
 
 const renderCompare = () =>
   render(
@@ -176,17 +171,14 @@ describe('comparar precios', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('listitem')).toHaveTextContent('350 m');
     expect(screen.getByRole('radio', { name: 'Distancia' })).toBeEnabled();
-    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    const asked = lastAsked(api);
     expect(asked?.searchParams.get('lat')).toBe('4.53');
     expect(asked?.searchParams.has('municipality')).toBe(false);
   });
 
   it('si se niega la ubicación lo dice y sigue comparando en Armenia', async () => {
     stubCompare(comparison([result()]));
-    vi.stubGlobal(
-      'navigator',
-      Object.assign(Object.create(navigator) as Navigator, { geolocation: undefined }),
-    );
+    stubNoGeolocation();
     renderCompare();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
@@ -205,7 +197,7 @@ describe('comparar precios', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Solo precios vigentes' }));
 
     await vi.waitFor(() => {
-      const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+      const asked = lastAsked(api);
       expect(asked?.searchParams.get('onlyCurrent')).toBe('true');
     });
   });
@@ -304,7 +296,7 @@ describe('comparar precios', () => {
     expect(
       await screen.findByText('Ordenado por precio por unidad · en Calarcá'),
     ).toBeInTheDocument();
-    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    const asked = lastAsked(api);
     expect(asked?.searchParams.get('municipality')).toBe('calarca');
   });
 
@@ -325,7 +317,7 @@ describe('comparar precios', () => {
     expect(
       await screen.findByText('Ordenado por precio por unidad · a menos de 0,5 km de ti'),
     ).toBeInTheDocument();
-    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    const asked = lastAsked(api);
     expect(asked?.searchParams.get('radiusKm')).toBe('0.5');
   });
 
@@ -344,7 +336,7 @@ describe('comparar precios', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Comparar por municipio' }));
 
     expect(await screen.findByRole('combobox', { name: 'Municipio' })).toHaveValue('armenia');
-    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    const asked = lastAsked(api);
     expect(asked?.searchParams.has('lat')).toBe(false);
   });
 
@@ -358,7 +350,7 @@ describe('comparar precios', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Comparar por municipio' }));
 
     await screen.findByRole('combobox', { name: 'Municipio' });
-    const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
+    const asked = lastAsked(api);
     expect(asked?.searchParams.get('sort')).toBe('unit_price');
   });
 

@@ -6,6 +6,7 @@ import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { SelectField } from '../../shared/ui/SelectField';
 import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, type Municipality, MUNICIPALITIES } from './criteria';
 import { readMunicipality, saveMunicipality } from './lastMunicipality';
@@ -16,6 +17,11 @@ type Product = components['schemas']['Product'];
 type Comparison = components['schemas']['Comparison'];
 type Sort = Comparison['criteria']['sort'];
 const RADII = [0.5, 1, 2, 3];
+
+const MUNICIPALITY_OPTIONS = (Object.keys(MUNICIPALITIES) as Municipality[]).map((value) => ({
+  value,
+  label: MUNICIPALITIES[value],
+}));
 
 const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: 'unit_price', label: 'Precio por unidad' },
@@ -111,21 +117,17 @@ export function ComparePrices() {
       {point ? (
         <>
           {/* ADR-019: radio calibrable de 0,5 a 3 km; 2 km por defecto. */}
-          <label className="field">
-            Radio
-            <select
-              value={String(radiusKm)}
-              onChange={(event) => {
-                setRadiusKm(Number(event.target.value));
-              }}
-            >
-              {RADII.map((km) => (
-                <option key={km} value={String(km)}>
-                  {`${String(km).replace('.', ',')} km`}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Radio"
+            value={String(radiusKm)}
+            options={RADII.map((km) => ({
+              value: String(km),
+              label: `${String(km).replace('.', ',')} km`,
+            }))}
+            onChange={(km) => {
+              setRadiusKm(Number(km));
+            }}
+          />
           <button
             type="button"
             className="btn ghost"
@@ -140,23 +142,15 @@ export function ComparePrices() {
         </>
       ) : (
         <>
-          <label className="field">
-            Municipio
-            <select
-              value={municipality}
-              onChange={(event) => {
-                const chosen = event.target.value as Municipality;
-                saveMunicipality(chosen);
-                setMunicipality(chosen);
-              }}
-            >
-              {Object.entries(MUNICIPALITIES).map(([value, name]) => (
-                <option key={value} value={value}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Municipio"
+            value={municipality}
+            options={MUNICIPALITY_OPTIONS}
+            onChange={(chosen) => {
+              saveMunicipality(chosen);
+              setMunicipality(chosen);
+            }}
+          />
           <button
             type="button"
             className="btn ghost"
