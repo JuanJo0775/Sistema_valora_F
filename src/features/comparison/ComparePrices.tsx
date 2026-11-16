@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { api, call } from '../../shared/api';
 import { askLocation, type Point } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { ErrorState } from '../../shared/ui/ErrorState';
+import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
-import { describeCriteria } from './criteria';
+import { describeCriteria, MUNICIPALITIES } from './criteria';
 import { Offer } from './Offer';
 import './comparison.css';
 
@@ -22,6 +25,7 @@ const SORT_OPTIONS: { value: Sort; label: string }[] = [
 export function ComparePrices() {
   const { productId = '' } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
+  const [productError, setProductError] = useState<unknown>(null);
   const [sort, setSort] = useState<Sort>('unit_price');
   // Por defecto Armenia, sin pedir permisos; con la ubicación, las tiendas cercanas (EC-08: la
   // ubicación solo va en la consulta y no se guarda).
@@ -29,42 +33,52 @@ export function ComparePrices() {
   const [locationProblem, setLocationProblem] = useState('');
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
-  const [outcome, setOutcome] = useState<{ key: string; comparison: Comparison } | null>(null);
-  const key = `${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : 'armenia'}`;
+  const [outcome, setOutcome] = useState<
+    { key: string; comparison: Comparison } | { key: string; error: unknown } | null
+  >(null);
+  const [attempt, setAttempt] = useState(0);
+  const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : 'armenia'}`;
 
   useEffect(() => {
-    void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
-      setProduct,
-    );
-  }, [productId]);
+    call(api.GET('/products/{productId}', { params: { path: { productId } } }))
+      .then(setProduct)
+      .catch((error: unknown) => {
+        setProductError(error);
+      });
+  }, [productId, attempt]);
 
   useEffect(() => {
     let current = true;
-    void call(
+    call(
       api.GET('/products/{productId}/comparison', {
         params: {
           path: { productId },
           query: { ...(point ?? { municipality: 'armenia' as const }), sort, onlyCurrent },
         },
       }),
-    ).then((comparison) => {
-      if (current) setOutcome({ key, comparison });
-    });
+    )
+      .then((comparison) => {
+        if (current) setOutcome({ key, comparison });
+      })
+      .catch((error: unknown) => {
+        if (current) setOutcome({ key, error });
+      });
     return () => {
       current = false;
     };
   }, [productId, sort, point, onlyCurrent, key]);
 
-  if (!product || !outcome) return null;
-  const { comparison } = outcome;
+  const retry = () => {
+    setProductError(null);
+    setAttempt((current) => current + 1);
+  };
+  if (productError !== null) return <ErrorState error={productError} onRetry={retry} />;
+  if (!product) return <Loading />;
+  const result = outcome?.key === key ? outcome : null;
   const sizeOf = (presentationId: string) => {
     const presentation = product.presentations.find(({ id }) => id === presentationId);
     return presentation ? formatPresentation(presentation) : '';
   };
-  const competes = (offer: Comparison['results'][number]) =>
-    offer.freshness !== 'desactualizado' && offer.reliability !== 'en_revision';
-  const competing = comparison.results.filter(competes);
-  const others = comparison.results.filter((offer) => !competes(offer));
   return (
     <section className="compare">
       <h1>{product.name}</h1>
@@ -118,7 +132,52 @@ export function ComparePrices() {
           {locationProblem}
         </p>
       )}
-      <p className="muted">{describeCriteria(comparison.criteria)}</p>
+      {!result && <Loading />}
+      {result && 'error' in result && <ErrorState error={result.error} onRetry={retry} />}
+      {result && 'comparison' in result && (
+        <Results
+          comparison={result.comparison}
+          sizeOf={sizeOf}
+          register={`/registrar?producto=${productId}`}
+        />
+      )}
+    </section>
+  );
+}
+
+const competes = (offer: Comparison['results'][number]) =>
+  offer.freshness !== 'desactualizado' && offer.reliability !== 'en_revision';
+
+function Results({
+  comparison,
+  sizeOf,
+  register,
+}: {
+  comparison: Comparison;
+  sizeOf: (presentationId: string) => string;
+  register: string;
+}) {
+  const { criteria, results } = comparison;
+  if (results.length === 0) {
+    const where = criteria.municipality
+      ? `en ${MUNICIPALITIES[criteria.municipality]}`
+      : 'cerca de ti';
+    return (
+      <EmptyState
+        title={`Todavía nadie ha reportado este producto ${where}`}
+        action={
+          <Link to={register} className="btn">
+            Registrar un precio
+          </Link>
+        }
+      />
+    );
+  }
+  const competing = results.filter(competes);
+  const others = results.filter((offer) => !competes(offer));
+  return (
+    <>
+      <p className="muted">{describeCriteria(criteria)}</p>
       <ul className="offers">
         {competing.map((offer) => (
           <Offer key={offer.reportId} offer={offer} size={sizeOf(offer.presentationId)} />
@@ -135,6 +194,6 @@ export function ComparePrices() {
           </ul>
         </>
       )}
-    </section>
+    </>
   );
 }
