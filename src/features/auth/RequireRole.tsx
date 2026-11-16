@@ -15,6 +15,7 @@ export function RequireRole({
 }: {
   role: Role;
   allowSuspended?: boolean;
+  allowOffline?: boolean;
   children: ReactNode;
 }) {
   const { session, reload } = useSession();
