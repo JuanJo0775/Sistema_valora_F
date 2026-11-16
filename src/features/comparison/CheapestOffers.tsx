@@ -15,6 +15,7 @@ const SHOWN = 3;
 // comparación (precio por unidad, EC-06) y solo precios vigentes; el resto, en «Ver todas».
 export function CheapestOffers({ product }: { product: Product }) {
   const [comparison, setComparison] = useState<Comparison | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     call(
@@ -27,10 +28,16 @@ export function CheapestOffers({ product }: { product: Product }) {
     )
       .then(setComparison)
       // Si la comparación falla, el detalle del producto se sigue viendo.
-      .catch(() => undefined);
+      .catch(() => {
+        setFailed(true);
+      });
   }, [product.id]);
 
+  if (failed) return <p className="muted">No pudimos cargar los precios.</p>;
   if (!comparison) return null;
+  if (comparison.results.length === 0) {
+    return <p className="muted">Todavía no hay precios vigentes de este producto en Armenia.</p>;
+  }
   const sizeOf = (presentationId: string) => {
     const presentation = product.presentations.find(({ id }) => id === presentationId);
     return presentation ? formatPresentation(presentation) : '';
