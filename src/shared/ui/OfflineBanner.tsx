@@ -10,8 +10,10 @@ export function OfflineBanner() {
       setOnline(navigator.onLine);
     };
     window.addEventListener('offline', update);
+    window.addEventListener('online', update);
     return () => {
       window.removeEventListener('offline', update);
+      window.removeEventListener('online', update);
     };
   }, []);
 
