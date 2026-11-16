@@ -73,7 +73,7 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
     [opened],
   );
 
-  const value = useMemo(() => ({ reports, submit }), [reports, submit]);
+  const value = useMemo(() => ({ reports, needsSession: false, submit }), [reports, submit]);
   return <QueueContext value={value}>{children}</QueueContext>;
 }
 

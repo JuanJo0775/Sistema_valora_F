@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { sessionAs, stubApi } from '../test/fakeApi';
+import { SessionProvider } from '../features/auth/SessionProvider';
+import { useSession } from '../features/auth/session';
+import { NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
 import { useReportQueue } from './queueContext';
 import { openReportQueue } from './reportQueue';
 import { ReportQueueProvider } from './ReportQueueProvider';
@@ -29,9 +31,10 @@ const leftFromBefore = async () => {
 
 // Lo que una pantalla ve de la cola.
 function QueueStatus() {
-  const { reports } = useReportQueue();
+  const { reports, needsSession } = useReportQueue();
   return (
     <ul>
+      {needsSession && <li>Falta iniciar sesión</li>}
       {reports.map((report) => (
         <li key={report.idempotencyKey}>{`${report.label.product}: ${report.status}`}</li>
       ))}
@@ -104,5 +107,42 @@ describe('sincronización de la cola', () => {
     vi.advanceTimersByTime(30_000);
 
     expect(await screen.findByText('Arroz blanco · 500 g: sincronizado')).toBeInTheDocument();
+  });
+
+  it('sin sesión espera y, al iniciar sesión, envía los pendientes', async () => {
+    await leftFromBefore();
+    stubApi({
+      'GET /v1/auth/session': [NO_SESSION, NO_SESSION, sessionAs('reportante')],
+      'POST /v1/auth/login': { status: 204 },
+      'POST /v1/reports': [
+        { status: 401, body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' } },
+        { status: 201, body: receipt },
+      ],
+    });
+    function SignInButton() {
+      const { signIn } = useSession();
+      return (
+        <button
+          type="button"
+          onClick={() => void signIn({ email: 'ana@correo.co', password: 'una clave larga' })}
+        >
+          Entrar
+        </button>
+      );
+    }
+    render(
+      <SessionProvider>
+        <ReportQueueProvider>
+          <QueueStatus />
+          <SignInButton />
+        </ReportQueueProvider>
+      </SessionProvider>,
+    );
+    expect(await screen.findByText('Falta iniciar sesión')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText('Arroz blanco · 500 g: sincronizado')).toBeInTheDocument();
+    expect(screen.queryByText('Falta iniciar sesión')).not.toBeInTheDocument();
   });
 });
