@@ -15,7 +15,9 @@ type Offer = components['schemas']['ComparisonItem'];
 export function CheapestStore({ items }: { items: BasketItem[] }) {
   const [municipality] = useState(readMunicipality);
   const pending = items.filter(({ bought }) => !bought);
-  const productIds = [...new Set(pending.map(({ productId }) => productId))].sort();
+  const productIds = [...new Set(pending.map(({ productId }) => productId))].sort((a, b) =>
+    a.localeCompare(b),
+  );
   const key = productIds.join(',');
   const [offers, setOffers] = useState<
     { key: string; byProduct: Map<string, Offer[]> } | { key: string; failed: true } | null
