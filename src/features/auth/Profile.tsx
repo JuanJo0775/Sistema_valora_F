@@ -3,8 +3,14 @@ import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
-import { useSession } from './session';
+import { type Role, useSession } from './session';
 import { SuspendedNotice } from './SuspendedNotice';
+
+// La sección privada de cada rol. La del comercio llega en el Corte 3.
+const SECTION_OF: Partial<Record<Role, { to: string; label: string }>> = {
+  reportante: { to: '/mis-aportes', label: 'Mis aportes' },
+  moderador: { to: '/moderacion', label: 'Moderación' },
+};
 
 export function Profile() {
   const { session, signOut, reload } = useSession();
@@ -12,6 +18,7 @@ export function Profile() {
   if (session.status === 'loading') return <Loading />;
   if (session.status === 'unknown') return <ErrorState error={session.error} onRetry={reload} />;
   if (session.status === 'active') {
+    const section = SECTION_OF[session.role];
     return (
       <>
         {session.suspendedUntil && <SuspendedNotice until={session.suspendedUntil} />}
@@ -20,18 +27,25 @@ export function Profile() {
           title="Tu cuenta"
           text={`Entraste como ${session.role}.`}
           action={
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => {
-                setError(null);
-                signOut().catch((failure: unknown) => {
-                  setError(failure);
-                });
-              }}
-            >
-              Cerrar sesión
-            </button>
+            <div className="actions">
+              {section && (
+                <Link to={section.to} className="btn">
+                  {section.label}
+                </Link>
+              )}
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  setError(null);
+                  signOut().catch((failure: unknown) => {
+                    setError(failure);
+                  });
+                }}
+              >
+                Cerrar sesión
+              </button>
+            </div>
           }
         />
       </>
