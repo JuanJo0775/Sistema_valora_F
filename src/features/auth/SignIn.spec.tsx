@@ -52,4 +52,16 @@ describe('iniciar sesión', () => {
       password: 'una clave larga',
     });
   });
+
+  it.each(['//malo.example', 'https://malo.example/entrar'])(
+    'si «volver» apunta a otro sitio (%s) lleva al inicio de Valora',
+    async (volver) => {
+      stubLogin({ status: 204 });
+      renderSignIn(`/entrar?volver=${encodeURIComponent(volver)}`);
+
+      signIn('ana@correo.co', 'una clave larga');
+
+      expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
+    },
+  );
 });
