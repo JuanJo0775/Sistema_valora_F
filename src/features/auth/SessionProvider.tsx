@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { api, call } from '../../shared/api';
 import { type Session, SessionContext } from './session';
 
@@ -16,5 +16,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  return <SessionContext value={session}>{children}</SessionContext>;
+  const value = useMemo(
+    () => ({
+      session,
+      signOut: async () => {
+        await call(api.POST('/auth/logout'));
+        setSession({ status: 'anonymous' });
+      },
+    }),
+    [session],
+  );
+
+  return <SessionContext value={value}>{children}</SessionContext>;
 }

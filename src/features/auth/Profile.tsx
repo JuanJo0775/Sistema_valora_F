@@ -6,7 +6,7 @@ import { useSession } from './session';
 const DAY = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' });
 
 export function Profile() {
-  const session = useSession();
+  const { session, signOut } = useSession();
   if (session.status === 'active') {
     return (
       <>
@@ -16,7 +16,15 @@ export function Profile() {
             Mientras tanto puedes ver el estado de tus aportes y apelar.
           </p>
         )}
-        <EmptyState title="Tu cuenta" text={`Entraste como ${session.role}.`} />
+        <EmptyState
+          title="Tu cuenta"
+          text={`Entraste como ${session.role}.`}
+          action={
+            <button type="button" className="btn ghost" onClick={() => void signOut()}>
+              Cerrar sesión
+            </button>
+          }
+        />
       </>
     );
   }

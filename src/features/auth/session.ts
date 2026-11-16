@@ -10,6 +10,14 @@ export type Session =
   | { status: 'anonymous' }
   | { status: 'active'; role: Role; suspendedUntil?: string | undefined };
 
-export const SessionContext = createContext<Session>({ status: 'loading' });
+export interface SessionState {
+  session: Session;
+  signOut: () => Promise<void>;
+}
+
+export const SessionContext = createContext<SessionState>({
+  session: { status: 'loading' },
+  signOut: () => Promise.resolve(),
+});
 
 export const useSession = () => useContext(SessionContext);
