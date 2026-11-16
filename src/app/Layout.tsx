@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router';
 import logoDark from '../assets/logo-oscuro.png';
 import logoLight from '../assets/logo-claro.png';
 import { PendingBanner } from '../pwa/PendingBanner';
+import { UpdateBanner } from '../pwa/UpdateBanner';
 import { OfflineBanner } from '../shared/ui/OfflineBanner';
 import { Icon, type IconName } from './Icon';
 import './layout.css';
@@ -27,6 +28,7 @@ export function Layout() {
       </header>
       <OfflineBanner />
       <PendingBanner />
+      <UpdateBanner />
       <main className="page">
         <Outlet />
       </main>

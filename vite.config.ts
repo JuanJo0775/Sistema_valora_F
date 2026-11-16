@@ -13,7 +13,8 @@ export default defineConfig(({ mode }) => {
       // las consultas a /v1 van a la red (la consulta requiere conexión, ADR-010). La única excepción
       // es el detalle de un producto ya abierto, para registrar sin señal (#26).
       VitePWA({
-        registerType: 'autoUpdate',
+        // Aviso de versión nueva (UpdateBanner): se actualiza cuando la persona lo pide.
+        registerType: 'prompt',
         includeAssets: ['favicon-64.png', 'apple-touch-icon.png'],
         manifest: {
           name: 'Valora — precios de tu barrio',
