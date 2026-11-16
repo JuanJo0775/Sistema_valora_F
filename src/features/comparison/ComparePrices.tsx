@@ -105,39 +105,72 @@ export function ComparePrices() {
           </label>
         ))}
       </fieldset>
-      {/* #15: por defecto Armenia (las tiendas de la semilla), sin pedir la ubicación (EC-08). */}
-      <label className="field">
-        Municipio
-        <select
-          value={municipality}
-          onChange={(event) => {
-            setMunicipality(event.target.value as Municipality);
-          }}
-        >
-          {Object.entries(MUNICIPALITIES).map(([value, name]) => (
-            <option key={value} value={value}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {point && (
-        // ADR-019: radio calibrable de 0,5 a 3 km; 2 km por defecto.
-        <label className="field">
-          Radio
-          <select
-            value={String(radiusKm)}
-            onChange={(event) => {
-              setRadiusKm(Number(event.target.value));
+      {/* #15: por defecto Armenia (las tiendas de la semilla), sin pedir la ubicación (EC-08). Con la
+          ubicación, las tiendas a la redonda; las dos cosas no se mezclan. */}
+      {point ? (
+        <>
+          {/* ADR-019: radio calibrable de 0,5 a 3 km; 2 km por defecto. */}
+          <label className="field">
+            Radio
+            <select
+              value={String(radiusKm)}
+              onChange={(event) => {
+                setRadiusKm(Number(event.target.value));
+              }}
+            >
+              {RADII.map((km) => (
+                <option key={km} value={String(km)}>
+                  {`${String(km).replace('.', ',')} km`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setPoint(null);
+              // Sin ubicación no hay distancia: el backend responde 400 a sort=distance.
+              if (sort === 'distance') setSort('unit_price');
             }}
           >
-            {RADII.map((km) => (
-              <option key={km} value={String(km)}>
-                {`${String(km).replace('.', ',')} km`}
-              </option>
-            ))}
-          </select>
-        </label>
+            Comparar por municipio
+          </button>
+        </>
+      ) : (
+        <>
+          <label className="field">
+            Municipio
+            <select
+              value={municipality}
+              onChange={(event) => {
+                setMunicipality(event.target.value as Municipality);
+              }}
+            >
+              {Object.entries(MUNICIPALITIES).map(([value, name]) => (
+                <option key={value} value={value}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setLocationProblem('');
+              askLocation()
+                .then(setPoint)
+                .catch(() => {
+                  setLocationProblem(
+                    'Activa la ubicación del navegador para ver las tiendas cercanas.',
+                  );
+                });
+            }}
+          >
+            Usar mi ubicación
+          </button>
+        </>
       )}
       <label className="check">
         <input
@@ -149,22 +182,6 @@ export function ComparePrices() {
         />
         Solo precios vigentes
       </label>
-      <button
-        type="button"
-        className="btn ghost"
-        onClick={() => {
-          setLocationProblem('');
-          askLocation()
-            .then(setPoint)
-            .catch(() => {
-              setLocationProblem(
-                'Activa la ubicación del navegador para ver las tiendas cercanas.',
-              );
-            });
-        }}
-      >
-        Usar mi ubicación
-      </button>
       {locationProblem && (
         <p role="alert" className="banner warn">
           {locationProblem}
