@@ -17,7 +17,7 @@ export function SignIn() {
     event.preventDefault();
     void call(api.POST('/auth/login', { body: { email, password } })).then(() => {
       reload();
-      void navigate(params.get('volver') ?? '/', { replace: true });
+      void navigate(safeReturn(params.get('volver')), { replace: true });
     });
   };
 
@@ -53,4 +53,9 @@ export function SignIn() {
       </button>
     </form>
   );
+}
+
+// Solo rutas de la misma app: un enlace «/entrar?volver=//otro.sitio» no saca a nadie de Valora.
+function safeReturn(path: string | null): string {
+  return path?.startsWith('/') && !path.startsWith('//') ? path : '/';
 }
