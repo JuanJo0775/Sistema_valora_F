@@ -146,4 +146,37 @@ describe('cola de reportes sin conexión', () => {
 
     expect(send).toHaveBeenCalledTimes(1);
   });
+
+  // EC-07 / RNF-013: 50 reportes guardados sin conexión, 100 % confirmados y 0 duplicados.
+  // Un servidor falso idempotente como el real: con una clave ya vista responde 200 sin crear otro.
+  it('50 reportes sin conexión: al volver la red se confirman todos y ninguno se duplica', async () => {
+    const queue = await openReportQueue(freshName());
+    for (let index = 0; index < 50; index++) {
+      await queue.add(report(crypto.randomUUID()));
+    }
+    const created = new Set<string>();
+    let online = false;
+    let calls = 0;
+    const send = (sent: QueuedReport) => {
+      calls++;
+      // Se corta la red a la mitad de la segunda vuelta: el reporte 30 llega, la respuesta no.
+      if (!online || calls === 30) {
+        if (calls === 30) created.add(sent.idempotencyKey);
+        return Promise.reject(
+          new ApiError({ status: 0, code: 'NETWORK_ERROR', message: 'Sin red.' }),
+        );
+      }
+      created.add(sent.idempotencyKey);
+      return Promise.resolve();
+    };
+
+    await queue.sync(send);
+    online = true;
+    await queue.sync(send);
+    await queue.sync(send);
+
+    const saved = await queue.list();
+    expect(saved.filter(({ status }) => status === 'sincronizado')).toHaveLength(50);
+    expect(created.size).toBe(50);
+  });
 });
