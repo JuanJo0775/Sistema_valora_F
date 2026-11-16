@@ -51,3 +51,11 @@
 .store-card p {
   margin: 0;
 }
+
+/* El punto elegido al proponer una tienda: naranja, porque es lo seleccionado. */
+.store-map .picked-pin {
+  fill: var(--accent);
+  fill-opacity: 0.95;
+  stroke: var(--bg);
+  stroke-width: 3;
+}

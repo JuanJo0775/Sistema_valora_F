@@ -18,6 +18,8 @@ const ARMENIA: L.LatLngExpression = [4.5339, -75.6811];
 export function StoreMap({
   stores,
   label,
+  onPick,
+  picked = null,
 }: {
   stores: MapStore[];
   label: string;
@@ -27,7 +29,14 @@ export function StoreMap({
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const pins = useRef<L.LayerGroup | null>(null);
+  const pickedLayer = useRef<L.LayerGroup | null>(null);
+  // El último onPick, sin volver a crear el mapa cada vez que cambia.
+  const pick = useRef(onPick);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    pick.current = onPick;
+  }, [onPick]);
 
   useEffect(() => {
     if (!element.current) return;
@@ -38,6 +47,11 @@ export function StoreMap({
     }).addTo(created);
     map.current = created;
     pins.current = L.layerGroup().addTo(created);
+    pickedLayer.current = L.layerGroup().addTo(created);
+    // #12: al proponer una tienda, el toque en el mapa elige su ubicación (la de la tienda, EC-08).
+    created.on('click', ({ latlng }: L.LeafletMouseEvent) => {
+      pick.current?.({ lat: latlng.lat, lng: latlng.lng });
+    });
     return () => {
       created.remove();
       map.current = null;
@@ -72,6 +86,15 @@ export function StoreMap({
       });
     }
   }, [stores, navigate]);
+
+  useEffect(() => {
+    const layer = pickedLayer.current;
+    if (!map.current || !layer) return;
+    layer.clearLayers();
+    if (!picked) return;
+    L.circleMarker([picked.lat, picked.lng], { radius: 10, className: 'picked-pin' }).addTo(layer);
+    map.current.panTo([picked.lat, picked.lng]);
+  }, [picked]);
 
   return <div ref={element} className="store-map" role="region" aria-label={label} />;
 }
