@@ -14,10 +14,12 @@ export function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
+  const [sending, setSending] = useState(false);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     setError(null);
+    setSending(true);
     call(api.POST('/auth/login', { body: { email, password } }))
       .then(() => {
         reload();
@@ -25,6 +27,7 @@ export function SignIn() {
       })
       .catch((failure: unknown) => {
         setError(failure);
+        setSending(false);
       });
   };
 
@@ -57,8 +60,8 @@ export function SignIn() {
           }}
         />
       </label>
-      <button type="submit" className="btn">
-        Entrar
+      <button type="submit" className="btn" disabled={sending}>
+        {sending ? 'Entrando…' : 'Entrar'}
       </button>
     </form>
   );
