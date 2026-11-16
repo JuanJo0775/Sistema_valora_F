@@ -37,6 +37,14 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
   // la sincronización en segundo plano).
   useEffect(() => {
     void syncNow();
+    // Y cada vez que vuelve la red (EC-07: p95 de confirmación de 60 s o menos tras reconectar).
+    const onOnline = () => {
+      void syncNow();
+    };
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+    };
   }, [syncNow]);
 
   const submit = useCallback(
