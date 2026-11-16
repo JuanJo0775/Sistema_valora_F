@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi } from '../../test/fakeApi';
+import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { BasketPage } from './BasketPage';
 import { BasketProvider } from './BasketProvider';
 
@@ -162,5 +162,19 @@ describe('mi canasta', () => {
     expect(api.requested.map(({ pathname }) => pathname)).toEqual([
       `/v1/products/${MILK}/comparison`,
     ]);
+  });
+
+  it('mientras busca los precios lo dice, y si fallan también', async () => {
+    stubPendingApi();
+    const waiting = renderBasket(milk);
+    expect(within(await where()).getByRole('status')).toHaveTextContent('Buscando precios…');
+    waiting.unmount();
+    stubApi({});
+
+    renderBasket(milk);
+
+    expect(
+      await within(await where()).findByText('No pudimos calcular dónde te sale más barata.'),
+    ).toBeInTheDocument();
   });
 });
