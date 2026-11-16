@@ -95,6 +95,15 @@ export function ProductSearch({
         <EmptyState
           title={`Sin resultados para «${query}»`}
           text="Revisa la escritura o pide que lo agreguemos al catálogo."
+          action={
+            // #12: proponerlo, con el nombre que se buscó (pide sesión de reportante).
+            <Link
+              to={`/proponer/producto?${new URLSearchParams({ nombre: query }).toString()}`}
+              className="btn ghost"
+            >
+              Propón este producto
+            </Link>
+          }
         />
       )}
       {result && 'products' in result && (
