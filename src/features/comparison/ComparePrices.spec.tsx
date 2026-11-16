@@ -80,4 +80,30 @@ describe('comparar precios', () => {
     expect(row).toHaveTextContent('500 g · $2.000');
     expect(row).toHaveTextContent('$400 por 100 g');
   });
+
+  it('cada precio dice su vigencia, su confiabilidad, su fuente y si es el más barato', async () => {
+    stubCompare(
+      comparison([
+        result({ isCheapest: true }),
+        result({
+          reportId: '8f7e6d5c-4b3a-4291-8a0f-7e6d5c4b3a29',
+          establishment: store('6e3d2c1b-0a9f-4b8c-9d7e-6f5a4b3c2d1e', 'Minimercado La 14'),
+          priceCop: 4400,
+          unitPrice: { valueCop: 440, per: '100g' },
+          presentationId: rice.presentations[1]?.id,
+          reliability: 'media',
+        }),
+      ]),
+    );
+
+    renderCompare();
+
+    const [cheapest, other] = await screen.findAllByRole('listitem');
+    expect(cheapest).toHaveTextContent('Más barato');
+    expect(cheapest).toHaveTextContent('Hoy');
+    expect(cheapest).toHaveTextContent('Confiabilidad alta');
+    expect(cheapest).toHaveTextContent('Comunidad');
+    expect(other).not.toHaveTextContent('Más barato');
+    expect(other).toHaveTextContent('Confiabilidad media');
+  });
 });
