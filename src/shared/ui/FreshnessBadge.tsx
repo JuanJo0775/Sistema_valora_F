@@ -21,6 +21,7 @@ export function FreshnessBadge({
   observedAt: string;
   now?: Date;
 }) {
+  if (freshness === 'desactualizado') return <span className="pill bad">Desactualizado</span>;
   const days = daysAgo(observedAt, now);
   if (freshness === 'por_confirmar') {
     return <span className="pill warn">{`Por confirmar · ${String(days)} días`}</span>;
