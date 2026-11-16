@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi } from '../../test/fakeApi';
+import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { ReportPrice } from './ReportPrice';
 
 const rice = {
@@ -354,5 +354,29 @@ describe('registrar un precio', () => {
     renderReport();
 
     expect(await screen.findByRole('radio', { name: '500 g' })).toBeChecked();
+  });
+
+  it('mientras llega el producto dice «Cargando…»', () => {
+    stubPendingApi();
+
+    renderReport();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+  });
+
+  it('si el producto no carga muestra el error y «Reintentar» lo vuelve a pedir', async () => {
+    const api = stubApi({
+      [`GET /v1/products/${rice.id}`]: [
+        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        { status: 200, body: rice },
+      ],
+    });
+    renderReport();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+    expect(api.requested).toHaveLength(2);
   });
 });
