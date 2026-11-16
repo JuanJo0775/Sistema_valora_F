@@ -79,6 +79,7 @@ const renderReport = (path = `/registrar?producto=${rice.id}`) =>
 describe('registrar un precio', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it('con el producto en la dirección lo muestra con sus presentaciones para elegir', async () => {
@@ -267,5 +268,28 @@ describe('registrar un precio', () => {
       'href',
       `/registrar?producto=${rice.id}`,
     );
+  });
+
+  it('recuerda la última tienda: el siguiente reporte ya la trae elegida', async () => {
+    stubApi(reportRoutes);
+    const first = renderReport();
+    await fillAndSend();
+    await screen.findByRole('heading', { name: 'Recibido' });
+    first.unmount();
+
+    renderReport();
+
+    expect(await screen.findByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+  });
+
+  it('después de «Recibido» se puede registrar otro producto en la misma tienda', async () => {
+    stubApi(reportRoutes);
+    renderReport();
+
+    await fillAndSend();
+
+    expect(
+      await screen.findByRole('link', { name: 'Registrar otro en esta tienda' }),
+    ).toHaveAttribute('href', '/registrar');
   });
 });
