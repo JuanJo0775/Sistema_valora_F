@@ -7,7 +7,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { SelectField } from '../../shared/ui/SelectField';
-import { shortDay } from './days';
+import { shortDay } from '../../shared/days';
 import { HistoryChart } from './HistoryChart';
 import './history.css';
 

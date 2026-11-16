@@ -1,5 +1,5 @@
 import { formatCop } from '../../shared/money';
-import { shortDay } from './days';
+import { shortDay } from '../../shared/days';
 
 interface Point {
   date: string;

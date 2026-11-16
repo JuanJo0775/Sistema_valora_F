@@ -6,3 +6,8 @@ export function shortDay(date: string): string {
   const [, month = '1', day = '1'] = date.split('-');
   return `${String(Number(day))} ${MONTHS[Number(month) - 1] ?? ''}`;
 }
+
+const BOGOTA_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' });
+
+// Un instante (fecha y hora) como día de calendario en Colombia: «2026-11-16T15:00:00Z» → «16 nov».
+export const dayInColombia = (instant: string) => shortDay(BOGOTA_DAY.format(new Date(instant)));
