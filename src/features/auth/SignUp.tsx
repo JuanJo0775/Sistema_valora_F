@@ -7,6 +7,17 @@ import './auth.css';
 
 // Versión vigente de la política de datos (contrato: provisional hasta tener el texto).
 const POLICY_VERSION = '2026-11';
+const MIN_PASSWORD = 10;
+
+// Lo mismo que exige el contrato, dicho antes de enviar: el servidor vuelve a validarlo.
+function problemOf({ password, accepted }: { password: string; accepted: boolean }) {
+  if (password.length < MIN_PASSWORD) {
+    return `La contraseña debe tener al menos ${String(MIN_PASSWORD)} caracteres.`;
+  }
+  // Ley 1581: sin consentimiento no se crea la cuenta.
+  if (!accepted) return 'Para crear la cuenta debes aceptar la política de tratamiento de datos.';
+  return '';
+}
 
 // RF-001: toda cuenta nueva es reportante. El registro no inicia sesión: se entra justo después.
 export function SignUp() {
@@ -20,9 +31,9 @@ export function SignUp() {
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    // Ley 1581: sin consentimiento no se crea la cuenta (el servidor también lo exige).
-    if (!accepted) {
-      setProblem('Para crear la cuenta debes aceptar la política de tratamiento de datos.');
+    const found = problemOf({ password, accepted });
+    if (found) {
+      setProblem(found);
       return;
     }
     setProblem('');
@@ -63,7 +74,7 @@ export function SignUp() {
           type="password"
           autoComplete="new-password"
           required
-          minLength={10}
+          minLength={MIN_PASSWORD}
           value={password}
           onChange={(event) => {
             setPassword(event.target.value);
