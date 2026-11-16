@@ -49,4 +49,19 @@ describe('pestaña Yo', () => {
     expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
   });
+
+  it('con la cuenta suspendida dice hasta cuándo y qué puede hacer', async () => {
+    stubApi({
+      'GET /v1/auth/session': {
+        status: 200,
+        body: { role: 'reportante', csrfToken: 'token-1', suspendedUntil: '2026-11-20T17:00:00Z' },
+      },
+    });
+
+    renderProfile();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Tu cuenta está suspendida hasta el 20 de noviembre de 2026. Mientras tanto puedes ver el estado de tus aportes y apelar.',
+    );
+  });
 });
