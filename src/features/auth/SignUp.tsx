@@ -1,6 +1,6 @@
 import { type SyntheticEvent, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
-import { api, call } from '../../shared/api';
+import { Link, useNavigate, useSearchParams } from 'react-router';
+import { api, ApiError, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { safeReturn } from './safeReturn';
 import { useSession } from './session';
@@ -30,6 +30,8 @@ export function SignUp() {
   const [accepted, setAccepted] = useState(false);
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
+  const [existing, setExisting] = useState(false);
+  const volver = safeReturn(params.get('volver'));
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -40,6 +42,7 @@ export function SignUp() {
     }
     setProblem('');
     setError(null);
+    setExisting(false);
     call(
       api.POST('/auth/register', {
         body: { email, password, acceptedPolicyVersion: POLICY_VERSION },
@@ -47,10 +50,13 @@ export function SignUp() {
     )
       .then(() => signIn({ email, password }))
       .then(() => {
-        void navigate(safeReturn(params.get('volver')), { replace: true });
+        void navigate(volver, { replace: true });
       })
       .catch((failure: unknown) => {
-        setError(failure);
+        // EC-08: con un correo ya registrado el registro responde 201 igual y no cambia nada; si
+        // luego la contraseña no coincide, se invita a entrar sin decir que la cuenta existía.
+        if (failure instanceof ApiError && failure.status === 401) setExisting(true);
+        else setError(failure);
       });
   };
 
@@ -63,6 +69,12 @@ export function SignUp() {
         </p>
       )}
       {error !== null && <ErrorState error={error} />}
+      {existing && (
+        <p role="alert" className="banner warn">
+          Si ya tenías una cuenta con ese correo, inicia sesión con tu contraseña.{' '}
+          <Link to={`/entrar?${new URLSearchParams({ volver }).toString()}`}>Iniciar sesión</Link>
+        </p>
+      )}
       <label className="field">
         Correo
         <input
