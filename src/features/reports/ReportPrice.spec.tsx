@@ -282,6 +282,19 @@ describe('registrar un precio', () => {
     expect(await screen.findByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
   });
 
+  it('la tienda recordada no muestra la distancia de la vez anterior', async () => {
+    stubApi(reportRoutes);
+    const first = renderReport();
+    await fillAndSend();
+    await screen.findByRole('heading', { name: 'Recibido' });
+    first.unmount();
+
+    renderReport();
+
+    const stores = await screen.findByRole('radiogroup', { name: 'Tienda' });
+    expect(stores).not.toHaveTextContent('350 m');
+  });
+
   it('después de «Recibido» se puede registrar otro producto en la misma tienda', async () => {
     stubApi(reportRoutes);
     renderReport();
