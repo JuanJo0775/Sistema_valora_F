@@ -375,4 +375,19 @@ describe('inicio', () => {
 
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
   });
+
+  it('un moderador abre el panel de moderación desde Yo', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('moderador'),
+      'GET /v1/moderation/queue': { status: 200, body: { items: [] } },
+    });
+    window.history.pushState({}, '', '/yo');
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Moderación' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'No hay precios en revisión' }),
+    ).toBeInTheDocument();
+  });
 });

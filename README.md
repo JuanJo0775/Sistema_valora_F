@@ -202,6 +202,7 @@ src/
   features/comparison/  # comparar precios entre tiendas con el criterio declarado
   features/contributions/ # mis aportes, apelar un descarte y marcar un precio dudoso
   features/history/     # historial y gráfica de los últimos 30 días
+  features/moderation/  # panel del moderador: precios en revisión (tiendas, productos y roles en camino)
   features/proposals/   # proponer un producto o sugerir una tienda que no existe
   features/reports/     # registrar un precio: producto, tienda cercana, precio y hora
   features/stores/      # mapa de tiendas (Leaflet + OpenStreetMap) y página de cada tienda

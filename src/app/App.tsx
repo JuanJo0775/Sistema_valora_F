@@ -11,6 +11,7 @@ import { BasketProvider } from '../features/basket/BasketProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ComparePrices } from '../features/comparison/ComparePrices';
 import { MyReports } from '../features/contributions/MyReports';
+import { ModerationPanel } from '../features/moderation/ModerationPanel';
 import { PriceHistory } from '../features/history/PriceHistory';
 import { ProposeProduct } from '../features/proposals/ProposeProduct';
 import { ProposeStore } from '../features/proposals/ProposeStore';
@@ -18,7 +19,6 @@ import { MapPage } from '../features/stores/MapPage';
 import { StorePage } from '../features/stores/StorePage';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportPrice } from '../features/reports/ReportPrice';
-import { EmptyState } from '../shared/ui/EmptyState';
 import { Layout } from './Layout';
 
 // Inicio del prototipo de MC-E4: una sola idea, buscar lo que se va a comprar.
@@ -31,16 +31,6 @@ function Home() {
       </p>
       <ProductSearch formClassName="search home-search" />
     </>
-  );
-}
-
-// Secciones que todavía no tienen pantalla: cada una dice con qué issue llega.
-function Soon({ title, issue }: { title: string; issue: number }) {
-  return (
-    <EmptyState
-      title={title}
-      text={`Esta sección está en construcción (issue #${String(issue)}).`}
-    />
   );
 }
 
@@ -94,7 +84,7 @@ export function App() {
                   path="/moderacion"
                   element={
                     <RequireRole role="moderador">
-                      <Soon title="Moderación" issue={14} />
+                      <ModerationPanel />
                     </RequireRole>
                   }
                 />
