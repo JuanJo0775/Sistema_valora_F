@@ -13,6 +13,12 @@ const SOURCE: Record<Item['source'], string> = {
   siembra: 'Dato inicial',
 };
 
+const directions = ({ lat, lng }: { lat: number; lng: number }) =>
+  `https://www.google.com/maps/dir/?${new URLSearchParams({
+    api: '1',
+    destination: `${String(lat)},${String(lng)}`,
+  }).toString()}`;
+
 // Un precio de la comparación: tienda, presentación, precio por unidad y qué tan confiable es.
 export function Offer({ offer, size }: { offer: Item; size: string }) {
   return (
@@ -31,6 +37,15 @@ export function Offer({ offer, size }: { offer: Item; size: string }) {
         <ReliabilityBadge level={offer.reliability} />
         <span className="pill mute">{SOURCE[offer.source]}</span>
       </p>
+      {/* ADR-019: el mapa es OpenStreetMap; Google solo como enlace externo. Solo va la tienda. */}
+      <a
+        href={directions(offer.establishment)}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Cómo llegar a ${offer.establishment.name}`}
+      >
+        Cómo llegar
+      </a>
     </li>
   );
 }
