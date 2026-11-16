@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { Loading } from '../../shared/ui/Loading';
 import { useSession } from './session';
 
 // Las fechas se leen en la hora de Colombia, sin importar la zona del teléfono.
@@ -7,6 +8,7 @@ const DAY = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'Ame
 
 export function Profile() {
   const { session, signOut } = useSession();
+  if (session.status === 'loading') return <Loading />;
   if (session.status === 'active') {
     return (
       <>
