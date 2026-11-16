@@ -24,4 +24,16 @@ describe('aviso sin conexión', () => {
       'Sin conexión. La consulta de precios necesita internet.',
     );
   });
+
+  it('desaparece cuando vuelve la señal', () => {
+    render(<OfflineBanner />);
+    goOffline();
+
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
 });
