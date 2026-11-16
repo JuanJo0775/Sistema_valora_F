@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { ErrorState } from '../../shared/ui/ErrorState';
 import { formatPresentation } from '../catalog/presentation';
 import { type Store, StorePicker } from './StorePicker';
 import './reports.css';
@@ -36,6 +37,7 @@ export function ReportPrice() {
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [received, setReceived] = useState(false);
   const [problem, setProblem] = useState('');
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
@@ -49,7 +51,8 @@ export function ReportPrice() {
     const found = problemOf({ presentationId, store, priceCop });
     setProblem(found);
     if (found || !store) return;
-    void call(
+    setError(null);
+    call(
       api.POST('/reports', {
         params: { header: { 'Idempotency-Key': idempotencyKey } },
         body: {
@@ -60,9 +63,14 @@ export function ReportPrice() {
           observedAt: new Date().toISOString(),
         },
       }),
-    ).then(() => {
-      setReceived(true);
-    });
+    )
+      .then(() => {
+        setReceived(true);
+      })
+      // Los mensajes propios de cada respuesta (duplicado, ráfaga, fecha) llegan con la #11.
+      .catch((failure: unknown) => {
+        setError(failure);
+      });
   };
 
   if (received) {
@@ -116,6 +124,7 @@ export function ReportPrice() {
           {problem}
         </p>
       )}
+      {error !== null && <ErrorState error={error} />}
       <button type="submit" className="btn">
         Enviar
       </button>
