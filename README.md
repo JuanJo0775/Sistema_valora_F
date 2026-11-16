@@ -198,6 +198,7 @@ src/
   app/                  # rutas y página de inicio
   features/health/      # estado de la API
   shared/api/           # cliente de la API con los tipos del contrato
+  shared/ui/            # colores, fuentes, etiquetas y estados comunes (prototipo de MC-E4)
   test/                 # configuración de Vitest
 ```
 
