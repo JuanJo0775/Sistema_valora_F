@@ -37,6 +37,7 @@ export function ComparePrices() {
   // Por defecto Armenia, sin pedir permisos; con la ubicación, las tiendas cercanas (EC-08: la
   // ubicación solo va en la consulta y no se guarda).
   const [point, setPoint] = useState<Point | null>(null);
+  const [locationProblem, setLocationProblem] = useState('');
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
   const [outcome, setOutcome] = useState<{ key: string; comparison: Comparison } | null>(null);
   const key = `${productId}|${sort}|${point ? `${String(point.lat)},${String(point.lng)}` : 'armenia'}`;
@@ -96,11 +97,23 @@ export function ComparePrices() {
         type="button"
         className="btn ghost"
         onClick={() => {
-          void askLocation().then(setPoint);
+          setLocationProblem('');
+          askLocation()
+            .then(setPoint)
+            .catch(() => {
+              setLocationProblem(
+                'Activa la ubicación del navegador para ver las tiendas cercanas.',
+              );
+            });
         }}
       >
         Usar mi ubicación
       </button>
+      {locationProblem && (
+        <p role="alert" className="banner warn">
+          {locationProblem}
+        </p>
+      )}
       <p className="muted">{describeCriteria(comparison.criteria)}</p>
       <ul className="offers">
         {comparison.results.map((offer) => (
