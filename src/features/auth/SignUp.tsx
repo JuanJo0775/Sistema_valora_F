@@ -1,6 +1,7 @@
 import { type SyntheticEvent, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
+import { ErrorState } from '../../shared/ui/ErrorState';
 import { safeReturn } from './safeReturn';
 import { useSession } from './session';
 import './auth.css';
@@ -28,6 +29,7 @@ export function SignUp() {
   const [password, setPassword] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [problem, setProblem] = useState('');
+  const [error, setError] = useState<unknown>(null);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -37,7 +39,8 @@ export function SignUp() {
       return;
     }
     setProblem('');
-    void call(
+    setError(null);
+    call(
       api.POST('/auth/register', {
         body: { email, password, acceptedPolicyVersion: POLICY_VERSION },
       }),
@@ -45,6 +48,9 @@ export function SignUp() {
       .then(() => signIn({ email, password }))
       .then(() => {
         void navigate(safeReturn(params.get('volver')), { replace: true });
+      })
+      .catch((failure: unknown) => {
+        setError(failure);
       });
   };
 
@@ -56,6 +62,7 @@ export function SignUp() {
           {problem}
         </p>
       )}
+      {error !== null && <ErrorState error={error} />}
       <label className="field">
         Correo
         <input
