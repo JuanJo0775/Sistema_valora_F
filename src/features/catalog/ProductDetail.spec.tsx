@@ -218,6 +218,7 @@ describe('detalle del producto', () => {
     ).toBeInTheDocument();
     expect(within(side).getByRole('link', { name: 'Comparar precios' })).toBeInTheDocument();
     expect(within(side).getByRole('link', { name: 'Registrar un precio' })).toBeInTheDocument();
+    expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
     expect(within(side).queryByRole('heading', { name: 'Arroz blanco' })).not.toBeInTheDocument();
   });
 });
