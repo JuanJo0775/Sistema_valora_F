@@ -15,6 +15,7 @@ export function ProductSearch() {
   const query = params.get('q') ?? '';
   const [text, setText] = useState(query);
   const [products, setProducts] = useState<Product[]>([]);
+  const [hint, setHint] = useState('');
 
   useEffect(() => {
     if (!query) return;
@@ -27,7 +28,14 @@ export function ProductSearch() {
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    setParams({ q: text.trim() });
+    const wanted = text.trim();
+    // El contrato pide al menos 2 letras (minLength de q): se avisa sin llamar a la API.
+    if (wanted.length < 2) {
+      setHint('Escribe al menos 2 letras.');
+      return;
+    }
+    setHint('');
+    setParams({ q: wanted });
   };
 
   return (
@@ -46,6 +54,7 @@ export function ProductSearch() {
           Buscar
         </button>
       </form>
+      {hint && <p className="muted">{hint}</p>}
       <ul className="results">
         {products.map((product) => (
           <li key={product.id}>
