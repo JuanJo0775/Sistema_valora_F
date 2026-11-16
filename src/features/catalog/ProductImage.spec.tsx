@@ -14,4 +14,10 @@ describe('imagen del producto', () => {
 
     expect(screen.getByRole('img', { name: 'Arroz blanco' })).toHaveAttribute('src', offPhoto.url);
   });
+
+  it('una foto de Open Food Facts cita su fuente', () => {
+    render(<ProductImage name="Arroz blanco" image={offPhoto} />);
+
+    expect(screen.getByText('Foto: Open Food Facts, licencia ODbL')).toBeInTheDocument();
+  });
 });
