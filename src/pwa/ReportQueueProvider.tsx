@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSession } from '../features/auth/session';
 import { api, ApiError, call } from '../shared/api';
 import { QueueContext, type SubmitResult } from './queueContext';
 import {
@@ -23,6 +24,8 @@ const RETRY_MS = 30_000;
 export function ReportQueueProvider({ children }: { children: ReactNode }) {
   const queue = useRef<Promise<ReportQueue> | null>(null);
   const [reports, setReports] = useState<QueuedReport[]>([]);
+  const [needsSession, setNeedsSession] = useState(false);
+  const { session } = useSession();
 
   const opened = useCallback(() => {
     queue.current ??= openReportQueue();
@@ -31,9 +34,15 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
 
   const syncNow = useCallback(async () => {
     const reportQueue = await opened();
-    await reportQueue.sync(send);
+    const outcome = await reportQueue.sync(send);
+    setNeedsSession(outcome.needsSession);
     setReports(await reportQueue.list());
   }, [opened]);
+
+  // Al iniciar sesión se envía lo que esperaba la sesión, con la misma clave (#9).
+  useEffect(() => {
+    if (session.status === 'active') void syncNow();
+  }, [session.status, syncNow]);
 
   // Al abrir la app se envía lo que quedó pendiente (OFFLINE_FIRST.md: el navegador no garantiza
   // la sincronización en segundo plano).
@@ -66,6 +75,7 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
         outcome = await reportQueue.sync(send);
         saved = await find();
       }
+      setNeedsSession(outcome.needsSession);
       const result = await resultOf(reportQueue, saved, outcome.problem);
       setReports(await reportQueue.list());
       return result;
@@ -73,7 +83,7 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
     [opened],
   );
 
-  const value = useMemo(() => ({ reports, needsSession: false, submit }), [reports, submit]);
+  const value = useMemo(() => ({ reports, needsSession, submit }), [reports, needsSession, submit]);
   return <QueueContext value={value}>{children}</QueueContext>;
 }
 

@@ -111,9 +111,13 @@ describe('sincronización de la cola', () => {
 
   it('sin sesión espera y, al iniciar sesión, envía los pendientes', async () => {
     await leftFromBefore();
+    let signedIn = false;
     stubApi({
-      'GET /v1/auth/session': [NO_SESSION, NO_SESSION, sessionAs('reportante')],
-      'POST /v1/auth/login': { status: 204 },
+      'GET /v1/auth/session': () => (signedIn ? sessionAs('reportante') : NO_SESSION),
+      'POST /v1/auth/login': () => {
+        signedIn = true;
+        return { status: 204 };
+      },
       'POST /v1/reports': [
         { status: 401, body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' } },
         { status: 201, body: receipt },

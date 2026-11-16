@@ -11,8 +11,9 @@ export interface FakeReply {
 // Backend falso para las pantallas: reemplaza fetch (la frontera con la API) y responde según
 // «MÉTODO /v1/ruta». Guarda las URL pedidas (requested) y cada llamada con su método, su cuerpo y sus cabeceras
 // (calls) para revisar qué se envió. Con una lista de respuestas, cada llamada usa la siguiente y la
-// última se repite (por ejemplo, sin sesión antes de entrar y con sesión después).
-export function stubApi(routes: Record<string, FakeReply | FakeReply[]>) {
+// última se repite. Con una función, la respuesta depende del momento (por ejemplo, de si ya se
+// inició sesión), sin importar cuántas veces se consulte.
+export function stubApi(routes: Record<string, FakeRoute>) {
   const requested: URL[] = [];
   const calls: { method: string; path: string; body: string; headers: Headers }[] = [];
   vi.stubGlobal(
@@ -39,7 +40,10 @@ export function stubApi(routes: Record<string, FakeReply | FakeReply[]>) {
 
 const NOT_FOUND: FakeReply = { status: 404, body: { code: 'NOT_FOUND', message: 'No existe.' } };
 
-function nextReply(route: FakeReply | FakeReply[] | undefined): FakeReply {
+type FakeRoute = FakeReply | FakeReply[] | (() => FakeReply);
+
+function nextReply(route: FakeRoute | undefined): FakeReply {
+  if (typeof route === 'function') return route();
   if (!Array.isArray(route)) return route ?? NOT_FOUND;
   if (route.length > 1) return route.shift() ?? NOT_FOUND;
   return route[0] ?? NOT_FOUND;
