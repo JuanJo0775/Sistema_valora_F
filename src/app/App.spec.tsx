@@ -247,4 +247,22 @@ describe('inicio', () => {
     expect(await screen.findByRole('heading', { name: 'Mi canasta' })).toBeInTheDocument();
     localStorage.clear();
   });
+
+  it('desde el detalle, «Historial» abre los precios de los últimos 30 días', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/history`]: {
+        status: 200,
+        body: { from: '2026-10-18', to: '2026-11-16', presentations: [] },
+      },
+    });
+    window.history.pushState({}, '', `/productos/${rice.id}`);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Historial' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Historial de precios · Arroz blanco' }),
+    ).toBeInTheDocument();
+  });
 });
