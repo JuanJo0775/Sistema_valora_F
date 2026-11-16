@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { type SyntheticEvent, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { formatPresentation } from '../catalog/presentation';
 import { type Store, StorePicker } from './StorePicker';
 import './reports.css';
@@ -15,6 +16,10 @@ export function ReportPrice() {
   const [product, setProduct] = useState<Product | null>(null);
   const [presentationId, setPresentationId] = useState('');
   const [store, setStore] = useState<Store | null>(null);
+  const [price, setPrice] = useState('');
+  // EC-07: la clave nace con el reporte; un reintento del mismo reporte usa la misma.
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [received, setReceived] = useState(false);
 
   useEffect(() => {
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
@@ -22,9 +27,31 @@ export function ReportPrice() {
     );
   }, [productId]);
 
+  const submit = (event: SyntheticEvent) => {
+    event.preventDefault();
+    if (!store) return;
+    void call(
+      api.POST('/reports', {
+        params: { header: { 'Idempotency-Key': idempotencyKey } },
+        body: {
+          presentationId,
+          establishmentId: store.id,
+          priceCop: Number(price),
+          priceType: 'normal',
+          observedAt: new Date().toISOString(),
+        },
+      }),
+    ).then(() => {
+      setReceived(true);
+    });
+  };
+
+  if (received) {
+    return <EmptyState title="Recibido" text="Gracias: tu precio ayuda a otros a comparar." />;
+  }
   if (!product) return null;
   return (
-    <form className="report">
+    <form className="report" onSubmit={submit}>
       <h1>{product.name}</h1>
       <fieldset role="radiogroup" className="choices">
         <legend>Presentación</legend>
@@ -44,6 +71,20 @@ export function ReportPrice() {
         ))}
       </fieldset>
       <StorePicker value={store} onChange={setStore} />
+      <label className="field">
+        Precio en pesos
+        <input
+          inputMode="numeric"
+          autoComplete="off"
+          value={price}
+          onChange={(event) => {
+            setPrice(event.target.value);
+          }}
+        />
+      </label>
+      <button type="submit" className="btn">
+        Enviar
+      </button>
     </form>
   );
 }
