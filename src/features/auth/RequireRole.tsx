@@ -5,10 +5,12 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { withReturn } from './safeReturn';
 import { type Role, useSession } from './session';
+import { SuspendedNotice } from './SuspendedNotice';
 
 // Guía de pantalla, no de seguridad: el servidor vuelve a verificar el rol en cada ruta (ADR-014).
 export function RequireRole({
   role,
+  allowSuspended = false,
   children,
 }: {
   role: Role;
@@ -24,6 +26,9 @@ export function RequireRole({
   }
   if (session.role !== role) {
     return <EmptyState title={`Esta sección es para cuentas de ${role}`} />;
+  }
+  if (session.suspendedUntil && !allowSuspended) {
+    return <SuspendedNotice until={session.suspendedUntil} />;
   }
   return children;
 }

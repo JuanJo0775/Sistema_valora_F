@@ -4,9 +4,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { useSession } from './session';
-
-// Las fechas se leen en la hora de Colombia, sin importar la zona del teléfono.
-const DAY = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' });
+import { SuspendedNotice } from './SuspendedNotice';
 
 export function Profile() {
   const { session, signOut, reload } = useSession();
@@ -16,12 +14,7 @@ export function Profile() {
   if (session.status === 'active') {
     return (
       <>
-        {session.suspendedUntil && (
-          <p role="alert" className="banner warn">
-            Tu cuenta está suspendida hasta el {DAY.format(new Date(session.suspendedUntil))}.
-            Mientras tanto puedes ver el estado de tus aportes y apelar.
-          </p>
-        )}
+        {session.suspendedUntil && <SuspendedNotice until={session.suspendedUntil} />}
         {error !== null && <ErrorState error={error} />}
         <EmptyState
           title="Tu cuenta"
