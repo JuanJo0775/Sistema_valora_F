@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, sessionAs, stubApi } from '../test/fakeApi';
+import { type FakeReply, NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
 import { PendingReports } from './PendingReports';
 import { openReportQueue } from './reportQueue';
 import { ReportQueueProvider } from './ReportQueueProvider';
@@ -32,8 +32,8 @@ const saveReports = async (...products: string[]) => {
   }
 };
 
-const renderPending = (posts: FakeReply[]) => {
-  stubApi({ 'GET /v1/auth/session': sessionAs('reportante'), 'POST /v1/reports': posts });
+const renderPending = (posts: FakeReply[], session: FakeReply = sessionAs('reportante')) => {
+  stubApi({ 'GET /v1/auth/session': session, 'POST /v1/reports': posts });
   return render(
     <ReportQueueProvider>
       <MemoryRouter>
@@ -75,5 +75,41 @@ describe('reportes guardados en el teléfono', () => {
     const eggs = await rowOf('Huevos · 12 und');
     expect(eggs.getByText('Por enviar')).toBeInTheDocument();
     expect(eggs.getByText('Tienda Don Pepe · $2.500')).toBeInTheDocument();
+  });
+
+  it('«Descartar» quita un reporte que requiere atención', async () => {
+    await saveReports('Leche · 1 l');
+    renderPending([
+      { status: 422, body: { code: 'INVALID_OBSERVATION_DATE', message: 'Fuera de rango.' } },
+    ]);
+
+    fireEvent.click((await rowOf('Leche · 1 l')).getByRole('button', { name: 'Descartar' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'No tienes reportes guardados en este teléfono' }),
+    ).toBeInTheDocument();
+  });
+
+  it('si falta la sesión pide iniciarla y vuelve aquí para enviarlos', async () => {
+    await saveReports('Huevos · 12 und');
+    renderPending(
+      [{ status: 401, body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' } }],
+      NO_SESSION,
+    );
+
+    expect(
+      await screen.findByRole('link', { name: 'Inicia sesión para enviarlos' }),
+    ).toHaveAttribute('href', '/entrar?volver=%2Fpendientes');
+  });
+
+  it('con reportes por enviar avisa que puede hacer falta abrir la app', async () => {
+    await saveReports('Huevos · 12 und');
+    renderPending([{ status: 503, body: { code: 'REQUEST_ERROR', message: 'No disponible.' } }]);
+
+    expect(
+      await screen.findByText(
+        'Se envían solos cuando hay conexión. Si no salen, abre Valora con internet: el navegador no siempre los envía con la app cerrada.',
+      ),
+    ).toBeInTheDocument();
   });
 });
