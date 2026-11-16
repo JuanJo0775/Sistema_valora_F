@@ -34,7 +34,18 @@ interface ErrorBody {
 export async function call<T>(
   request: Promise<{ data?: T; error?: unknown; response: Response }>,
 ): Promise<T> {
-  const { data, error, response } = await request;
+  let result: Awaited<typeof request>;
+  try {
+    result = await request;
+  } catch {
+    // fetch solo falla así cuando no hay red o el servidor no contesta.
+    throw new ApiError({
+      status: 0,
+      code: 'NETWORK_ERROR',
+      message: 'No hay conexión con Valora. Revisa tu internet e inténtalo de nuevo.',
+    });
+  }
+  const { data, error, response } = result;
   if (!response.ok) {
     const body = (error ?? {}) as ErrorBody;
     throw new ApiError({
