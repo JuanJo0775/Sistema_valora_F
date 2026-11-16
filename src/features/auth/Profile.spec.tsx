@@ -91,4 +91,20 @@ describe('pestaña Yo', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
     expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
   });
+
+  it('si cerrar sesión falla lo dice y la sesión sigue abierta', async () => {
+    stubApi({
+      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+      'POST /v1/auth/logout': {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' },
+      },
+    });
+    renderProfile();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Cerrar sesión' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
+    expect(screen.getByText('Entraste como reportante.')).toBeInTheDocument();
+  });
 });
