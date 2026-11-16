@@ -9,6 +9,7 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { useSession } from '../auth/session';
 import { SuspendedNotice } from '../auth/SuspendedNotice';
+import { AppealForm } from './AppealForm';
 import './contributions.css';
 
 type MyReport =
@@ -47,6 +48,17 @@ export function MyReports() {
   useEffect(() => {
     load();
   }, [load, attempt]);
+
+  // El servidor ya la recibió: el aporte queda «Apelación en revisión» sin volver a pedir la lista.
+  const markAppealed = (reportId: string) => {
+    setReports((current) =>
+      (current ?? []).map((report) =>
+        report.reportId === reportId
+          ? { ...report, status: 'apelacion_pendiente', appealableUntil: undefined }
+          : report,
+      ),
+    );
+  };
 
   if (error !== null) {
     return (
@@ -97,6 +109,15 @@ export function MyReports() {
                 {STATUS[report.status].text}
               </span>
             </p>
+            {report.status === 'descartado' && report.appealableUntil && (
+              <AppealForm
+                reportId={report.reportId}
+                until={report.appealableUntil}
+                onAppealed={() => {
+                  markAppealed(report.reportId);
+                }}
+              />
+            )}
           </li>
         ))}
       </ul>
