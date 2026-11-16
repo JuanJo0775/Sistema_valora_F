@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '../../test/fakeApi';
@@ -50,5 +50,20 @@ describe('detalle del producto', () => {
       await screen.findByRole('heading', { name: 'No encontramos este producto' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Buscar otro producto' })).toHaveAttribute('href', '/');
+  });
+
+  it('sin conexión muestra el error con «Reintentar», no «no existe»', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+
+    renderDetail(rice.id);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No hay conexión con Valora');
+    expect(screen.queryByText('No encontramos este producto')).not.toBeInTheDocument();
+    stubApi({ [`GET /v1/products/${rice.id}`]: { status: 200, body: rice } });
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
   });
 });
