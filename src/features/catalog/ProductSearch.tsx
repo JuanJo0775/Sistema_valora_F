@@ -19,8 +19,11 @@ const BARCODE = /^\d{8,14}$/;
 // Por defecto cada resultado lleva a su detalle; el registro de precios lo trae de vuelta a sí mismo.
 export function ProductSearch({
   linkTo = (productId) => `/productos/${productId}`,
+  formClassName = 'search',
 }: {
   linkTo?: (productId: string) => string;
+  // El Inicio esconde su formulario en escritorio, donde el buscador está en la barra (#48).
+  formClassName?: string;
 }) {
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
@@ -64,7 +67,7 @@ export function ProductSearch({
 
   return (
     <>
-      <form role="search" className="search" onSubmit={submit}>
+      <form role="search" aria-label="Buscar producto" className={formClassName} onSubmit={submit}>
         <input
           type="search"
           aria-label="Buscar producto"

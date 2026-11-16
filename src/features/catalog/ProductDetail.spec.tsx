@@ -202,4 +202,22 @@ describe('detalle del producto', () => {
     const asked = api.requested.find(({ pathname }) => pathname.endsWith('/comparison'));
     expect(asked?.searchParams.get('municipality')).toBe('calarca');
   });
+
+  // #48: en escritorio el panel derecho lleva los más baratos y las acciones.
+  it('los precios y las acciones van en un panel aparte del producto', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([offer('Ara', 2000, true)]),
+    });
+
+    renderDetail(rice.id);
+
+    const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
+    expect(
+      await within(side).findByRole('list', { name: 'Más baratos en Armenia' }),
+    ).toBeInTheDocument();
+    expect(within(side).getByRole('link', { name: 'Comparar precios' })).toBeInTheDocument();
+    expect(within(side).getByRole('link', { name: 'Registrar un precio' })).toBeInTheDocument();
+    expect(within(side).queryByRole('heading', { name: 'Arroz blanco' })).not.toBeInTheDocument();
+  });
 });

@@ -30,7 +30,7 @@ describe('inicio', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
       target: { value: 'arroz' },
     });
-    fireEvent.submit(screen.getByRole('search'));
+    fireEvent.submit(screen.getByRole('search', { name: 'Buscar producto' }));
     fireEvent.click(await screen.findByRole('link', { name: /Arroz blanco/ }));
 
     expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
@@ -196,5 +196,24 @@ describe('inicio', () => {
 
     expect(await screen.findByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
     localStorage.clear();
+  });
+
+  // #48: en escritorio el buscador va en la barra superior, en todas las pantallas.
+  it('el buscador de la barra superior lleva a los resultados desde cualquier pantalla', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/products': { status: 200, body: { items: [rice] } },
+    });
+    window.history.pushState({}, '', '/yo');
+    render(<App />);
+    const header = within(screen.getByRole('banner'));
+
+    fireEvent.change(header.getByRole('searchbox', { name: 'Buscar en Valora' }), {
+      target: { value: 'arroz' },
+    });
+    fireEvent.submit(header.getByRole('search'));
+
+    expect(await screen.findByRole('link', { name: /Arroz blanco/ })).toBeInTheDocument();
+    expect(window.location.pathname + window.location.search).toBe('/?q=arroz');
   });
 });
