@@ -77,6 +77,7 @@ const renderCompare = () =>
 describe('comparar precios', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it('cada resultado dice la tienda, la presentación con su precio y el precio por unidad', async () => {
@@ -359,5 +360,18 @@ describe('comparar precios', () => {
     await screen.findByRole('combobox', { name: 'Municipio' });
     const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison')).at(-1);
     expect(asked?.searchParams.get('sort')).toBe('unit_price');
+  });
+
+  it('recuerda el municipio elegido para la próxima vez', async () => {
+    stubCompare(comparison([result()]));
+    const first = renderCompare();
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Municipio' }), {
+      target: { value: 'calarca' },
+    });
+    first.unmount();
+
+    renderCompare();
+
+    expect(await screen.findByRole('combobox', { name: 'Municipio' })).toHaveValue('calarca');
   });
 });
