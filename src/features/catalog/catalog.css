@@ -50,3 +50,13 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actions .btn {
+  text-decoration: none;
+}

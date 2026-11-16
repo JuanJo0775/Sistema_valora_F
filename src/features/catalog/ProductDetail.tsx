@@ -70,6 +70,18 @@ export function ProductDetail() {
           </li>
         ))}
       </ul>
+      {/* Prototipo: la acción principal (naranja) es comparar; las demás, secundarias. */}
+      <div className="actions">
+        <Link to={`/productos/${product.id}/comparar`} className="btn">
+          Comparar precios
+        </Link>
+        <Link to={`/productos/${product.id}/historial`} className="btn ghost">
+          Historial
+        </Link>
+        <Link to={`/registrar?producto=${product.id}`} className="btn ghost">
+          Registrar un precio
+        </Link>
+      </div>
     </article>
   );
 }
