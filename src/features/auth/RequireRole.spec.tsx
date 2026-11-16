@@ -83,4 +83,17 @@ describe('secciones con sesión', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
     expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
   });
+
+  it('sin red no da la sesión por cerrada: muestra el error y permite reintentar', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+
+    renderAt('/registrar');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No hay conexión con Valora');
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
+  });
 });
