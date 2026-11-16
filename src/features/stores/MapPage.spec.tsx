@@ -89,7 +89,7 @@ describe('mapa de tiendas', () => {
 
     expect(await screen.findByRole('heading', { name: 'Tiendas cerca de ti' })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Tienda Don Pepe' }).closest('li'),
+      (await screen.findByRole('heading', { name: 'Tienda Don Pepe' })).closest('li'),
     ).toHaveTextContent('350 m');
     fireEvent.change(screen.getByRole('combobox', { name: 'Radio' }), { target: { value: '1' } });
     await vi.waitFor(() => {
