@@ -6,6 +6,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
+import { AddToBasket } from '../basket/AddToBasket';
 import { CheapestOffers } from '../comparison/CheapestOffers';
 import { ProductImage } from './ProductImage';
 import './catalog.css';
@@ -80,6 +81,7 @@ export function ProductDetail() {
       {/* #48: en escritorio, el panel fijo de la derecha; en el celular, debajo del producto. */}
       <aside className="side" aria-label="Precios y acciones">
         <CheapestOffers product={product} />
+        <AddToBasket product={product} />
         {/* Prototipo: la acción principal (naranja) es comparar; las demás, secundarias. */}
         <div className="actions">
           <Link to={`/productos/${product.id}/comparar`} className="btn">
