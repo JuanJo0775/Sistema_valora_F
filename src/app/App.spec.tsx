@@ -114,4 +114,13 @@ describe('inicio', () => {
       await screen.findByRole('heading', { name: 'Esta sección es para cuentas de moderador' }),
     ).toBeInTheDocument();
   });
+
+  it('un reportante que toca «Registrar precio» empieza buscando el producto', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+    window.history.pushState({}, '', '/registrar');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
+  });
 });
