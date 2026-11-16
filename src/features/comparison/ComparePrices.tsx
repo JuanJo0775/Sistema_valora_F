@@ -38,9 +38,10 @@ export function ComparePrices() {
   // ubicación solo va en la consulta y no se guarda).
   const [point, setPoint] = useState<Point | null>(null);
   const [locationProblem, setLocationProblem] = useState('');
+  const [onlyCurrent, setOnlyCurrent] = useState(false);
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
   const [outcome, setOutcome] = useState<{ key: string; comparison: Comparison } | null>(null);
-  const key = `${productId}|${sort}|${point ? `${String(point.lat)},${String(point.lng)}` : 'armenia'}`;
+  const key = `${productId}|${sort}|${String(onlyCurrent)}|${point ? `${String(point.lat)},${String(point.lng)}` : 'armenia'}`;
 
   useEffect(() => {
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
@@ -54,7 +55,7 @@ export function ComparePrices() {
       api.GET('/products/{productId}/comparison', {
         params: {
           path: { productId },
-          query: point ? { ...point, sort } : { municipality: 'armenia', sort },
+          query: { ...(point ?? { municipality: 'armenia' as const }), sort, onlyCurrent },
         },
       }),
     ).then((comparison) => {
@@ -63,7 +64,7 @@ export function ComparePrices() {
     return () => {
       current = false;
     };
-  }, [productId, sort, point, key]);
+  }, [productId, sort, point, onlyCurrent, key]);
 
   if (!product || !outcome) return null;
   const { comparison } = outcome;
@@ -93,6 +94,16 @@ export function ComparePrices() {
           </label>
         ))}
       </fieldset>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={onlyCurrent}
+          onChange={(event) => {
+            setOnlyCurrent(event.target.checked);
+          }}
+        />
+        Solo precios vigentes
+      </label>
       <button
         type="button"
         className="btn ghost"
