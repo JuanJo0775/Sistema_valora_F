@@ -64,4 +64,17 @@ describe('iniciar sesión', () => {
       expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
     },
   );
+
+  it('si el correo o la contraseña no coinciden lo dice y deja el formulario', async () => {
+    stubLogin({
+      status: 401,
+      body: { code: 'UNAUTHORIZED', message: 'Correo o contraseña incorrectos.' },
+    });
+    renderSignIn('/entrar');
+
+    signIn('ana@correo.co', 'otra clave larga');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos.');
+    expect(screen.getByLabelText('Correo')).toHaveValue('ana@correo.co');
+  });
 });
