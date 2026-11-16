@@ -17,8 +17,17 @@ export type NewBasketItem = Pick<
 export interface BasketState {
   items: BasketItem[];
   add: (item: NewBasketItem) => void;
+  setQuantity: (presentationId: string, quantity: number) => void;
+  toggleBought: (presentationId: string) => void;
+  removeBought: () => void;
 }
 
-export const BasketContext = createContext<BasketState>({ items: [], add: () => undefined });
+export const BasketContext = createContext<BasketState>({
+  items: [],
+  add: () => undefined,
+  setQuantity: () => undefined,
+  toggleBought: () => undefined,
+  removeBought: () => undefined,
+});
 
 export const useBasket = () => useContext(BasketContext);

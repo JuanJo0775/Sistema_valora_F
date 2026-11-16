@@ -40,6 +40,10 @@ export function BasketProvider({ children }: { children: ReactNode }) {
     [save],
   );
 
-  const value = useMemo(() => ({ items, add }), [items, add]);
+  const noop = useCallback(() => undefined, []);
+  const value = useMemo(
+    () => ({ items, add, setQuantity: noop, toggleBought: noop, removeBought: noop }),
+    [items, add, noop],
+  );
   return <BasketContext value={value}>{children}</BasketContext>;
 }

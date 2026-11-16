@@ -12,7 +12,7 @@ const rice500 = {
 
 // Lo que una pantalla ve y hace con la canasta.
 function BasketProbe() {
-  const { items, add } = useBasket();
+  const { items, add, setQuantity, toggleBought, removeBought } = useBasket();
   return (
     <>
       <button
@@ -23,10 +23,29 @@ function BasketProbe() {
       >
         Agregar arroz
       </button>
+      <button type="button" onClick={removeBought}>
+        Quitar lo comprado
+      </button>
       <ul>
         {items.map((item) => (
           <li key={item.presentationId}>
-            {`${item.productName} · ${item.presentationLabel} × ${String(item.quantity)}`}
+            {`${item.productName} · ${item.presentationLabel} × ${String(item.quantity)}${item.bought ? ' (comprado)' : ''}`}
+            <button
+              type="button"
+              onClick={() => {
+                setQuantity(item.presentationId, 0);
+              }}
+            >
+              Cantidad 0
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                toggleBought(item.presentationId);
+              }}
+            >
+              Comprado
+            </button>
           </li>
         ))}
       </ul>
@@ -63,5 +82,25 @@ describe('estado de la canasta', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Agregar arroz' }));
 
     expect(screen.getByText('Arroz blanco · 500 g × 2')).toBeInTheDocument();
+  });
+
+  it('con cantidad 0 el producto sale de la canasta', () => {
+    renderBasket();
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar arroz' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cantidad 0' }));
+
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+  });
+
+  it('se marca como comprado y «Quitar lo comprado» lo saca', () => {
+    renderBasket();
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar arroz' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Comprado' }));
+    expect(screen.getByText(/× 1 \(comprado\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar lo comprado' }));
+
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
   });
 });
