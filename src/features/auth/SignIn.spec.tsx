@@ -77,4 +77,20 @@ describe('iniciar sesión', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos.');
     expect(screen.getByLabelText('Correo')).toHaveValue('ana@correo.co');
   });
+
+  it('mientras entra el botón dice «Entrando…» y no se puede volver a enviar', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.url.endsWith('/auth/session')
+          ? Promise.resolve(new Response(JSON.stringify(unauthorized.body), { status: 401 }))
+          : new Promise<Response>(() => undefined),
+      ),
+    );
+    renderSignIn('/entrar');
+
+    signIn('ana@correo.co', 'una clave larga');
+
+    expect(screen.getByRole('button', { name: 'Entrando…' })).toBeDisabled();
+  });
 });
