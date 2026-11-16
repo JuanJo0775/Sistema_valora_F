@@ -12,6 +12,17 @@ type Product = components['schemas']['Product'];
 // En Colombia los miles se separan con punto: «2.500» son 2500 pesos (sin centavos).
 const toPesos = (text: string) => Number(text.replace(/[.\s$]/g, ''));
 
+// Lo que exige el contrato (ReportCreate), dicho antes de enviar: el servidor vuelve a validarlo.
+function problemOf(report: { presentationId: string; store: Store | null; priceCop: number }) {
+  if (!report.presentationId) return 'Elige la presentación.';
+  if (!report.store) return 'Elige la tienda.';
+  const { priceCop } = report;
+  if (!Number.isInteger(priceCop) || priceCop < 1 || priceCop > 10_000_000) {
+    return 'Escribe el precio en pesos.';
+  }
+  return '';
+}
+
 // EC-01: una sola pantalla con lo que ya se sabe lleno, para reportar en 15 segundos o menos.
 export function ReportPrice() {
   const [params] = useSearchParams();
@@ -23,6 +34,7 @@ export function ReportPrice() {
   // EC-07: la clave nace con el reporte; un reintento del mismo reporte usa la misma.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [received, setReceived] = useState(false);
+  const [problem, setProblem] = useState('');
 
   useEffect(() => {
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
@@ -32,14 +44,17 @@ export function ReportPrice() {
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    if (!store) return;
+    const priceCop = toPesos(price);
+    const found = problemOf({ presentationId, store, priceCop });
+    setProblem(found);
+    if (found || !store) return;
     void call(
       api.POST('/reports', {
         params: { header: { 'Idempotency-Key': idempotencyKey } },
         body: {
           presentationId,
           establishmentId: store.id,
-          priceCop: toPesos(price),
+          priceCop,
           priceType: 'normal',
           observedAt: new Date().toISOString(),
         },
@@ -85,6 +100,11 @@ export function ReportPrice() {
           }}
         />
       </label>
+      {problem && (
+        <p role="alert" className="banner warn">
+          {problem}
+        </p>
+      )}
       <button type="submit" className="btn">
         Enviar
       </button>
