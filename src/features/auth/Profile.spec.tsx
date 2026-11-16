@@ -107,4 +107,20 @@ describe('pestaña Yo', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
     expect(screen.getByText('Entraste como reportante.')).toBeInTheDocument();
   });
+
+  it('sin red no da la sesión por cerrada: muestra el error y «Reintentar» vuelve a preguntar', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+    renderProfile();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No hay conexión con Valora');
+    expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
+    stubApi({
+      'GET /v1/auth/session': { status: 200, body: { role: 'reportante', csrfToken: 'token-1' } },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+  });
 });
