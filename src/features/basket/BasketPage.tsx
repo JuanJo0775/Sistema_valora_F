@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { type BasketItem, useBasket } from './basketContext';
+import { CheapestStore } from './CheapestStore';
 import './basket.css';
 
 // #31: la canasta es una lista de compras. Lo que falta por comprar va primero; lo comprado se
@@ -22,28 +23,31 @@ export function BasketPage() {
   }
   const ordered = [...items].sort((a, b) => Number(a.bought) - Number(b.bought));
   return (
-    <section className="basket">
-      <h1>Mi canasta</h1>
-      <ul className="basket-list">
-        {ordered.map((item) => (
-          <BasketRow
-            key={item.presentationId}
-            item={item}
-            onQuantity={(quantity) => {
-              setQuantity(item.presentationId, quantity);
-            }}
-            onBought={() => {
-              toggleBought(item.presentationId);
-            }}
-          />
-        ))}
-      </ul>
-      {items.some(({ bought }) => bought) && (
-        <button type="button" className="btn ghost" onClick={removeBought}>
-          Quitar lo comprado
-        </button>
-      )}
-    </section>
+    <div className="with-side">
+      <section className="basket">
+        <h1>Mi canasta</h1>
+        <ul className="basket-list">
+          {ordered.map((item) => (
+            <BasketRow
+              key={item.presentationId}
+              item={item}
+              onQuantity={(quantity) => {
+                setQuantity(item.presentationId, quantity);
+              }}
+              onBought={() => {
+                toggleBought(item.presentationId);
+              }}
+            />
+          ))}
+        </ul>
+        {items.some(({ bought }) => bought) && (
+          <button type="button" className="btn ghost" onClick={removeBought}>
+            Quitar lo comprado
+          </button>
+        )}
+      </section>
+      <CheapestStore items={items} />
+    </div>
   );
 }
 
