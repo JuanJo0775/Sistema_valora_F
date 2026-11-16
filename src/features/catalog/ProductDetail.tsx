@@ -6,6 +6,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
+import { ProductImage } from './ProductImage';
 import './catalog.css';
 
 type Product = components['schemas']['Product'];
@@ -60,6 +61,7 @@ export function ProductDetail() {
   const { product } = result;
   return (
     <article className="detail">
+      <ProductImage name={product.name} image={product.image} />
       <h1>{product.name}</h1>
       <p className="muted">{[product.brand, product.category.name].filter(Boolean).join(' · ')}</p>
       <h2 id="presentaciones">Presentaciones</h2>
