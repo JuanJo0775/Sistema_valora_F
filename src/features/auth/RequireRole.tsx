@@ -7,7 +7,14 @@ import { withReturn } from './safeReturn';
 import { type Role, useSession } from './session';
 
 // Guía de pantalla, no de seguridad: el servidor vuelve a verificar el rol en cada ruta (ADR-014).
-export function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
+export function RequireRole({
+  role,
+  children,
+}: {
+  role: Role;
+  allowSuspended?: boolean;
+  children: ReactNode;
+}) {
   const { session, reload } = useSession();
   const { pathname, search } = useLocation();
   if (session.status === 'loading') return <Loading />;

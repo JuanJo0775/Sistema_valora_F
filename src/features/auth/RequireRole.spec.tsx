@@ -32,6 +32,14 @@ const renderAt = (path: string) =>
               </RequireRole>
             }
           />
+          <Route
+            path="/mis-aportes"
+            element={
+              <RequireRole role="reportante" allowSuspended>
+                <h1>Mis aportes</h1>
+              </RequireRole>
+            }
+          />
           <Route path="/entrar" element={<WhereAmI />} />
         </Routes>
       </MemoryRouter>
@@ -95,5 +103,24 @@ describe('secciones con sesión', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No hay conexión con Valora');
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
+  });
+
+  it('una cuenta suspendida no puede registrar y ve hasta cuándo', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionOf('reportante', '2026-11-20T17:00:00Z') });
+
+    renderAt('/registrar');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Tu cuenta está suspendida hasta el 20 de noviembre de 2026.',
+    );
+    expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
+  });
+
+  it('una cuenta suspendida sí ve sus aportes, para poder apelar', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionOf('reportante', '2026-11-20T17:00:00Z') });
+
+    renderAt('/mis-aportes');
+
+    expect(await screen.findByRole('heading', { name: 'Mis aportes' })).toBeInTheDocument();
   });
 });
