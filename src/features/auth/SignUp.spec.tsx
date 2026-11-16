@@ -96,4 +96,22 @@ describe('crear cuenta', () => {
       'Demasiados intentos. Espera unos minutos.',
     );
   });
+
+  it('si el correo ya tenía cuenta invita a entrar con su contraseña, sin revelarlo', async () => {
+    stubSignUp(
+      { status: 201 },
+      { status: 401, body: { code: 'UNAUTHORIZED', message: 'Correo o contraseña incorrectos.' } },
+    );
+    renderSignUp();
+
+    fill();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Si ya tenías una cuenta con ese correo, inicia sesión con tu contraseña.',
+    );
+    expect(screen.getByRole('link', { name: 'Iniciar sesión' })).toHaveAttribute(
+      'href',
+      '/entrar?volver=%2Fyo',
+    );
+  });
 });
