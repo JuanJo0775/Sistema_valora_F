@@ -10,11 +10,13 @@ export interface NewReport {
   label: { product: string; store: string };
 }
 
-export type QueueStatus = 'pendiente';
+export type QueueStatus = 'pendiente' | 'sincronizado';
 
 export interface QueuedReport extends NewReport {
   status: QueueStatus;
   savedAt: string;
+  // syncedAt: cuándo lo confirmó el servidor; aparte de observedAt (OFFLINE_FIRST.md).
+  syncedAt?: string;
 }
 
 interface QueueDb extends DBSchema {
@@ -24,6 +26,7 @@ interface QueueDb extends DBSchema {
 export interface ReportQueue {
   add: (report: NewReport) => Promise<void>;
   list: () => Promise<QueuedReport[]>;
+  sync: (send: (report: QueuedReport) => Promise<unknown>) => Promise<void>;
 }
 
 export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
@@ -41,5 +44,6 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
       });
     },
     list: () => db.getAll('reports'),
+    sync: () => Promise.resolve(),
   };
 }

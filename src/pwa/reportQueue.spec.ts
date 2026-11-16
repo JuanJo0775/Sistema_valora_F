@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '../shared/api';
 import { openReportQueue } from './reportQueue';
 
 let dbCount = 0;
@@ -18,6 +19,13 @@ const report = (key = '7e6d5c4b-3a29-4180-9f7e-6d5c4b3a2918') => ({
   label: { product: 'Arroz blanco · 500 g', store: 'Tienda Don Pepe' },
 });
 
+// El envío a POST /v1/reports: responde bien o lanza el ApiError que llegaría del servidor.
+const answers = (...replies: (ApiError | 'ok')[]) =>
+  vi.fn(() => {
+    const reply = replies.shift() ?? 'ok';
+    return reply === 'ok' ? Promise.resolve() : Promise.reject(reply);
+  });
+
 describe('cola de reportes sin conexión', () => {
   it('un reporte guardado queda pendiente, con su clave y su hora, aunque se cierre la app', async () => {
     const name = freshName();
@@ -32,5 +40,22 @@ describe('cola de reportes sin conexión', () => {
       status: 'pendiente',
       body: { observedAt: '2026-11-16T15:00:00.000Z' },
     });
+  });
+
+  it('con 201 o 200 queda sincronizado: se envió con su clave y su cuerpo y no se vuelve a enviar', async () => {
+    const queue = await openReportQueue(freshName());
+    await queue.add(report());
+    const send = answers('ok');
+
+    await queue.sync(send);
+    await queue.sync(send);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: report().idempotencyKey, body: report().body }),
+    );
+    const [synced] = await queue.list();
+    expect(synced?.status).toBe('sincronizado');
+    expect(synced?.syncedAt).toBeDefined();
   });
 });
