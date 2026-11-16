@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { call, createApiClient } from './client';
+import { ApiError, call, createApiClient } from './client';
 
 type Reply = { status: number; body?: unknown; headers?: Record<string, string> };
 
@@ -36,5 +36,23 @@ describe('cliente de la API', () => {
 
     expect(found.items).toEqual([rice]);
     expect(new URL(backend.requests[0]?.url ?? '').search).toBe('?q=arroz');
+  });
+
+  it('un producto que no existe llega como error con el código y el mensaje del servidor', async () => {
+    const backend = fakeBackend({
+      [`GET /v1/products/${rice.id}`]: {
+        status: 404,
+        body: { code: 'NOT_FOUND', message: 'No existe el producto.' },
+      },
+    });
+    const api = createApiClient({ fetch: backend.fetch });
+
+    const request = call(
+      api.GET('/products/{productId}', { params: { path: { productId: rice.id } } }),
+    );
+
+    await expect(request).rejects.toEqual(
+      new ApiError({ status: 404, code: 'NOT_FOUND', message: 'No existe el producto.' }),
+    );
   });
 });

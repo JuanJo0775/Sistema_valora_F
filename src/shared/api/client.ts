@@ -18,3 +18,14 @@ export async function call<T>(request: Promise<{ data?: T }>): Promise<T> {
   if (data === undefined) throw new Error('La API no devolvió datos');
   return data;
 }
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string;
+
+  constructor(_details: { status: number; code: string; message: string }) {
+    super('Sin implementar');
+    this.status = 0;
+    this.code = '';
+  }
+}
