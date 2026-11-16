@@ -5,6 +5,7 @@ import type { components } from '../../shared/api/schema';
 import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
 import { formatPresentation } from '../catalog/presentation';
+import { describeCriteria } from './criteria';
 import { formatCop, formatUnitPrice } from './money';
 import './comparison.css';
 
@@ -46,6 +47,7 @@ export function ComparePrices() {
   return (
     <section className="compare">
       <h1>{data.product.name}</h1>
+      <p className="muted">{describeCriteria(data.comparison.criteria)}</p>
       <ul className="offers">
         {data.comparison.results.map((offer) => (
           <li key={offer.reportId} className="offer">
