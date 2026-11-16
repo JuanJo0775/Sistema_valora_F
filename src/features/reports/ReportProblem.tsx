@@ -15,5 +15,15 @@ export function ReportProblem({ error }: { error: unknown }) {
       </p>
     );
   }
+  // RF-012 RN2: más de 20 reportes observados en una misma hora (valor provisional del backend).
+  if (error instanceof ApiError && error.status === 429 && error.retryAfterSeconds) {
+    const minutes = Math.ceil(error.retryAfterSeconds / 60);
+    return (
+      <p role="alert" className="banner warn">
+        Registraste muchos precios en poco tiempo. Podrás registrar otro en {minutes}{' '}
+        {minutes === 1 ? 'minuto' : 'minutos'}.
+      </p>
+    );
+  }
   return <ErrorState error={error} />;
 }
