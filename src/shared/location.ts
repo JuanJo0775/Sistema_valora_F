@@ -15,3 +15,9 @@ export function askLocation(): Promise<Point> {
     }, reject);
   });
 }
+
+const KM = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
+
+// «350 m» o «1,2 km», como se lee en Colombia.
+export const formatDistance = (meters: number) =>
+  meters < 1000 ? `${String(meters)} m` : `${KM.format(meters / 1000)} km`;

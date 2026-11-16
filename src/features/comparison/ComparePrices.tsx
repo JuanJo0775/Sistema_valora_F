@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { api, call } from '../../shared/api';
+import { askLocation, formatDistance, type Point } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
 import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
@@ -33,9 +34,12 @@ export function ComparePrices() {
   const { productId = '' } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [sort, setSort] = useState<Sort>('unit_price');
+  // Por defecto Armenia, sin pedir permisos; con la ubicación, las tiendas cercanas (EC-08: la
+  // ubicación solo va en la consulta y no se guarda).
+  const [point, setPoint] = useState<Point | null>(null);
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
   const [outcome, setOutcome] = useState<{ key: string; comparison: Comparison } | null>(null);
-  const key = `${productId}|${sort}`;
+  const key = `${productId}|${sort}|${point ? `${String(point.lat)},${String(point.lng)}` : 'armenia'}`;
 
   useEffect(() => {
     void call(api.GET('/products/{productId}', { params: { path: { productId } } })).then(
@@ -47,7 +51,10 @@ export function ComparePrices() {
     let current = true;
     void call(
       api.GET('/products/{productId}/comparison', {
-        params: { path: { productId }, query: { municipality: 'armenia', sort } },
+        params: {
+          path: { productId },
+          query: point ? { ...point, sort } : { municipality: 'armenia', sort },
+        },
       }),
     ).then((comparison) => {
       if (current) setOutcome({ key, comparison });
@@ -55,7 +62,7 @@ export function ComparePrices() {
     return () => {
       current = false;
     };
-  }, [productId, sort, key]);
+  }, [productId, sort, point, key]);
 
   if (!product || !outcome) return null;
   const { comparison } = outcome;
@@ -76,7 +83,7 @@ export function ComparePrices() {
               value={option.value}
               checked={sort === option.value}
               // Sin la ubicación no hay distancia: el backend responde 400 a sort=distance.
-              disabled={option.value === 'distance'}
+              disabled={option.value === 'distance' && !point}
               onChange={() => {
                 setSort(option.value);
               }}
@@ -85,11 +92,23 @@ export function ComparePrices() {
           </label>
         ))}
       </fieldset>
+      <button
+        type="button"
+        className="btn ghost"
+        onClick={() => {
+          void askLocation().then(setPoint);
+        }}
+      >
+        Usar mi ubicación
+      </button>
       <p className="muted">{describeCriteria(comparison.criteria)}</p>
       <ul className="offers">
         {comparison.results.map((offer) => (
           <li key={offer.reportId} className="offer">
             <h2>{offer.establishment.name}</h2>
+            {offer.establishment.distanceM !== undefined && (
+              <p className="muted">{formatDistance(offer.establishment.distanceM)}</p>
+            )}
             <p>
               {sizeOf(offer.presentationId)} · {formatCop(offer.priceCop)}
             </p>

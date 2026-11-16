@@ -1,15 +1,11 @@
 import { useState } from 'react';
 import { api, call } from '../../shared/api';
-import { askLocation } from '../../shared/location';
+import { askLocation, formatDistance } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 
 export type Store = components['schemas']['Establishment'];
-
-const KM = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
-const distance = (meters: number) =>
-  meters < 1000 ? `${String(meters)} m` : `${KM.format(meters / 1000)} km`;
 
 // RF-005: la ubicación del momento solo sirve para buscar las tiendas cercanas. No se guarda ni va
 // en el reporte, que solo lleva la tienda (EC-08).
@@ -77,7 +73,7 @@ export function StorePicker({
           />
           <span>{store.name}</span>
           {store.distanceM !== undefined && (
-            <span className="muted">{distance(store.distanceM)}</span>
+            <span className="muted">{formatDistance(store.distanceM)}</span>
           )}
         </label>
       ))}
