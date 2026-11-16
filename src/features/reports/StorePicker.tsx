@@ -18,17 +18,25 @@ export function StorePicker({
   onChange: (store: Store) => void;
 }) {
   const [stores, setStores] = useState<Store[]>([]);
+  const [problem, setProblem] = useState('');
 
   const findNearby = () => {
-    navigator.geolocation.getCurrentPosition(({ coords }) => {
-      void call(
-        api.GET('/establishments/nearby', {
-          params: { query: { lat: coords.latitude, lng: coords.longitude } },
-        }),
-      ).then(({ items }) => {
-        setStores(items);
-      });
-    });
+    setProblem('');
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        void call(
+          api.GET('/establishments/nearby', {
+            params: { query: { lat: coords.latitude, lng: coords.longitude } },
+          }),
+        ).then(({ items }) => {
+          setStores(items);
+        });
+      },
+      // Sin ubicación todavía no hay otra forma de elegir la tienda (llega con B#116).
+      () => {
+        setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
+      },
+    );
   };
 
   return (
@@ -37,6 +45,11 @@ export function StorePicker({
       <button type="button" className="btn ghost" onClick={findNearby}>
         Usar mi ubicación
       </button>
+      {problem && (
+        <p role="alert" className="banner warn">
+          {problem}
+        </p>
+      )}
       {stores.map((store) => (
         <label key={store.id} className="choice store">
           <input
