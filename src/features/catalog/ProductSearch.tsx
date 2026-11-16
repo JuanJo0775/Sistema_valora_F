@@ -7,6 +7,8 @@ import './catalog.css';
 
 type Product = components['schemas']['Product'];
 
+const BARCODE = /^\d{8,14}$/;
+
 // El texto buscado vive en la dirección (?q=): «atrás» vuelve a los mismos resultados.
 export function ProductSearch() {
   const [params, setParams] = useSearchParams();
@@ -16,7 +18,9 @@ export function ProductSearch() {
 
   useEffect(() => {
     if (!query) return;
-    void call(api.GET('/products', { params: { query: { q: query } } })).then(({ items }) => {
+    // RF-003: el código de barras (EAN/GTIN) se escribe o se escanea; tiene de 8 a 14 dígitos.
+    const filter = BARCODE.test(query) ? { barcode: query } : { q: query };
+    void call(api.GET('/products', { params: { query: filter } })).then(({ items }) => {
       setProducts(items);
     });
   }, [query]);
