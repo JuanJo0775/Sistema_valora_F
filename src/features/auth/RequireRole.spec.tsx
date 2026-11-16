@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { api, call } from '../../shared/api';
 import { stubApi } from '../../test/fakeApi';
 import { RequireRole } from './RequireRole';
 import { SessionProvider } from './SessionProvider';
@@ -13,6 +14,23 @@ const sessionOf = (role: string, suspendedUntil?: string) => ({
   status: 200,
   body: { role, csrfToken: 'token-1', suspendedUntil },
 });
+
+// Una sección cualquiera que consulta la API con la sesión.
+function MyReports() {
+  return (
+    <>
+      <h1>Mis aportes</h1>
+      <button
+        type="button"
+        onClick={() => {
+          call(api.GET('/me/reports')).catch(() => undefined);
+        }}
+      >
+        Actualizar
+      </button>
+    </>
+  );
+}
 
 function WhereAmI() {
   const { pathname, search } = useLocation();
@@ -36,7 +54,7 @@ const renderAt = (path: string) =>
             path="/mis-aportes"
             element={
               <RequireRole role="reportante" allowSuspended>
-                <h1>Mis aportes</h1>
+                <MyReports />
               </RequireRole>
             }
           />
@@ -122,5 +140,17 @@ describe('secciones con sesión', () => {
     renderAt('/mis-aportes');
 
     expect(await screen.findByRole('heading', { name: 'Mis aportes' })).toBeInTheDocument();
+  });
+
+  it('si la sesión vence mientras la usa, lleva a entrar y recuerda dónde estaba', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionOf('reportante'),
+      'GET /v1/me/reports': unauthorized,
+    });
+    renderAt('/mis-aportes');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Actualizar' }));
+
+    expect(await screen.findByText('Estás en /entrar?volver=%2Fmis-aportes')).toBeInTheDocument();
   });
 });
