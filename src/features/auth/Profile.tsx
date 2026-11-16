@@ -1,7 +1,12 @@
 import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { useSession } from './session';
 
 export function Profile() {
+  const session = useSession();
+  if (session.status === 'active') {
+    return <EmptyState title="Tu cuenta" text={`Entraste como ${session.role}.`} />;
+  }
   return (
     <EmptyState
       title="Tu cuenta"
