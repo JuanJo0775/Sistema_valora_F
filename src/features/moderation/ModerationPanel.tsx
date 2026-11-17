@@ -1,14 +1,16 @@
 import { useSearchParams } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ModerationQueue } from './ModerationQueue';
+import { ProductRequests } from './ProductRequests';
+import { StoreProposals } from './StoreProposals';
 import './moderation.css';
 
 type View = 'precios' | 'tiendas' | 'productos' | 'roles';
 
 const VIEWS: { value: View; label: string; issue?: number }[] = [
   { value: 'precios', label: 'Precios' },
-  { value: 'tiendas', label: 'Tiendas', issue: 57 },
-  { value: 'productos', label: 'Productos', issue: 57 },
+  { value: 'tiendas', label: 'Tiendas' },
+  { value: 'productos', label: 'Productos' },
   { value: 'roles', label: 'Roles', issue: 58 },
 ];
 
@@ -39,9 +41,10 @@ export function ModerationPanel() {
         ))}
       </div>
       <div role="tabpanel" id={`panel-${view.value}`} aria-labelledby={`tab-${view.value}`}>
-        {view.value === 'precios' ? (
-          <ModerationQueue />
-        ) : (
+        {view.value === 'precios' && <ModerationQueue />}
+        {view.value === 'tiendas' && <StoreProposals />}
+        {view.value === 'productos' && <ProductRequests />}
+        {view.value === 'roles' && (
           <EmptyState
             title={view.label}
             text={`Esta vista está en construcción (issue #${String(view.issue)}).`}
