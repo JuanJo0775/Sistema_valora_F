@@ -17,7 +17,7 @@ const STATUS: Record<QueuedReport['status'], string> = {
 export function PendingReports() {
   const { reports, needsSession, discard } = useReportQueue();
   if (reports.length === 0) {
-    return <EmptyState title="No tienes reportes guardados en este teléfono" />;
+    return <EmptyState title="No tienes reportes guardados en este teléfono" level={1} />;
   }
   return (
     <section className="pending">
