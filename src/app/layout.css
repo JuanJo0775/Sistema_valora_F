@@ -167,8 +167,20 @@
     background: var(--bg-2);
   }
 
+  /* Prototipo: en escritorio el contador se lee junto al nombre, «Canasta · 5». */
   .badge {
     position: static;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    background: none;
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .badge::before {
+    content: '· ';
   }
 
   /* En escritorio «Registrar precio» se lee completo: botón naranja con texto, al final. */
