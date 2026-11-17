@@ -124,8 +124,8 @@ describe('todas las tiendas, en el detalle del producto', () => {
     ],
     [{ sort: 'recent', municipality: 'calarca' }, 'Ordenado por los más recientes · en Calarcá'],
     [
-      { sort: 'distance', municipality: undefined, radiusKm: 2 },
-      'Ordenado por distancia · a menos de 2 km de ti',
+      { sort: 'distance', municipality: undefined, radiusKm: 1.5 },
+      'Ordenado por distancia · a menos de 1,5 km de ti',
     ],
   ])('dice el criterio que declaró la API (%o)', async (criteria, text) => {
     stubCompare(comparison([result()], criteria));
@@ -197,7 +197,7 @@ describe('todas las tiendas, en el detalle del producto', () => {
             },
           }),
         ],
-        { municipality: undefined, radiusKm: 2 },
+        { municipality: undefined, radiusKm: 1.5 },
       ),
     ]);
     stubLocation();
@@ -207,7 +207,7 @@ describe('todas las tiendas, en el detalle del producto', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
 
     expect(
-      await screen.findByText('Ordenado por precio por unidad · a menos de 2 km de ti'),
+      await screen.findByText('Ordenado por precio por unidad · a menos de 1,5 km de ti'),
     ).toBeInTheDocument();
     expect(screen.getByRole('listitem')).toHaveTextContent('350 m');
     expect(screen.getByRole('radio', { name: 'Más cerca' })).toBeEnabled();
@@ -345,17 +345,16 @@ describe('todas las tiendas, en el detalle del producto', () => {
   it('con la ubicación se elige el radio y la comparación lo usa', async () => {
     const api = stubCompare([
       comparison([result()]),
-      comparison([result()], { municipality: undefined, radiusKm: 2 }),
+      comparison([result()], { municipality: undefined, radiusKm: 1.5 }),
       comparison([result()], { municipality: undefined, radiusKm: 0.5 }),
     ]);
     stubLocation();
     renderCompare();
     await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
-    const radius = await screen.findByRole('combobox', { name: 'Radio' });
-    expect(radius).toHaveValue('2');
+    expect(await screen.findByRole('radio', { name: '1,5 km' })).toBeChecked();
 
-    fireEvent.change(radius, { target: { value: '0.5' } });
+    fireEvent.click(screen.getByRole('radio', { name: '0,5 km' }));
 
     expect(
       await screen.findByText('Ordenado por precio por unidad · a menos de 0,5 km de ti'),
@@ -367,14 +366,14 @@ describe('todas las tiendas, en el detalle del producto', () => {
   it('con la ubicación no se elige municipio, y se puede volver a comparar por municipio', async () => {
     const api = stubCompare([
       comparison([result()]),
-      comparison([result()], { municipality: undefined, radiusKm: 2 }),
+      comparison([result()], { municipality: undefined, radiusKm: 1.5 }),
       comparison([result()]),
     ]);
     stubLocation();
     renderCompare();
     await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
-    await screen.findByRole('combobox', { name: 'Radio' });
+    await screen.findByRole('radiogroup', { name: 'Radio de búsqueda' });
     expect(screen.queryByRole('combobox', { name: 'Municipio' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Comparar por municipio' }));
