@@ -15,6 +15,8 @@ export interface StoreTotal {
   totalCop: number;
   found: number;
   complete: boolean;
+  // Las presentaciones de la canasta que esta tienda sí tiene (para decir cuáles faltan).
+  presentationIds: string[];
 }
 
 // #31: el frontend solo suma. Los precios, su vigencia y qué tienda entra los decide el backend en
@@ -29,9 +31,11 @@ export function totalsByStore(lines: BasketLine[]): StoreTotal[] {
         totalCop: 0,
         found: 0,
         complete: false,
+        presentationIds: [],
       };
       current.totalCop += offer.priceCop * quantity;
       current.found += 1;
+      current.presentationIds.push(presentationId);
       byStore.set(offer.establishment.id, current);
     }
   }
