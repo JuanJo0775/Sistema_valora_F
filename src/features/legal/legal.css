@@ -50,7 +50,8 @@
 
 .cookie-notice {
   position: fixed;
-  inset: auto 12px calc(76px + env(safe-area-inset-bottom, 0px));
+  inset: auto 12px
+    calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h));
   z-index: 20;
   display: grid;
   gap: 10px;

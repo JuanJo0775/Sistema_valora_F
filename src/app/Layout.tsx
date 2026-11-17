@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import logoDark from '../assets/logo-horizontal-oscuro.png';
 import logoLight from '../assets/logo-horizontal-claro.png';
@@ -24,9 +25,22 @@ const SECTIONS: { to: string; label: string; icon: IconName; primary?: boolean }
 
 export function Layout() {
   const { items } = useBasket();
+  const mainRef = useRef<HTMLElement>(null);
   const toBuy = items.filter(({ bought }) => !bought).length;
   return (
     <div className="shell">
+      {/* Con teclado, el primer Tab ofrece saltarse la barra superior. Se enfoca el contenido sin
+          tocar la direcci�n. */}
+      <a
+        className="skip-link"
+        href="#contenido"
+        onClick={(event) => {
+          event.preventDefault();
+          mainRef.current?.focus();
+        }}
+      >
+        Saltar al contenido
+      </a>
       {/* Celular: el logo arriba y la navegación fija abajo. Escritorio (#48): una sola barra arriba
           con logo, buscador, secciones y «Registrar precio». */}
       <header className="top">
@@ -65,7 +79,7 @@ export function Layout() {
       <PendingBanner />
       <UpdateBanner />
       <VerifyEmailBanner />
-      <main className="page">
+      <main className="page" id="contenido" tabIndex={-1} ref={mainRef}>
         <Outlet />
       </main>
       <BasketToast />

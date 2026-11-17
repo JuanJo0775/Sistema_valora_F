@@ -38,4 +38,14 @@ describe('index.html: vista previa al compartir el enlace', () => {
   it('pide la tarjeta grande para Twitter y X', () => {
     expect(meta('twitter:card')).toBe('summary_large_image');
   });
+
+  it('el color de la barra del navegador sigue el tema del sistema', () => {
+    const colors = [
+      ...html.matchAll(/<meta\s+name="theme-color"\s+content="([^"]*)"\s+media="([^"]*)"/g),
+    ];
+    expect(colors.map(([, color, media]) => [color?.toLowerCase(), media])).toEqual([
+      ['#ffffff', '(prefers-color-scheme: light)'],
+      ['#0d0d0e', '(prefers-color-scheme: dark)'],
+    ]);
+  });
 });

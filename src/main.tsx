@@ -10,6 +10,7 @@ import '@fontsource/outfit/latin-700.css';
 import './shared/ui/tokens.css';
 import './shared/ui/base.css';
 import { App } from './app/App';
+import './shared/ui/web.css';
 import { applyStoredTheme } from './shared/theme';
 
 applyStoredTheme();
