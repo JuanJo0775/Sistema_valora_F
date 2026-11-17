@@ -68,7 +68,33 @@
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 16px 16px 96px;
+  padding: 16px 16px calc(96px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h));
+}
+
+/* Alturas de lo fijo abajo, para que la página y el aviso de cookies no queden tapados: la barra de
+   navegación (sin la zona segura) y, solo si está en pantalla, la barra de compra del detalle. */
+:root {
+  --tabbar-h: 65px;
+  --action-bar-h: 0px;
+}
+
+:root:has(.action-bar) {
+  --action-bar-h: 64px;
+}
+
+/* Lo que se enfoca (un campo, un enlace) no queda tapado por lo fijo de abajo. */
+html {
+  scroll-padding-bottom: calc(
+    var(--tabbar-h) + 16px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h)
+  );
+}
+
+/* Enlaces sueltos dentro de listas: se tocan en 44 px o más (WCAG 2.2). */
+.offer h2 a,
+.legal-index a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
 }
 
 .tabbar {
