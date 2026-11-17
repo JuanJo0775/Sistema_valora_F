@@ -64,6 +64,16 @@ describe('inicio', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('la dirección vieja de comparar lleva al detalle del producto, donde están todas las tiendas', async () => {
+    stubApi({ [`GET /v1/products/${rice.id}`]: { status: 200, body: rice } });
+    window.history.pushState({}, '', `/productos/${rice.id}/comparar`);
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/productos/${rice.id}`);
+  });
+
   it('la navegación principal lleva a cada sección y marca en la que está', () => {
     vi.stubGlobal(
       'fetch',
