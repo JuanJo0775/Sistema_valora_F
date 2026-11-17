@@ -147,6 +147,31 @@ describe('mapa de tiendas', () => {
     expect(other.queryByText(/Tu canasta aquí/)).not.toBeInTheDocument();
   });
 
+  it('cada tarjeta dice cuántos precios tiene la tienda', async () => {
+    stubApi({
+      'GET /v1/establishments': {
+        status: 200,
+        body: {
+          items: [
+            { ...ara, priceCount: 9 },
+            { ...pepe, priceCount: 1 },
+            shop('7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d', 'Granero Nuevo', 'barrio', {
+              priceCount: 0,
+            }),
+          ],
+        },
+      },
+    });
+
+    renderMap();
+
+    const cardOf = async (name: string) =>
+      (await screen.findByRole('heading', { name })).closest('li') as HTMLElement;
+    expect(await cardOf('Ara')).toHaveTextContent('9 precios');
+    expect(await cardOf('Tienda Don Pepe')).toHaveTextContent('1 precio');
+    expect(await cardOf('Granero Nuevo')).toHaveTextContent('Sin precios');
+  });
+
   it('se elige otro municipio y muestra sus tiendas', async () => {
     const api = stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [pepe] } } });
     renderMap();
