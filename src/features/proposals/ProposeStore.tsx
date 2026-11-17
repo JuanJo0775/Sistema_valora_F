@@ -11,6 +11,7 @@ import { readMunicipality } from '../comparison/lastMunicipality';
 import { StoreMap } from '../stores/StoreMap';
 import { STORE_TYPES } from '../stores/storeTypes';
 import './proposals.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 type StoreType = components['schemas']['Establishment']['type'];
 type Point = { lat: number; lng: number };
@@ -70,6 +71,7 @@ export function ProposeStore() {
   }
   return (
     <form className="form proposal" onSubmit={submit} noValidate>
+      <BackLink fallback="/mapa" />
       <h1>Sugerir una tienda</h1>
       <Field label="Nombre de la tienda" value={name} onValue={setName} />
       <SelectField label="Tipo" value={type} options={TYPE_OPTIONS} onChange={setType} />

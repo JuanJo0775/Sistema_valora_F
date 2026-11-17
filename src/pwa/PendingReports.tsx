@@ -5,6 +5,7 @@ import { EmptyState } from '../shared/ui/EmptyState';
 import { ReportProblem } from '../features/reports/ReportProblem';
 import { useReportQueue } from './queueContext';
 import type { QueuedReport } from './reportQueue';
+import { BackLink } from '../shared/ui/BackLink';
 
 const STATUS: Record<QueuedReport['status'], string> = {
   pendiente: 'Por enviar',
@@ -20,6 +21,7 @@ export function PendingReports() {
   }
   return (
     <section className="pending">
+      <BackLink fallback="/yo" />
       <h1>Reportes en este teléfono</h1>
       {needsSession && (
         <p role="alert" className="banner warn">

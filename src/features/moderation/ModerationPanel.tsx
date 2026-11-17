@@ -4,6 +4,7 @@ import { ProductRequests } from './ProductRequests';
 import { RoleChange } from './RoleChange';
 import { StoreProposals } from './StoreProposals';
 import './moderation.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 type View = 'precios' | 'tiendas' | 'productos' | 'roles';
 
@@ -21,6 +22,7 @@ export function ModerationPanel() {
   if (!view) return null;
   return (
     <section className="moderation">
+      <BackLink fallback="/yo" />
       <h1>Moderación</h1>
       <div role="tablist" aria-label="Vistas de moderación" className="choices">
         {VIEWS.map(({ value, label }) => (

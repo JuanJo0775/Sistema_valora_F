@@ -7,6 +7,7 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { SelectField } from '../../shared/ui/SelectField';
 import { Field } from '../auth/Field';
 import './proposals.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 type Category = components['schemas']['Category'];
 type Unit = components['schemas']['Unit'];
@@ -84,6 +85,7 @@ export function ProposeProduct() {
   }
   return (
     <form className="form proposal" onSubmit={submit} noValidate>
+      <BackLink fallback="/" />
       <h1>Proponer un producto</h1>
       <Field label="Nombre del producto" value={name} onValue={setName} />
       <Field label="Marca (opcional)" value={brand} onValue={setBrand} required={false} />
