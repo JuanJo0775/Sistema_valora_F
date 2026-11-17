@@ -160,7 +160,7 @@ function ProductCard({ item }: { item: Item }) {
             <span className="pill ok">{`Hasta −${String(item.savingsPercent)} %`}</span>
           )}
         </div>
-        <h3>{item.name}</h3>
+        <h2>{item.name}</h2>
         <span className="muted">{presentation}</span>
         <span className="product-card-price">
           <span>
