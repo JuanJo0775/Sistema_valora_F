@@ -55,9 +55,14 @@ export const NO_SESSION: FakeReply = {
   body: { code: 'UNAUTHORIZED', message: 'Se requiere sesión.' },
 };
 
-export const sessionAs = (role: string, suspendedUntil?: string): FakeReply => ({
+// ADR-029: por defecto la cuenta ya verificó su correo; `emailVerified = false` la deja sin verificar.
+export const sessionAs = (
+  role: string,
+  suspendedUntil?: string,
+  emailVerified = true,
+): FakeReply => ({
   status: 200,
-  body: { role, csrfToken: 'token-1', suspendedUntil },
+  body: { role, csrfToken: 'token-1', suspendedUntil, emailVerified },
 });
 
 // Una API que todavía no responde (para ver «Cargando…»), salvo las rutas indicadas.

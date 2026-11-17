@@ -16,6 +16,8 @@ export type Session =
       suspendedUntil?: string | undefined;
       // B#133: el nombre visible, solo para la propia cuenta (las anteriores no lo tienen).
       displayName?: string | undefined;
+      // ADR-029: sin el correo verificado no se pueden registrar precios.
+      emailVerified: boolean;
     };
 
 export interface SessionState {

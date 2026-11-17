@@ -238,7 +238,7 @@ export interface paths {
          * @description Idempotente por la cabecera Idempotency-Key: un reintento con la misma clave y el mismo cuerpo
          *     devuelve la respuesta original y no crea duplicados (EC-01, EC-07). El precio vigente se
          *     actualiza segundos después con el evento PriceReported; la confianza se calcula después (ADR-004).
-         *     Exige sesión de reportante y la cabecera X-CSRF-Token (issue #16); el reporte guarda la cuenta,
+         *     Exige sesión de reportante con el correo verificado (ADR-029) y la cabecera X-CSRF-Token (issue #16); el reporte guarda la cuenta,
          *     que nunca sale en respuestas ni eventos (EC-08). La misma Idempotency-Key usada por otra cuenta
          *     responde 409.
          *
@@ -366,7 +366,7 @@ export interface paths {
         put?: never;
         /**
          * Crear cuenta de reportante con consentimiento de datos (RF-001, Ley 1581)
-         * @description La cuenta nueva siempre es reportante y no inicia sesión. Si el correo ya tiene cuenta, responde 201 igual y no cambia nada, para no revelar qué correos están registrados (EC-08). El correo se guarda sin espacios y en minúsculas. El nombre visible (#133) se guarda sin espacios sobrantes y solo lo devuelve GET /auth/session de la propia cuenta; ninguna otra respuesta lo incluye (EC-08).
+         * @description La cuenta nueva siempre es reportante, no inicia sesión y recibe por correo el enlace de verificación (ADR-029); si el envío falla, el registro no falla. Si el correo ya tiene cuenta, responde 201 igual y no cambia nada, para no revelar qué correos están registrados (EC-08). El correo se guarda sin espacios y en minúsculas. El nombre visible (#133) se guarda sin espacios sobrantes y solo lo devuelve GET /auth/session de la propia cuenta; ninguna otra respuesta lo incluye (EC-08).
          */
         post: operations["register"];
         delete?: never;
@@ -423,6 +423,46 @@ export interface paths {
         get: operations["getSession"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verificar el correo con el token del enlace (ADR-029)
+         * @description Pública: el token del enlace que llegó por correo es la credencial, así que no pide sesión ni CSRF. Es un POST y no un GET para que los antivirus y las vistas previas de los enlaces no gasten el token. El token vale 24 horas y un solo uso; solo se guarda su hash. Un token desconocido, vencido o ya usado responde igual (422 INVALID_VERIFICATION_TOKEN), sin decir cuál. Si la cuenta ya estaba verificada, un token vigente responde 204 y no cambia la fecha original.
+         */
+        post: operations["verifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reenviar el correo de verificación a la cuenta de la sesión (ADR-029)
+         * @description Sin cuerpo: el correo sale a la cuenta de la sesión, nunca a una dirección recibida, así que no revela qué correos existen (EC-08). Un enlace nuevo deja sin efecto los anteriores sin usar. Responde 202 igual si la cuenta ya estaba verificada (no se envía nada) o si el envío se encola. Una cuenta suspendida también puede usarla.
+         */
+        post: operations["resendVerification"];
         delete?: never;
         options?: never;
         head?: never;
@@ -672,7 +712,7 @@ export interface components {
              */
             availableFrom?: string;
         };
-        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), NOT_FOUND (404), CONFLICT (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, INVALID_TTL y los que agreguen las reglas futuras. */
+        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), NOT_FOUND (404), CONFLICT (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, INVALID_TTL, INVALID_VERIFICATION_TOKEN y los que agreguen las reglas futuras. */
         Error: {
             /** @example INVALID_QUANTITY */
             code: string;
@@ -947,7 +987,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description code FORBIDDEN: el rol no tiene permiso. code CSRF_TOKEN_INVALID: falta la cabecera X-CSRF-Token o no coincide con la sesión. code ACCOUNT_SUSPENDED: la cuenta está suspendida y su sesión solo sirve para ver el estado de sus reportes, apelar y cerrar sesión (#71). */
+        /** @description code FORBIDDEN: el rol no tiene permiso. code CSRF_TOKEN_INVALID: falta la cabecera X-CSRF-Token o no coincide con la sesión. code ACCOUNT_SUSPENDED: la cuenta está suspendida y su sesión solo sirve para ver el estado de sus reportes, apelar y cerrar sesión (#71). code EMAIL_NOT_VERIFIED: solo en POST /reports, la cuenta aún no verificó su correo (ADR-029). */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1526,7 +1566,21 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            403: components["responses"]["Forbidden"];
+            /** @description code FORBIDDEN, CSRF_TOKEN_INVALID o ACCOUNT_SUSPENDED, como en toda ruta con sesión. code EMAIL_NOT_VERIFIED (ADR-029): la cuenta aún no verificó su correo; el frontend avisa y ofrece POST /auth/resend-verification. Se responde antes de validar el cuerpo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "EMAIL_NOT_VERIFIED",
+                     *       "message": "Verifica tu correo para registrar precios. Revisa tu bandeja o pide un enlace nuevo."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description Conflicto. code IDEMPOTENCY_KEY_REUSED: la misma Idempotency-Key ya se usó con otro cuerpo o por otra cuenta. code DUPLICATE_REPORT: la cuenta ya tiene un reporte de esa presentación en ese establecimiento observado a menos de 60 minutos de este (por la hora de observación, no de llegada; valor provisional, #29, #30). Solo este código trae availableFrom: la hora de observación desde la que se acepta otro reporte; reintentar el mismo nunca pasa (#84). */
             409: {
                 headers: {
@@ -1948,6 +2002,8 @@ export interface operations {
                     "application/json": {
                         /** @enum {string} */
                         role: "reportante" | "comercio" | "moderador";
+                        /** @description ADR-029: si la cuenta ya verificó su correo. Sin verificar puede iniciar sesión y consultar, pero POST /reports responde 403 EMAIL_NOT_VERIFIED. Solo la propia sesión lo dice; ninguna respuesta pública lo incluye (EC-08). Las cuentas anteriores a ADR-029 empiezan en false. */
+                        emailVerified: boolean;
                         /** @description El nombre visible de la propia cuenta (#133). No viene en las cuentas creadas antes de que se pidiera. Es la única respuesta que lo incluye (EC-08). */
                         displayName?: string;
                         /** @description Va en la cabecera X-CSRF-Token de las rutas con sesión que modifican datos. El frontend lo guarda en memoria. */
@@ -1961,6 +2017,81 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    verifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description El valor de ?token= del enlace (43 caracteres en base64url). */
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Correo verificado (o la cuenta ya lo estaba) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description code INVALID_VERIFICATION_TOKEN: el enlace no es válido, venció o ya se usó. Hay que pedir uno nuevo con POST /auth/resend-verification. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Más de 20 intentos por IP en 15 minutos (valores provisionales). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    resendVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Solicitud aceptada */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Más de 3 reenvíos por cuenta en una hora (valores provisionales). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getModerationQueue: {
