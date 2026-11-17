@@ -87,6 +87,23 @@ describe('pestaña Yo', () => {
     );
   });
 
+  it('«Simular sin conexión» se enciende y queda recordado en el teléfono', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
+    });
+    renderProfile();
+    const offline = await screen.findByRole('switch', { name: /Simular sin conexión/ });
+    expect(offline).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(offline);
+
+    expect(offline).toHaveAttribute('aria-checked', 'true');
+    expect(localStorage.getItem('valora:sin-conexion')).toBe('1');
+    fireEvent.click(offline);
+    expect(localStorage.getItem('valora:sin-conexion')).toBeNull();
+  });
+
   it('dice que el nombre y la ubicación nunca se publican', async () => {
     stubApi({
       'GET /v1/auth/session': sessionAs('reportante'),

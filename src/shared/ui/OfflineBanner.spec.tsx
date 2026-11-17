@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setSimulatedOffline } from '../connection';
 import { OfflineBanner } from './OfflineBanner';
 
 const goOffline = () => {
@@ -34,6 +35,20 @@ describe('aviso sin conexión', () => {
       window.dispatchEvent(new Event('online'));
     });
 
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('aparece con «Simular sin conexión» y se va al apagarla', () => {
+    render(<OfflineBanner />);
+
+    act(() => {
+      setSimulatedOffline(true);
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Sin conexión');
+
+    act(() => {
+      setSimulatedOffline(false);
+    });
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
