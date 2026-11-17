@@ -193,6 +193,23 @@ describe('detalle del producto', () => {
     expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
   });
 
+  it('el más barato dice cuánto menos cuesta que la tienda más cara', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: {
+        status: 200,
+        body: {
+          ...comparisonOf([offer('Ara', 2000, true), offer('D1', 2350)]).body,
+          savingsPercent: 15,
+        },
+      },
+    });
+
+    renderDetail(rice.id);
+
+    expect(await screen.findByText('Hasta 15 % menos que la tienda más cara.')).toBeInTheDocument();
+  });
+
   it('sin precios el panel no muestra el más barato', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },

@@ -35,6 +35,10 @@ export function CheapestCard({
         )}
         <FreshnessBadge freshness={cheapest.freshness} observedAt={cheapest.observedAt} />
       </p>
+      {/* B#128: el ahorro lo calcula el backend con el precio por unidad. */}
+      {comparison.savingsPercent !== undefined && (
+        <p className="muted">{`Hasta ${String(comparison.savingsPercent)} % menos que la tienda más cara.`}</p>
+      )}
     </section>
   );
 }

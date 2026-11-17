@@ -51,7 +51,7 @@ describe('inicio', () => {
 
     render(<App />);
     expect(
-      await screen.findByRole('heading', { name: 'Canasta básica de hoy' }),
+      await screen.findByRole('region', { name: 'Canasta básica de hoy' }),
     ).toBeInTheDocument();
     fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
       target: { value: 'arroz' },
@@ -59,9 +59,7 @@ describe('inicio', () => {
     fireEvent.submit(screen.getByRole('search', { name: 'Buscar producto' }));
 
     expect(await screen.findByRole('link', { name: /Arroz blanco/ })).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Canasta básica de hoy' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Canasta básica de hoy' })).not.toBeInTheDocument();
   });
 
   it('la dirección vieja de comparar lleva al detalle del producto, donde están todas las tiendas', async () => {
@@ -72,6 +70,18 @@ describe('inicio', () => {
 
     expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
     expect(window.location.pathname).toBe(`/productos/${rice.id}`);
+  });
+
+  it('el inicio invita a registrar un precio visto en la tienda', async () => {
+    stubApi({});
+
+    render(<App />);
+
+    const invite = await screen.findByRole('region', { name: '¿Viste un precio en la tienda?' });
+    expect(within(invite).getByRole('link', { name: 'Registrar precio' })).toHaveAttribute(
+      'href',
+      '/registrar',
+    );
   });
 
   it('la navegación principal lleva a cada sección y marca en la que está', () => {

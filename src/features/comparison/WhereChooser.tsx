@@ -4,14 +4,15 @@ import { SelectField } from '../../shared/ui/SelectField';
 import { type Municipality, MUNICIPALITY_OPTIONS } from './criteria';
 import { readMunicipality, saveMunicipality } from './lastMunicipality';
 
-const RADII = [0.5, 1, 2, 3];
+const RADII = [0.5, 1, 1.5, 2, 3];
 
 // #15 y ADR-019: dónde buscar. Por defecto el municipio elegido la última vez (sin pedir permisos,
 // EC-08); con la ubicación del momento, a la redonda con un radio. Las dos cosas no se mezclan.
-export function useWhere() {
+// La comparación usa 2 km por defecto; la canasta del Inicio, 1,5 km (B#128).
+export function useWhere(defaultRadiusKm = 2) {
   const [point, setPoint] = useState<Point | null>(null);
   const [municipality, setMunicipality] = useState<Municipality>(readMunicipality);
-  const [radiusKm, setRadiusKm] = useState(2);
+  const [radiusKm, setRadiusKm] = useState(defaultRadiusKm);
   const [problem, setProblem] = useState('');
   // Un objeto estable mientras no cambie dónde: se usa como dependencia de las consultas.
   const query = useMemo(
