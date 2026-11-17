@@ -371,6 +371,10 @@
   color: var(--accent-ink);
 }
 
+.cheapest-card > p.muted {
+  margin: 0;
+}
+
 .cheapest-price,
 .cheapest-store {
   display: flex;
