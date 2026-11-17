@@ -132,8 +132,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Canasta básica de hoy en un municipio (RF-008, RF-009, B#120)
-         * @description Pública, sin cuenta. Los productos con más tiendas del municipio que tienen un precio vigente, cada uno con su precio más bajo por unidad y la tienda donde está. Lee price_current (ADR-004) con el mismo criterio que la comparación con onlyCurrent=true: solo precios vigentes (ni por confirmar, ni desactualizados, ni en revisión). El más bajo se elige con el valor exacto del precio por unidad y los desempates de la comparación (la fecha más reciente y luego los ids). Las promociones no entran (ADR-009) y no hay datos de quién reportó (EC-08). Orden declarado en criteria (EC-06): más tiendas con precio vigente primero; en empate, el menor precio por unidad que se muestra (entre productos de bases distintas, 100 g o unidad, es solo un desempate) y al final el id del producto. La ruta no cuelga de /products porque /products/{productId} tomaría «featured» como un id. Caché pública de 60 segundos (valor provisional, EC-04) y ETag: con If-None-Match igual al ETag responde 304.
+         * Canasta básica de hoy cerca de ti o en un municipio (RF-008, RF-009, B#120, B#128)
+         * @description Pública, sin cuenta. Los productos con más tiendas del área que tienen un precio vigente, cada uno con su precio más bajo por unidad y la tienda donde está. El área es un municipio, la ubicación del usuario con un radio, o las dos cosas, como en la comparación (#106, B#128). Lee price_current (ADR-004) con el mismo criterio que la comparación con onlyCurrent=true: solo precios vigentes (ni por confirmar, ni desactualizados, ni en revisión). El más bajo y el más caro se eligen con el valor exacto del precio por unidad y los desempates de la comparación. Las promociones no entran (ADR-009) y no hay datos de quién reportó (EC-08). Orden declarado en criteria (EC-06): más tiendas con precio vigente primero; en empate, el menor precio por unidad que se muestra (entre productos de bases distintas, 100 g o unidad, es solo un desempate) y al final el id del producto. Con la ubicación, la respuesta lleva Cache-Control no-store: la ubicación se usa solo para elegir las tiendas del radio, no se guarda, no se registra en los logs ni aparece en la respuesta (RF-005 RN5, EC-08). Sin ubicación, caché pública de 60 segundos (valor provisional, EC-04) y ETag: con If-None-Match igual al ETag responde 304. La ruta no cuelga de /products porque /products/{productId} tomaría «featured» como un id.
          */
         get: operations["listFeaturedProducts"];
         put?: never;
@@ -830,6 +830,32 @@ export interface components {
                  */
                 url: string;
             };
+            /** @description Cuánto menos cuesta el precio más bajo que el más alto, por precio por unidad, entre los resultados que pueden ser el más barato (los mismos de isCheapest: ni desactualizados ni en revisión): (más caro − más barato) / más caro × 100, con los valores exactos y redondeado al entero con la mitad hacia arriba (B#128, EC-06). Solo sale con dos tiendas o más. */
+            savingsPercent?: number;
+        };
+        /** @description Un precio vigente de la canasta básica de hoy, con la tienda donde está (B#128). */
+        FeaturedPrice: {
+            /** Format: uuid */
+            presentationId: string;
+            /**
+             * @description Producto y presentación, como label del historial.
+             * @example Arroz Diana · 500 g
+             */
+            label: string;
+            priceCop: number;
+            /** @description Redondeado al peso entero con la mitad hacia arriba (RF-004). */
+            unitPrice: {
+                valueCop: number;
+                /** @enum {string} */
+                per: "100g" | "100ml" | "und";
+            };
+            establishment: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** @description Metros desde la ubicación consultada; solo si se envió la ubicación. */
+                distanceM?: number;
+            };
         };
         ReportCreate: {
             /** Format: uuid */
@@ -1188,8 +1214,17 @@ export interface operations {
     };
     listFeaturedProducts: {
         parameters: {
-            query: {
-                municipality: components["schemas"]["Municipality"];
+            query?: {
+                /** @description Obligatorio si no se envían lat y lng. Con la ubicación, el radio solo mira ese municipio. */
+                municipality?: components["schemas"]["Municipality"];
+                /** @description Obligatoria (con lng) si no se envía municipality. */
+                lat?: number;
+                /** @description Obligatoria (con lat) si no se envía municipality. */
+                lng?: number;
+                /** @description Radio en kilómetros alrededor de la ubicación, con los mismos límites que la comparación (ADR-019). Sin ubicación no se usa. */
+                radiusKm?: number;
+                /** @description Código de la lista cerrada de categorías (GET /v1/categories). Solo los productos de esa categoría; un código que no existe responde la lista vacía. */
+                category?: string;
                 /** @description Los mismos valores del parámetro común Limit, con 5 por defecto. */
                 limit?: number;
             };
@@ -1202,22 +1237,27 @@ export interface operations {
             /** @description Los productos de la canasta, en el orden declarado */
             200: {
                 headers: {
+                    /** @description public, max-age=60 sin ubicación; no-store con ubicación. */
                     "Cache-Control"?: string;
                     ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        /** @description Criterio declarado al usuario (EC-06). */
+                        /** @description Criterio y área declarados al usuario (EC-06). municipality sale si se filtró por municipio; radiusKm, si se envió la ubicación; category, si se filtró por categoría. */
                         criteria: {
-                            municipality: components["schemas"]["Municipality"];
+                            municipality?: components["schemas"]["Municipality"];
+                            radiusKm?: number;
+                            category?: string;
                             /**
                              * @description Más tiendas con precio vigente primero.
                              * @enum {string}
                              */
                             sort: "store_count";
                         };
-                        /** @description Vacío si ninguna tienda del municipio tiene precios vigentes. */
+                        /** @description Tiendas del área (municipio o radio) con al menos un precio vigente, de cualquier categoría. Para «Precios de 7 tiendas a menos de 1,5 km». */
+                        storesWithPrices: number;
+                        /** @description Vacío si ninguna tienda del área tiene precios vigentes. */
                         items: {
                             /** Format: uuid */
                             productId: string;
@@ -1225,30 +1265,14 @@ export interface operations {
                             /** @description Opcional */
                             brand?: string;
                             category: components["schemas"]["Category"];
-                            /** @description Tiendas del municipio con al menos un precio vigente del producto. */
+                            /** @description Tiendas del área con al menos un precio vigente del producto. */
                             storeCount: number;
-                            /** @description El precio vigente más bajo por unidad del producto en el municipio. */
-                            cheapest: {
-                                /** Format: uuid */
-                                presentationId: string;
-                                /**
-                                 * @description Producto y presentación, como label del historial.
-                                 * @example Arroz Diana · 500 g
-                                 */
-                                label: string;
-                                priceCop: number;
-                                /** @description Redondeado al peso entero con la mitad hacia arriba (RF-004). */
-                                unitPrice: {
-                                    valueCop: number;
-                                    /** @enum {string} */
-                                    per: "100g" | "100ml" | "und";
-                                };
-                                establishment: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    name: string;
-                                };
-                            };
+                            /** @description El precio vigente más bajo por unidad del producto en el área. */
+                            cheapest: components["schemas"]["FeaturedPrice"];
+                            /** @description El precio vigente más alto por unidad del producto en el área. Sale junto con savingsPercent, solo cuando hay dos tiendas o más. */
+                            priciest?: components["schemas"]["FeaturedPrice"];
+                            /** @description Cuánto menos cuesta el más barato que el más caro, por precio por unidad: (más caro − más barato) / más caro × 100, con los valores exactos y redondeado al entero con la mitad hacia arriba (B#128, EC-06). Solo con dos tiendas o más. */
+                            savingsPercent?: number;
                         }[];
                     };
                 };
