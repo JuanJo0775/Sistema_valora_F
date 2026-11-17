@@ -34,16 +34,23 @@ export function SkeletonThumb({ size }: { size: 'card' | 'row' }) {
 export function SkeletonCard() {
   return (
     <li className="skeleton-card" aria-hidden="true">
-      <div className="skeleton-card-top">
-        <SkeletonThumb size="card" />
-        <div className="skeleton-card-title">
-          <Skeleton width="70%" />
-          <Skeleton width="40%" />
+      <div className="skeleton-card-link">
+        <div className="skeleton-card-top">
+          <SkeletonThumb size="card" />
+          <Skeleton width="6rem" height="1.5rem" className="skeleton-pill" />
         </div>
-      </div>
-      <div className="skeleton-card-price">
-        <Skeleton width="38%" height="1.6rem" />
-        <Skeleton width="28%" />
+        <Skeleton width="70%" className="skeleton-title" />
+        <Skeleton width="40%" className="skeleton-sub" />
+        <div className="skeleton-card-price">
+          <span className="skeleton-lines">
+            <Skeleton width="2.5rem" />
+            <Skeleton width="6rem" height="1.6rem" />
+          </span>
+          <span className="skeleton-lines skeleton-store">
+            <Skeleton width="5rem" />
+            <Skeleton width="3rem" />
+          </span>
+        </div>
       </div>
       <Skeleton variant="block" className="skeleton-button" />
     </li>
