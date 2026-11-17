@@ -7,12 +7,70 @@
   z-index: 0;
 }
 
-/* Marcadores con el color de la serie de gráficas (no el naranja de la acción principal). */
+/* #73 (prototipo): cada tipo de tienda con su color, el mismo en el mapa, la leyenda y la lista.
+   Se usan los tokens del tema, así cambian solos en modo oscuro. */
+.type-barrio {
+  --type: var(--accent);
+}
+
+.type-minimercado {
+  --type: var(--ok);
+}
+
+.type-supermercado {
+  --type: var(--info);
+}
+
+.type-descuento {
+  --type: var(--promo);
+}
+
 .store-map .store-pin {
-  fill: var(--chart-1);
-  fill-opacity: 0.9;
+  fill: var(--type, var(--chart-1));
+  fill-opacity: 0.95;
   stroke: var(--bg);
+  stroke-width: 3;
+}
+
+/* El radio: círculo naranja punteado y suave, con el punto azul de la persona en el centro. */
+.store-map .radius-circle {
+  fill: var(--accent);
+  fill-opacity: 0.08;
+  stroke: var(--accent);
   stroke-width: 2;
+  stroke-dasharray: 6 6;
+}
+
+.store-map .user-pin {
+  fill: var(--info);
+  fill-opacity: 1;
+  stroke: var(--bg);
+  stroke-width: 3;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+}
+
+.map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--type, var(--ink-3));
 }
 
 .store-map .pin-link {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
@@ -8,6 +8,7 @@ import { MUNICIPALITIES } from '../comparison/criteria';
 import { useWhere, WhereChooser } from '../comparison/WhereChooser';
 import { StoreCard } from './StoreCard';
 import { StoreMap } from './StoreMap';
+import { STORE_TYPES } from './storeTypes';
 import './stores.css';
 
 type Store = components['schemas']['Establishment'];
@@ -49,11 +50,22 @@ export function MapPage() {
   const result = outcome?.key === key ? outcome : null;
   const place = where.point ? 'cerca de ti' : `en ${MUNICIPALITIES[where.municipality]}`;
   const stores = result && 'stores' in result ? result.stores : [];
+  // El círculo del radio alrededor de la persona; un objeto estable para no redibujar el mapa.
+  const { point, radiusKm } = where;
+  const around = useMemo(() => (point ? { ...point, radiusKm } : null), [point, radiusKm]);
   return (
     <section className="stores">
       <h1>{`Tiendas ${place}`}</h1>
       <WhereChooser where={where} backLabel="Ver por municipio" />
-      <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} />
+      <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} around={around} />
+      <ul className="map-legend" aria-label="Colores del mapa">
+        {Object.entries(STORE_TYPES).map(([type, name]) => (
+          <li key={type}>
+            <span className={`dot type-${type}`} aria-hidden="true" />
+            {name}
+          </li>
+        ))}
+      </ul>
       {!result && <Loading text="Buscando tiendas…" />}
       {result && 'error' in result && (
         <ErrorState

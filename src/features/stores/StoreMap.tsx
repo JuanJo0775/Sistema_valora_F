@@ -6,8 +6,17 @@ import { useNavigate } from 'react-router';
 export interface MapStore {
   id: string;
   name: string;
+  // #73: el tipo da el color del marcador (barrio, minimercado, supermercado, descuento).
+  type?: string;
   lat: number;
   lng: number;
+}
+
+// Dónde está la persona y hasta dónde se busca (solo en pantalla: no se guarda, EC-08).
+export interface Around {
+  lat: number;
+  lng: number;
+  radiusKm: number;
 }
 
 // Centro de Armenia: el mapa arranca en el municipio, no en la ubicación de la persona (ADR-019).
@@ -20,16 +29,19 @@ export function StoreMap({
   label,
   onPick,
   picked = null,
+  around = null,
 }: {
   stores: MapStore[];
   label: string;
   onPick?: (point: { lat: number; lng: number }) => void;
   picked?: { lat: number; lng: number } | null;
+  around?: Around | null;
 }) {
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const pins = useRef<L.LayerGroup | null>(null);
   const pickedLayer = useRef<L.LayerGroup | null>(null);
+  const aroundLayer = useRef<L.LayerGroup | null>(null);
   // El último onPick, sin volver a crear el mapa cada vez que cambia.
   const pick = useRef(onPick);
   const navigate = useNavigate();
@@ -48,6 +60,7 @@ export function StoreMap({
     map.current = created;
     pins.current = L.layerGroup().addTo(created);
     pickedLayer.current = L.layerGroup().addTo(created);
+    aroundLayer.current = L.layerGroup().addTo(created);
     // #12: al proponer una tienda, el toque en el mapa elige su ubicación (la de la tienda, EC-08).
     created.on('click', ({ latlng }: L.LeafletMouseEvent) => {
       pick.current?.({ lat: latlng.lat, lng: latlng.lng });
@@ -75,17 +88,32 @@ export function StoreMap({
         void navigate(`/tiendas/${store.id}`);
       });
       popup.append(name, document.createElement('br'), open);
-      L.circleMarker([store.lat, store.lng], { radius: 8, className: 'store-pin' })
+      const kind = store.type ? ` type-${store.type}` : '';
+      L.circleMarker([store.lat, store.lng], { radius: 9, className: `store-pin${kind}` })
         .bindPopup(popup)
         .addTo(layer);
     }
-    if (stores.length > 0) {
+    // Con el radio, el mapa encuadra el círculo (abajo); sin él, las tiendas.
+    if (stores.length > 0 && !around) {
       map.current.fitBounds(L.latLngBounds(stores.map(({ lat, lng }) => [lat, lng])), {
         padding: [24, 24],
         maxZoom: 16,
       });
     }
-  }, [stores, navigate]);
+  }, [stores, navigate, around]);
+
+  useEffect(() => {
+    const layer = aroundLayer.current;
+    if (!map.current || !layer) return;
+    layer.clearLayers();
+    if (!around) return;
+    const circle = L.circle([around.lat, around.lng], {
+      radius: around.radiusKm * 1000,
+      className: 'radius-circle',
+    }).addTo(layer);
+    L.circleMarker([around.lat, around.lng], { radius: 7, className: 'user-pin' }).addTo(layer);
+    map.current.fitBounds(circle.getBounds(), { padding: [16, 16] });
+  }, [around]);
 
   useEffect(() => {
     const layer = pickedLayer.current;
