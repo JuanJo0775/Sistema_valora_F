@@ -206,6 +206,7 @@
 .today-basket {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .today-basket p {
@@ -228,6 +229,8 @@
 .category-chips {
   display: flex;
   gap: 8px;
+  /* Un fieldset no se encoge por defecto: sin esto, los chips ensanchan la página. */
+  min-inline-size: 0;
   margin: 0;
   padding: 0 0 4px;
   border: 0;
