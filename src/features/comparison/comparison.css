@@ -465,3 +465,36 @@
 .cheapest-card .muted {
   font-size: 0.9rem;
 }
+
+/* Ayuda breve de las etiquetas («Dato inicial», «Confiabilidad baja»), sin dependencias. */
+.labels-help {
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  font-size: 0.9rem;
+}
+
+.labels-help summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.labels-help summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.labels-help p {
+  margin: 0 0 8px;
+}
+
+/* H-05: reserva el alto de la tarjeta «Más barato» mientras llega la comparación, para que el botón
+   de agregar no salte. */
+.cheapest-card.loading {
+  min-height: 190px;
+  border-color: var(--line);
+  background: var(--bg-2);
+}
