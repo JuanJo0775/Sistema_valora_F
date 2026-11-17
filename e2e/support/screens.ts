@@ -1,16 +1,23 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import type { Store } from './api';
 
 // Pasos de pantalla que repiten las pruebas, escritos como los haría una persona.
 
+// Las opciones de la app son fichas: el radio va escondido dentro de su etiqueta y la persona toca
+// la ficha. Se toca la etiqueta y se comprueba que el radio quedó elegido.
+export async function choose(radio: Locator) {
+  await radio.locator('xpath=ancestor::label[1]').click();
+  await expect(radio).toBeChecked();
+}
+
 export async function chooseFirstPresentation(page: Page) {
-  await page.getByRole('radiogroup', { name: 'Presentación' }).getByRole('radio').first().check();
+  await choose(page.getByRole('radiogroup', { name: 'Presentación' }).getByRole('radio').first());
 }
 
 export async function chooseStoreByName(page: Page, store: Store) {
   await page.getByRole('searchbox', { name: 'Buscar tienda por nombre' }).fill(store.name);
   await page.getByRole('button', { name: 'Buscar tienda' }).click();
-  await page.getByRole('radio', { name: store.name, exact: true }).check();
+  await choose(page.getByRole('radio', { name: store.name, exact: true }));
 }
 
 export async function sendPrice(page: Page, priceCop: number) {
