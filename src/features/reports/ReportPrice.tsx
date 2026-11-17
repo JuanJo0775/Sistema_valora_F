@@ -8,6 +8,8 @@ import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
 import { PresentationChoices } from '../catalog/PresentationChoices';
 import { ProductSearch } from '../catalog/ProductSearch';
+import { isUsabilityMode } from '../../shared/usabilityMode';
+import { secondsSince, Stopwatch } from './Stopwatch';
 import { useReportQueue } from '../../pwa/queueContext';
 import { readLastStore, saveLastStore } from './lastStore';
 import { ReportProblem } from './ReportProblem';
@@ -79,6 +81,9 @@ function ReportForm({ productId }: { productId: string }) {
   // Si lo vio antes, la hora que escribe en el campo (en la hora del teléfono).
   const [seenAt, setSeenAt] = useState<string | null>(null);
   const [done, setDone] = useState<'recibido' | 'guardado' | null>(null);
+  // #79 y #28: solo en el modo prueba de usabilidad, cuánto tardó el registro (EC-01).
+  const [testing] = useState(isUsabilityMode);
+  const [tookSeconds, setTookSeconds] = useState<number | null>(null);
   const queue = useReportQueue();
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
@@ -134,25 +139,31 @@ function ReportForm({ productId }: { productId: string }) {
           return;
         }
         saveLastStore(store);
+        setTookSeconds(secondsSince(startedAt));
         setDone(result.kind);
       });
   };
 
   if (done) {
     return (
-      <EmptyState
-        title={done === 'recibido' ? 'Recibido' : 'Guardado en tu teléfono'}
-        text={
-          done === 'recibido'
-            ? 'Gracias: tu precio ayuda a otros a comparar.'
-            : 'Se enviará solo cuando haya conexión.'
-        }
-        action={
-          <Link to="/registrar" className="btn">
-            Registrar otro en esta tienda
-          </Link>
-        }
-      />
+      <>
+        {testing && tookSeconds !== null && (
+          <p className="stopwatch">{`Registrado en ${String(tookSeconds)} s.`}</p>
+        )}
+        <EmptyState
+          title={done === 'recibido' ? 'Recibido' : 'Guardado en tu teléfono'}
+          text={
+            done === 'recibido'
+              ? 'Gracias: tu precio ayuda a otros a comparar.'
+              : 'Se enviará solo cuando haya conexión.'
+          }
+          action={
+            <Link to="/registrar" className="btn">
+              Registrar otro en esta tienda
+            </Link>
+          }
+        />
+      </>
     );
   }
   if (loadError !== null) {
@@ -169,6 +180,7 @@ function ReportForm({ productId }: { productId: string }) {
   if (!product) return <Loading />;
   return (
     <form className="report" onSubmit={submit}>
+      {testing && <Stopwatch since={startedAt} />}
       <h1>{product.name}</h1>
       <PresentationChoices
         presentations={product.presentations}

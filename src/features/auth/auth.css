@@ -4,3 +4,93 @@
   max-width: 420px;
   margin: 16px auto;
 }
+
+/* #79: «Yo» como el prototipo: saludo, mis aportes, ajustes y cerrar sesión. */
+.profile {
+  display: grid;
+  gap: 24px;
+  max-width: 720px;
+}
+
+.profile h1,
+.profile p {
+  margin: 0;
+}
+
+.recent-reports,
+.settings {
+  display: grid;
+  gap: 8px;
+}
+
+.recent-list,
+.settings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.recent-list li,
+.settings-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.recent-text,
+.settings-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.recent-text strong,
+.settings-text strong {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.profile > .btn.ghost {
+  justify-self: start;
+}
+
+/* Interruptor de los ajustes: gris apagado, naranja encendido (prototipo). */
+.switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line-2);
+  cursor: pointer;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: transform 0.15s ease;
+}
+
+.switch[aria-checked='true'] {
+  background: var(--accent);
+}
+
+.switch[aria-checked='true']::after {
+  transform: translateX(20px);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

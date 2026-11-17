@@ -31,3 +31,16 @@
   color: var(--ink);
   font: inherit;
 }
+
+/* #79 y #28: el cronómetro del modo prueba de usabilidad (EC-01). Se quita al cerrar la #28. */
+.stopwatch {
+  justify-self: end;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--info-soft);
+  color: var(--info);
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

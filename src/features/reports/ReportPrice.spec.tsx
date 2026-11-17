@@ -139,6 +139,27 @@ describe('registrar un precio', () => {
     expect(report?.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  // #79 y #28 (EC-01): solo en el modo prueba de usabilidad; se quita al cerrar la #28.
+  it('en el modo prueba de usabilidad muestra el cronómetro y cuánto tardó el registro', async () => {
+    localStorage.setItem('valora:modo-prueba', '1');
+    stubApi(reportRoutes);
+    renderReport();
+
+    expect(await screen.findByRole('timer', { name: 'Cronómetro' })).toHaveTextContent(/^0:0\d$/);
+    await fillAndSend();
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+    expect(screen.getByText(/^Registrado en \d+ s\.$/)).toBeInTheDocument();
+  });
+
+  it('sin el modo prueba no hay cronómetro', async () => {
+    stubApi(reportRoutes);
+    renderReport();
+
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+  });
+
   it('el precio se puede escribir con puntos de miles: «2.500» son 2500 pesos', async () => {
     const api = stubApi(reportRoutes);
     renderReport();

@@ -42,7 +42,7 @@ describe('iniciar sesión', () => {
 
     signIn('ana@correo.co', 'una clave larga');
 
-    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hola' })).toBeInTheDocument();
     const login = api.calls.find(({ path }) => path === '/v1/auth/login');
     expect(JSON.parse(login?.body ?? '{}')).toEqual({
       email: 'ana@correo.co',
@@ -99,7 +99,7 @@ describe('iniciar sesión', () => {
     renderSignIn('/entrar?volver=/yo');
 
     signIn('ana@correo.co', 'una clave larga');
-    await screen.findByText('Entraste como reportante.');
+    await screen.findByRole('heading', { name: 'Hola' });
 
     const stored = JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage)]);
     expect(stored).not.toContain('una clave larga');
