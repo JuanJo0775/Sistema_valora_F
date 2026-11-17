@@ -117,6 +117,38 @@ describe('todas las tiendas, en el detalle del producto', () => {
     expect(other).toHaveTextContent('Confiabilidad media');
   });
 
+  it('si la API trae la dirección de la tienda, la fila la muestra para distinguir tiendas homónimas', async () => {
+    stubCompare(
+      comparison([
+        result({
+          establishment: {
+            ...store('5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d', 'D1'),
+            address: 'Cra 14 # 5-20',
+          },
+        }),
+        result({
+          reportId: '8f7e6d5c-4b3a-4291-8a0f-7e6d5c4b3a29',
+          establishment: store('6e3d2c1b-0a9f-4b8c-9d7e-6f5a4b3c2d1e', 'D1'),
+        }),
+      ]),
+    );
+
+    renderCompare();
+
+    const [first, second] = await screen.findAllByRole('listitem');
+    expect(first).toHaveTextContent('Cra 14 # 5-20');
+    expect(second).not.toHaveTextContent('Cra');
+  });
+
+  it('«Dato inicial» es informativo (neutro) y «Confiabilidad baja» no es roja', async () => {
+    stubCompare(comparison([result({ source: 'siembra', reliability: 'baja' })]));
+
+    renderCompare();
+
+    expect(await screen.findByText('Dato inicial')).toHaveClass('pill', 'mute');
+    expect(screen.getByText('Confiabilidad baja')).not.toHaveClass('bad');
+  });
+
   it.each([
     [
       { sort: 'unit_price', municipality: 'armenia' },
@@ -182,7 +214,7 @@ describe('todas las tiendas, en el detalle del producto', () => {
     ).toBeInTheDocument();
     const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison'));
     expect(asked.at(-1)?.searchParams.get('sort')).toBe('recent');
-    expect(screen.getByRole('radio', { name: 'Más cerca' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'Más cerca' })).toBeEnabled();
   });
 
   it('«Usar mi ubicación» compara cerca de ti, dice la distancia y permite ordenar por ella', async () => {
@@ -382,6 +414,96 @@ describe('todas las tiendas, en el detalle del producto', () => {
     expect(await screen.findByRole('combobox', { name: 'Municipio' })).toHaveValue('armenia');
     const asked = lastAsked(api);
     expect(asked?.searchParams.has('lat')).toBe(false);
+  });
+
+  const near = (name: string, distanceM: number) =>
+    result({
+      reportId: crypto.randomUUID(),
+      establishment: {
+        ...store(crypto.randomUUID(), name),
+        distanceM,
+      },
+    });
+  const located = { municipality: undefined, radiusKm: 1.5 };
+
+  it('sin ubicación, «Más cerca» la pide y, al recibirla, ordena por distancia', async () => {
+    const api = stubCompare([
+      comparison([result()]),
+      comparison([near('Lejana', 900), near('Cercana', 120)], { ...located, sort: 'distance' }),
+    ]);
+    stubLocation();
+    renderCompare();
+    await screen.findByText('Ordenado por precio por unidad · en Armenia');
+    const closer = screen.getByRole('radio', { name: 'Más cerca' });
+    expect(closer).toBeEnabled();
+
+    fireEvent.click(closer);
+
+    expect(
+      await screen.findByText('Ordenado por distancia · a menos de 1,5 km de ti'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Más cerca' })).toBeChecked();
+    const asked = lastAsked(api);
+    expect(asked?.searchParams.get('sort')).toBe('distance');
+    expect(asked?.searchParams.get('lat')).toBe('4.53');
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('Lejana');
+  });
+
+  it('sin ubicación y con el permiso negado avisa qué hacer y conserva el orden', async () => {
+    const api = stubCompare(comparison([result()]));
+    stubNoGeolocation();
+    renderCompare();
+    await screen.findByText('Ordenado por precio por unidad · en Armenia');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Más cerca' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Activa la ubicación del navegador para ordenar por distancia.',
+    );
+    expect(screen.getByRole('radio', { name: 'Más barato' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Más cerca' })).not.toBeChecked();
+    expect(lastAsked(api)?.searchParams.get('sort')).toBe('unit_price');
+  });
+
+  it('con la ubicación activa, «Más cerca» ordena por distancia al instante', async () => {
+    const api = stubCompare([
+      comparison([result()]),
+      comparison([near('Cercana', 120)], { ...located, sort: 'unit_price' }),
+      comparison([near('Cercana', 120)], { ...located, sort: 'distance' }),
+    ]);
+    stubLocation();
+    renderCompare();
+    await openWhere();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    await screen.findByText('Ordenado por precio por unidad · a menos de 1,5 km de ti');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Más cerca' }));
+
+    expect(
+      await screen.findByText('Ordenado por distancia · a menos de 1,5 km de ti'),
+    ).toBeInTheDocument();
+    expect(lastAsked(api)?.searchParams.get('sort')).toBe('distance');
+  });
+
+  it('si el backend responde 400 al ordenar por distancia, la pantalla lo dice y no se rompe', async () => {
+    stubCompare([
+      comparison([result()]),
+      {
+        status: 400,
+        body: { code: 'VALIDATION_ERROR', message: 'Para ordenar por distancia envía lat y lng.' },
+      },
+    ]);
+    stubLocation();
+    renderCompare();
+    await screen.findByText('Ordenado por precio por unidad · en Armenia');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Más cerca' }));
+
+    expect(
+      await screen.findByText('Para ordenar por distancia envía lat y lng.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Ordenar por' })).toBeInTheDocument();
   });
 
   it('al volver al municipio, el orden por distancia pasa a precio por unidad', async () => {
