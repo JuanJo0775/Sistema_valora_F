@@ -25,7 +25,9 @@
 
 .result {
   display: grid;
-  gap: 2px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   min-height: var(--touch);
   padding: 12px 14px;
   border: 1px solid var(--line);
@@ -35,6 +37,49 @@
 
 .result:hover {
   background: var(--bg-2);
+}
+
+.result-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Miniatura de tarjetas y filas: tamaño fijo, foto contenida sobre --bg-2. */
+.product-thumb {
+  display: grid;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--r-m);
+  background: var(--bg-2);
+}
+
+.product-thumb.card {
+  width: 64px;
+  height: 64px;
+}
+
+.product-thumb.row {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-s);
+}
+
+.product-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.product-thumb svg {
+  width: 62%;
+  height: 62%;
+  fill: var(--bg-3);
+  stroke: var(--ink-3);
+  stroke-width: 2;
+  stroke-linejoin: round;
 }
 
 .detail {
@@ -156,7 +201,9 @@
 
 .suggest-option {
   display: grid;
-  gap: 2px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   min-height: var(--touch);
   padding: 8px 12px;
   border-radius: var(--r-s);
@@ -171,6 +218,12 @@
 .suggest-option[aria-selected='true'] {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+
+.suggest-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
 .suggest-name {

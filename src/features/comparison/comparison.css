@@ -322,16 +322,6 @@
   margin-bottom: 8px;
 }
 
-.product-card-top .product-image img,
-.product-card-top .product-image.illustration {
-  width: 72px;
-  max-width: 72px;
-}
-
-.product-card-top .product-image.illustration {
-  padding: 16px;
-}
-
 .product-card h2 {
   margin: 0;
   font-size: 1.05rem;

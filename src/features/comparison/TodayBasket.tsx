@@ -7,7 +7,7 @@ import { formatCop } from '../../shared/money';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { useBasket } from '../basket/basketContext';
-import { ProductImage } from '../catalog/ProductImage';
+import { ProductThumb } from '../catalog/ProductThumb';
 import '../catalog/catalog.css';
 import { MUNICIPALITIES } from './criteria';
 import { useWhere } from './WhereChooser';
@@ -155,7 +155,7 @@ function ProductCard({ item }: { item: Item }) {
     <li className="product-card">
       <Link to={`/productos/${item.productId}`} className="product-card-link">
         <div className="product-card-top">
-          <ProductImage name={item.name} />
+          <ProductThumb image={item.image} size="card" />
           {item.savingsPercent !== undefined && (
             <span className="pill ok">{`Hasta −${String(item.savingsPercent)} %`}</span>
           )}
