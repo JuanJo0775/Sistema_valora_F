@@ -243,6 +243,9 @@
 }
 
 .category-chip {
+  /* El radio oculto es absoluto: sin un padre posicionado se sale del renglón deslizable y
+     ensancha la página (se veía a 1200 px en el celular). */
+  position: relative;
   display: inline-flex;
   flex: none;
   align-items: center;
