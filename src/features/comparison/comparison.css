@@ -155,6 +155,14 @@
   text-decoration: none;
 }
 
+.offer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+
 .offer-meta,
 .offer-links {
   display: flex;
@@ -214,4 +222,38 @@
 .today-basket .price {
   color: var(--ink);
   font-size: 1.125rem;
+}
+
+/* #65: la tarjeta naranja del panel con el más barato (prototipo). */
+.cheapest-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-l);
+  background: var(--accent-soft);
+}
+
+.cheapest-card .eyebrow {
+  color: var(--accent-ink);
+}
+
+.cheapest-price,
+.cheapest-store {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.cheapest-price strong {
+  font-family: var(--f-display);
+  font-size: 2.25rem;
+  line-height: 1.1;
+}
+
+.cheapest-store {
+  justify-content: flex-start;
 }

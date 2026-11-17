@@ -84,20 +84,26 @@ export function ProductDetail() {
   return (
     <div className="with-side">
       <article className="detail">
-        <ProductImage name={product.name} image={product.image} />
-        {/* #58: solo un moderador cambia la foto (en el Corte 2, fotos del equipo, ADR-020). */}
-        {moderator && (
-          <ChangeProductPhoto
-            productId={product.id}
-            onChanged={(image) => {
-              setUploaded({ productId: product.id, image });
-            }}
-          />
-        )}
-        <p className="eyebrow">{product.category.name}</p>
-        <h1>{product.name}</h1>
-        {product.brand && <p className="muted">{product.brand}</p>}
-        <p className="muted">{summary(product, comparison)}</p>
+        <header className="detail-head">
+          <div className="detail-photo">
+            <ProductImage name={product.name} image={product.image} />
+            {/* #58: solo un moderador cambia la foto (en el Corte 2, fotos del equipo, ADR-020). */}
+            {moderator && (
+              <ChangeProductPhoto
+                productId={product.id}
+                onChanged={(image) => {
+                  setUploaded({ productId: product.id, image });
+                }}
+              />
+            )}
+          </div>
+          <div className="detail-title">
+            <p className="eyebrow">{product.category.name}</p>
+            <h1>{product.name}</h1>
+            {product.brand && <p className="muted">{product.brand}</p>}
+            <p className="muted">{summary(product, comparison)}</p>
+          </div>
+        </header>
         <AllStores
           product={product}
           onComparison={(latest) => {
