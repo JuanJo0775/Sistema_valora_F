@@ -1,0 +1,42 @@
+import { expect, type Locator, type Page } from '@playwright/test';
+import type { Store } from './api';
+
+// Pasos de pantalla que repiten las pruebas, escritos como los haría una persona.
+
+// Las opciones de la app son fichas: el radio va escondido dentro de su etiqueta y la persona toca
+// la ficha. Se toca la etiqueta y se comprueba que el radio quedó elegido.
+export async function choose(radio: Locator) {
+  await radio.locator('xpath=ancestor::label[1]').click();
+  await expect(radio).toBeChecked();
+}
+
+export async function chooseFirstPresentation(page: Page) {
+  await choose(page.getByRole('radiogroup', { name: 'Presentación' }).getByRole('radio').first());
+}
+
+export async function chooseStoreByName(page: Page, store: Store) {
+  await page.getByRole('searchbox', { name: 'Buscar tienda por nombre' }).fill(store.name);
+  await page.getByRole('button', { name: 'Buscar tienda' }).click();
+  await choose(page.getByRole('radio', { name: store.name, exact: true }));
+}
+
+export async function sendPrice(page: Page, priceCop: number) {
+  await page.getByLabel('Precio en pesos').fill(String(priceCop));
+  await page.getByRole('button', { name: 'Enviar' }).click();
+}
+
+// «$4.321», como lo escribe la app.
+export const pesos = (value: number) => `$${new Intl.NumberFormat('es-CO').format(value)}`;
+
+export async function expectHeading(page: Page, name: string) {
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+}
+
+// La comparación se arma con el repartidor de eventos (ADR-015): un precio nuevo, o uno recién
+// descartado, tarda un momento en verse. Se recarga hasta que la condición se cumple.
+export async function eventually(page: Page, check: () => Promise<void>) {
+  await expect(async () => {
+    await page.reload();
+    await check();
+  }).toPass({ timeout: 30_000 });
+}

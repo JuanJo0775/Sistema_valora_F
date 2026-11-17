@@ -1,0 +1,82 @@
+{
+  "escenario": "EC-07 / PR-08",
+  "fecha": "2026-11-17T09:55:53.247Z",
+  "reportesGuardadosSinSenal": 50,
+  "reportesRecibidos": 50,
+  "duplicados": 0,
+  "p95ConfirmacionMs": 819,
+  "maximoConfirmacionMs": 1335,
+  "porPersona": [
+    {
+      "sent": 17,
+      "received": 17,
+      "unique": 17,
+      "confirmationsMs": [
+        552,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819,
+        819
+      ]
+    },
+    {
+      "sent": 17,
+      "received": 17,
+      "unique": 17,
+      "confirmationsMs": [
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        279,
+        1335
+      ]
+    },
+    {
+      "sent": 16,
+      "received": 16,
+      "unique": 16,
+      "confirmationsMs": [
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800,
+        800
+      ]
+    }
+  ]
+}
