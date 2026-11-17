@@ -26,6 +26,13 @@ export default tseslint.config(
       },
     },
   },
+  // Herramientas del equipo en Node (por ejemplo, el resumen de la prueba de usabilidad de la #28):
+  // JavaScript sin tipos, fuera del proyecto de TypeScript.
+  {
+    files: ['scripts/**/*.mjs'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: { globals: globals.node, parserOptions: { projectService: false } },
+  },
   reactHooks.configs.flat.recommended,
   {
     files: ['**/*.spec.{ts,tsx}'],

@@ -8,9 +8,12 @@
   --bg-3: #efedea;
   --line: #ece9e5;
   --line-2: #dad6d0;
+  /* #28: borde de campos y botones con borde, 3:1 o más sobre el fondo (WCAG 1.4.11). */
+  --field-line: #8c857c;
   --ink: #17140f;
   --ink-2: #5e5850;
-  --ink-3: #8c857c;
+  /* #28: 4,5:1 sobre --bg y --bg-2 (WCAG 2.2 AA): antes #8c857c (3,65:1). */
+  --ink-3: #736c64;
   --accent: #f06a1a;
   --accent-ink: #b84b0b;
   --accent-soft: #fef1e8;
@@ -45,6 +48,7 @@
     --bg-3: #1d1d20;
     --line: #242427;
     --line-2: #36363a;
+    --field-line: #706a63;
     --ink: #f4f2ef;
     --ink-2: #b5afa8;
     --ink-3: #86807a;
@@ -74,6 +78,7 @@
   --bg-3: #1d1d20;
   --line: #242427;
   --line-2: #36363a;
+  --field-line: #706a63;
   --ink: #f4f2ef;
   --ink-2: #b5afa8;
   --ink-3: #86807a;
