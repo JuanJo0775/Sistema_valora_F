@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useEffect, useState } from 'react';
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
@@ -12,14 +12,14 @@ import { isUsabilityMode } from '../../shared/usabilityMode';
 import { secondsSince, Stopwatch } from './Stopwatch';
 import { useReportQueue } from '../../pwa/queueContext';
 import { readLastStore, saveLastStore } from './lastStore';
+import { readRecentProducts, saveRecentProduct } from './lastProducts';
+import { parsePrice } from './price';
 import { ReportProblem } from './ReportProblem';
 import { type Store, StorePicker } from './StorePicker';
+import '../auth/field.css';
 import './reports.css';
 
 type Product = components['schemas']['Product'];
-
-// En Colombia los miles se separan con punto: «2.500» son 2500 pesos (sin centavos).
-const toPesos = (text: string) => Number(text.replace(/[.\s$]/g, ''));
 
 // El campo datetime-local escribe la hora del teléfono sin zona: «2026-11-16T09:30».
 const toLocalInput = (date: Date) =>
@@ -28,25 +28,31 @@ const toLocalInput = (date: Date) =>
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
+type Field = 'presentation' | 'store' | 'price' | 'time';
+interface Problem {
+  field: Field;
+  text: string;
+}
+
 // Lo que exige el contrato (ReportCreate), dicho antes de enviar: el servidor vuelve a validarlo.
-function problemOf(report: {
+function check(report: {
   presentationId: string;
   store: Store | null;
-  priceCop: number;
+  price: string;
   observedAt: Date;
-}) {
-  if (!report.presentationId) return 'Elige la presentación.';
-  if (!report.store) return 'Elige la tienda.';
-  const { priceCop } = report;
-  if (!Number.isInteger(priceCop) || priceCop < 1 || priceCop > 10_000_000) {
-    return 'Escribe el precio en pesos.';
+}): { problem: Problem } | { priceCop: number } {
+  if (!report.presentationId) {
+    return { problem: { field: 'presentation', text: 'Elige la presentación.' } };
   }
+  if (!report.store) return { problem: { field: 'store', text: 'Elige la tienda.' } };
+  const price = parsePrice(report.price);
+  if ('problem' in price) return { problem: { field: 'price', text: price.problem } };
   // El servidor acepta hasta 5 minutos en el futuro (relojes desfasados) y 24 horas atrás.
   const age = Date.now() - report.observedAt.getTime();
   if (Number.isNaN(age) || age < -5 * MINUTE || age > 24 * HOUR) {
-    return 'La hora debe ser de las últimas 24 horas.';
+    return { problem: { field: 'time', text: 'La hora debe ser de las últimas 24 horas.' } };
   }
-  return '';
+  return { priceCop: price.pesos };
 }
 
 // EC-01: una sola pantalla con lo que ya se sabe lleno, para reportar en 15 segundos o menos.
@@ -57,7 +63,9 @@ export function ReportPrice() {
     return (
       <>
         <h1>¿Qué precio viste?</h1>
+        <p className="muted">Busca el producto por su nombre o su código de barras.</p>
         <ProductSearch linkTo={(id) => `/registrar?producto=${id}`} />
+        <RecentProducts />
       </>
     );
   }
@@ -85,7 +93,9 @@ function ReportForm({ productId }: { productId: string }) {
   const [testing] = useState(isUsabilityMode);
   const [tookSeconds, setTookSeconds] = useState<number | null>(null);
   const queue = useReportQueue();
-  const [problem, setProblem] = useState('');
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const priceRef = useRef<HTMLInputElement>(null);
+  const timeRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
 
@@ -102,18 +112,30 @@ function ReportForm({ productId }: { productId: string }) {
       });
   }, [productId, loadAttempt]);
 
+  const chosenSize = product?.presentations.find(({ id }) => id === presentationId);
+  // Al corregir el campo que falló, su aviso se quita.
+  const clear = (field: Field) => {
+    setProblem((now) => (now?.field === field ? null : now));
+  };
+
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    const priceCop = toPesos(price);
     const observedAt = seenAt ? new Date(seenAt) : startedAt;
-    const found = problemOf({ presentationId, store, priceCop, observedAt });
-    setProblem(found);
-    if (found || !store) return;
+    const found = check({ presentationId, store, price, observedAt });
+    if ('problem' in found) {
+      setProblem(found.problem);
+      // El foco va al campo que falló, para corregirlo sin buscarlo.
+      if (found.problem.field === 'price') priceRef.current?.focus();
+      if (found.problem.field === 'time') timeRef.current?.focus();
+      return;
+    }
+    setProblem(null);
+    if (!store) return;
     setError(null);
     const report = {
       presentationId,
       establishmentId: store.id,
-      priceCop,
+      priceCop: found.priceCop,
       priceType: onSale ? ('oferta' as const) : ('normal' as const),
       observedAt: observedAt.toISOString(),
     };
@@ -121,14 +143,15 @@ function ReportForm({ productId }: { productId: string }) {
     const key = attempt.body === '' || attempt.body === body ? attempt.key : crypto.randomUUID();
     setAttempt({ key, body });
     setSending(true);
-    const size = product?.presentations.find(({ id }) => id === presentationId);
     // ADR-010: se guarda en el teléfono antes de enviarlo; si no hay red, la cola lo envía sola.
     void queue
       .submit({
         idempotencyKey: key,
         body: report,
         label: {
-          product: [product?.name, size && formatPresentation(size)].filter(Boolean).join(' · '),
+          product: [product?.name, chosenSize && formatPresentation(chosenSize)]
+            .filter(Boolean)
+            .join(' · '),
           store: store.name,
         },
       })
@@ -139,6 +162,7 @@ function ReportForm({ productId }: { productId: string }) {
           return;
         }
         saveLastStore(store);
+        if (product) saveRecentProduct({ id: productId, name: product.name });
         setTookSeconds(secondsSince(startedAt));
         setDone(result.kind);
       });
@@ -154,13 +178,21 @@ function ReportForm({ productId }: { productId: string }) {
           title={done === 'recibido' ? 'Recibido' : 'Guardado en tu teléfono'}
           text={
             done === 'recibido'
-              ? 'Gracias: tu precio ayuda a otros a comparar.'
-              : 'Se enviará solo cuando haya conexión.'
+              ? 'Gracias: tu precio ayuda a otros a comparar. Ya cuenta en la comparación; el estado de tu aporte lo ves en «Mis aportes».'
+              : 'Se enviará solo cuando haya conexión; al enviarse cuenta en la comparación.'
           }
           action={
-            <Link to="/registrar" className="btn">
-              Registrar otro en esta tienda
-            </Link>
+            <div className="actions">
+              <Link to={`/productos/${productId}`} className="btn">
+                {product ? `Ver la comparación de ${product.name}` : 'Ver la comparación'}
+              </Link>
+              <Link to="/registrar" className="btn ghost">
+                Registrar otro en esta tienda
+              </Link>
+              <Link to={done === 'recibido' ? '/mis-aportes' : '/pendientes'} className="btn ghost">
+                {done === 'recibido' ? 'Ver mis aportes' : 'Ver lo guardado en el teléfono'}
+              </Link>
+            </div>
           }
         />
       </>
@@ -185,20 +217,46 @@ function ReportForm({ productId }: { productId: string }) {
       <PresentationChoices
         presentations={product.presentations}
         value={presentationId}
-        onChange={setPresentationId}
+        onChange={(id) => {
+          setPresentationId(id);
+          clear('presentation');
+        }}
       />
-      <StorePicker value={store} onChange={setStore} />
-      <label className="field">
-        Precio en pesos
-        <input
-          inputMode="numeric"
-          autoComplete="off"
-          value={price}
-          onChange={(event) => {
-            setPrice(event.target.value);
-          }}
-        />
-      </label>
+      <FieldProblem problem={problem} field="presentation" id="error-presentacion" />
+      <StorePicker
+        value={store}
+        onChange={(chosen) => {
+          setStore(chosen);
+          clear('store');
+        }}
+      />
+      <FieldProblem problem={problem} field="store" id="error-tienda" />
+      <div className="field-group">
+        <label className="field">
+          Precio en pesos
+          <input
+            ref={priceRef}
+            inputMode="numeric"
+            autoComplete="off"
+            value={price}
+            aria-describedby={
+              problem?.field === 'price' ? 'ayuda-precio error-precio' : 'ayuda-precio'
+            }
+            aria-invalid={problem?.field === 'price' ? true : undefined}
+            onChange={(event) => {
+              setPrice(event.target.value);
+              clear('price');
+            }}
+          />
+        </label>
+        <p id="ayuda-precio" className="muted">
+          {chosenSize
+            ? `Es el precio de ${formatPresentation(chosenSize)}.`
+            : 'Es el precio de la presentación que elijas.'}{' '}
+          Puedes escribirlo como 4600, 4.600 o $4.600.
+        </p>
+        <FieldProblem problem={problem} field="price" id="error-precio" />
+      </div>
       {seenAt === null ? (
         <button
           type="button"
@@ -207,20 +265,25 @@ function ReportForm({ productId }: { productId: string }) {
             setSeenAt(toLocalInput(startedAt));
           }}
         >
-          Lo vi antes
+          Lo vi otro día
         </button>
       ) : (
         <label className="field">
           ¿Cuándo lo viste?
           <input
+            ref={timeRef}
             type="datetime-local"
             value={seenAt}
+            aria-invalid={problem?.field === 'time' ? true : undefined}
+            aria-describedby={problem?.field === 'time' ? 'error-hora' : undefined}
             onChange={(event) => {
               setSeenAt(event.target.value);
+              clear('time');
             }}
           />
         </label>
       )}
+      <FieldProblem problem={problem} field="time" id="error-hora" />
       <label className="check">
         <input
           type="checkbox"
@@ -231,15 +294,47 @@ function ReportForm({ productId }: { productId: string }) {
         />
         Es oferta
       </label>
-      {problem && (
-        <p role="alert" className="banner warn">
-          {problem}
-        </p>
-      )}
       {error !== null && <ReportProblem error={error} />}
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Enviando…' : 'Enviar'}
       </button>
     </form>
+  );
+}
+
+function FieldProblem({
+  problem,
+  field,
+  id,
+}: {
+  problem: Problem | null;
+  field: Field;
+  id: string;
+}) {
+  if (problem?.field !== field) return null;
+  return (
+    <p id={id} role="alert" className="field-error">
+      {problem.text}
+    </p>
+  );
+}
+
+// Con el campo de búsqueda vacío, un atajo: los últimos productos para los que se registró un precio.
+function RecentProducts() {
+  const [recent] = useState(readRecentProducts);
+  if (recent.length === 0) return null;
+  return (
+    <section aria-labelledby="recientes">
+      <h2 id="recientes">Los últimos que registraste</h2>
+      <ul className="actions">
+        {recent.map(({ id, name }) => (
+          <li key={id}>
+            <Link to={`/registrar?producto=${id}`} className="btn ghost">
+              {name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

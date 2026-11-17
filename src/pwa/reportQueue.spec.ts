@@ -136,6 +136,26 @@ describe('cola de reportes sin conexión', () => {
     },
   );
 
+  it('un 403 de correo sin verificar no es de red ni de sesión: sale de la cola con su motivo', async () => {
+    const queue = await openReportQueue(freshName());
+    await queue.add(report('11111111-1111-4111-8111-111111111111'));
+    const send = answers(
+      new ApiError({ status: 403, code: 'EMAIL_NOT_VERIFIED', message: 'Verifica tu correo.' }),
+    );
+
+    const outcome = await queue.sync(send);
+
+    expect(outcome.needsSession).toBe(false);
+    const [saved] = await queue.list();
+    expect(saved).toMatchObject({
+      status: 'requiere_atencion',
+      problem: { status: 403, code: 'EMAIL_NOT_VERIFIED' },
+    });
+    // No se reintenta a ciegas en cada carga.
+    await queue.sync(send);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it('dos sincronizaciones a la vez no envían dos veces el mismo reporte', async () => {
     const queue = await openReportQueue(freshName());
     await queue.add(report());

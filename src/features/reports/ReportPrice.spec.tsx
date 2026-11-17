@@ -174,7 +174,11 @@ describe('registrar un precio', () => {
     ['la presentación', { size: false, store: true, price: '2500' }, 'Elige la presentación.'],
     ['la tienda', { size: true, store: false, price: '2500' }, 'Elige la tienda.'],
     ['el precio', { size: true, store: true, price: '' }, 'Escribe el precio en pesos.'],
-    ['un precio válido', { size: true, store: true, price: '2,5' }, 'Escribe el precio en pesos.'],
+    [
+      'un precio sin centavos',
+      { size: true, store: true, price: '2,5' },
+      'Escribe el precio en pesos enteros, sin centavos.',
+    ],
   ])('sin %s dice qué falta y no envía', async (_missing, steps, message) => {
     const api = stubApi(reportRoutes);
     renderReport();
@@ -219,7 +223,11 @@ describe('registrar un precio', () => {
     expect(
       await screen.findByRole('heading', { name: 'Guardado en tu teléfono' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Se enviará solo cuando haya conexión.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Se enviará solo cuando haya conexión; al enviarse cuenta en la comparación.',
+      ),
+    ).toBeInTheDocument();
     const [saved] = await (await openReportQueue()).list();
     expect(saved?.status).toBe('pendiente');
   });
@@ -335,11 +343,11 @@ describe('registrar un precio', () => {
     ).toHaveAttribute('href', '/registrar');
   });
 
-  it('«Lo vi antes» permite elegir la hora en que se vio el precio', async () => {
+  it('«Lo vi otro día» permite elegir la hora en que se vio el precio', async () => {
     const api = stubApi(reportRoutes);
     renderReport();
     const twoHoursAgo = new Date(Date.now() - 2 * 3600_000);
-    fireEvent.click(await screen.findByRole('button', { name: 'Lo vi antes' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Lo vi otro día' }));
     fireEvent.change(screen.getByLabelText('¿Cuándo lo viste?'), {
       target: { value: localTime(twoHoursAgo) },
     });
@@ -357,7 +365,7 @@ describe('registrar un precio', () => {
   ])('una hora %s se avisa sin enviar', async (_when, offset) => {
     const api = stubApi(reportRoutes);
     renderReport();
-    fireEvent.click(await screen.findByRole('button', { name: 'Lo vi antes' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Lo vi otro día' }));
     fireEvent.change(screen.getByLabelText('¿Cuándo lo viste?'), {
       target: { value: localTime(new Date(Date.now() + offset)) },
     });
@@ -621,5 +629,115 @@ describe('registrar un precio', () => {
     searchStore('don pepe');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
+  });
+});
+
+describe('registrar un precio: mejoras de flujo', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('«Recibido» ofrece ver la comparación del producto y los aportes, y dice qué pasa', async () => {
+    stubApi(reportRoutes);
+    renderReport();
+
+    await fillAndSend();
+
+    expect(
+      await screen.findByRole('link', { name: 'Ver la comparación de Arroz blanco' }),
+    ).toHaveAttribute('href', `/productos/${rice.id}`);
+    expect(screen.getByRole('link', { name: 'Ver mis aportes' })).toHaveAttribute(
+      'href',
+      '/mis-aportes',
+    );
+    expect(screen.getByText(/Ya cuenta en la comparación/)).toBeInTheDocument();
+  });
+
+  it('«$1.490» y «1490,00» se aceptan y se envía el entero', async () => {
+    const api = stubApi(reportRoutes);
+    renderReport();
+
+    await fillAndSend('$1.490,00');
+
+    await screen.findByRole('heading', { name: 'Recibido' });
+    expect(JSON.parse(sentReports(api)[0]?.body ?? '{}')).toMatchObject({ priceCop: 1490 });
+  });
+
+  it('el campo del precio dice de qué presentación es y marca el error con el foco', async () => {
+    stubApi(reportRoutes);
+    renderReport();
+    fireEvent.click(await screen.findByRole('radio', { name: '500 g' }));
+    stubLocation('allow');
+    fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
+    const price = screen.getByLabelText('Precio en pesos');
+    expect(price).toHaveAccessibleDescription(/Es el precio de 500 g/);
+
+    fireEvent.change(price, { target: { value: 'abc' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    expect(price).toHaveAttribute('aria-invalid', 'true');
+    expect(price).toHaveAccessibleDescription(/Escribe solo números/);
+    expect(price).toHaveFocus();
+
+    fireEvent.change(price, { target: { value: '2500' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('antes de pedir la ubicación dice para qué se usa y que no se publica', async () => {
+    stubApi(productRoute);
+    renderReport();
+
+    expect(
+      await screen.findByRole('button', { name: 'Usar mi ubicación' }),
+    ).toHaveAccessibleDescription(/no se guarda ni se publica/);
+  });
+
+  it('con la cuenta sin verificar dice que verifique el correo, no «sin conexión», y no lo guarda', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      'POST /v1/reports': {
+        status: 403,
+        body: { code: 'EMAIL_NOT_VERIFIED', message: 'Verifica tu correo.' },
+      },
+      'POST /v1/auth/resend-verification': { status: 202 },
+    });
+    renderReport();
+
+    await fillAndSend();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Verifica tu correo para registrar precios.');
+    expect(screen.queryByText('Guardado en tu teléfono')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Enviarme otro enlace' }));
+    expect(await screen.findByText(/revisa tu bandeja/)).toBeInTheDocument();
+    expect(api.calls.filter(({ path }) => path === '/v1/auth/resend-verification')).toHaveLength(1);
+    // Un segundo envío con el mismo reporte no queda pendiente en el teléfono.
+    expect(screen.getByRole('button', { name: 'Enviar' })).toBeEnabled();
+  });
+
+  it('sin producto sugiere los últimos que se registraron', async () => {
+    localStorage.setItem(
+      'valora:ultimos-productos',
+      JSON.stringify([{ id: rice.id, name: 'Arroz blanco' }]),
+    );
+    stubApi({});
+    renderReport('/registrar');
+
+    expect(await screen.findByRole('link', { name: 'Arroz blanco' })).toHaveAttribute(
+      'href',
+      `/registrar?producto=${rice.id}`,
+    );
+  });
+
+  it('después de registrar, el producto queda entre los últimos', async () => {
+    stubApi(reportRoutes);
+    renderReport();
+
+    await fillAndSend();
+    await screen.findByRole('heading', { name: 'Recibido' });
+
+    expect(localStorage.getItem('valora:ultimos-productos')).toContain('Arroz blanco');
   });
 });

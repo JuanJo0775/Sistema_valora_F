@@ -75,9 +75,17 @@ export function StorePicker({
   return (
     <fieldset role="radiogroup" className="choices stores">
       <legend>Tienda</legend>
-      <button type="button" className="btn ghost" onClick={findNearby}>
+      <button
+        type="button"
+        className="btn ghost"
+        aria-describedby="para-ubicacion"
+        onClick={findNearby}
+      >
         Usar mi ubicación
       </button>
+      <p id="para-ubicacion" className="muted">
+        Solo se usa en tu teléfono para buscar las tiendas cercanas; no se guarda ni se publica.
+      </p>
       {/* Va dentro del formulario del reporte: Enter busca la tienda, no envía el reporte. */}
       <div className="store-search">
         <input
@@ -109,23 +117,25 @@ export function StorePicker({
         ¿No está la tienda? Sugiérela
       </Link>
       {/* La tienda ya elegida (la última usada) aparece aunque no se haya pedido la ubicación. */}
-      {withChosen(stores, value).map((store) => (
-        <label key={store.id} className="choice store">
-          <input
-            type="radio"
-            name="store"
-            value={store.id}
-            checked={value?.id === store.id}
-            onChange={() => {
-              onChange(store);
-            }}
-          />
-          <span>{store.name}</span>
-          {store.distanceM !== undefined && (
-            <span className="muted">{formatDistance(store.distanceM)}</span>
-          )}
-        </label>
-      ))}
+      <div className="store-list">
+        {withChosen(stores, value).map((store) => (
+          <label key={store.id} className="choice store">
+            <input
+              type="radio"
+              name="store"
+              value={store.id}
+              checked={value?.id === store.id}
+              onChange={() => {
+                onChange(store);
+              }}
+            />
+            <span>{store.name}</span>
+            {store.distanceM !== undefined && (
+              <span className="muted">{formatDistance(store.distanceM)}</span>
+            )}
+          </label>
+        ))}
+      </div>
     </fieldset>
   );
 }

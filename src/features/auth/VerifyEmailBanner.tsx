@@ -1,45 +1,52 @@
 import { useState } from 'react';
-import { api, ApiError, call } from '../../shared/api';
+import { ResendVerification } from './ResendVerification';
 import { useSession } from './session';
 
-type Sending = 'idle' | 'sending' | 'sent' | 'limit' | 'error';
+const DISMISSED = 'valora.verify-notice-dismissed';
+
+const wasDismissed = () => {
+  try {
+    return sessionStorage.getItem(DISMISSED) === '1';
+  } catch {
+    return false;
+  }
+};
 
 // ADR-029: con una cuenta sin el correo verificado se puede navegar, pero no registrar precios. El
-// aviso lo dice y deja pedir otro enlace (el servidor limita a 3 por hora).
+// aviso es compacto, se puede cerrar durante la sesión de navegación y deja pedir otro enlace (el
+// servidor limita a 3 por hora). Cerrado, el motivo sigue a la vista donde importa: al registrar.
 export function VerifyEmailBanner() {
   const { session } = useSession();
-  const [state, setState] = useState<Sending>('idle');
-  if (session.status !== 'active' || session.emailVerified || !session.emailVerificationRequired) {
+  const [dismissed, setDismissed] = useState(wasDismissed);
+  if (
+    dismissed ||
+    session.status !== 'active' ||
+    session.emailVerified ||
+    !session.emailVerificationRequired
+  ) {
     return null;
   }
 
-  const resend = () => {
-    setState('sending');
-    call(api.POST('/auth/resend-verification'))
-      .then(() => {
-        setState('sent');
-      })
-      .catch((error: unknown) => {
-        setState(error instanceof ApiError && error.status === 429 ? 'limit' : 'error');
-      });
-  };
-
   return (
-    <div className="banner warn" role="status">
+    <div className="banner warn verify-notice">
       <p>
-        Verifica tu correo para registrar precios. Te enviamos un enlace; vale 24 horas. Para
-        comparar y ver el mapa no hace falta.
+        Verifica tu correo para registrar precios (el enlace vale 24 horas). Para comparar y ver el
+        mapa no hace falta. <ResendVerification />
       </p>
-      {state === 'sent' && <p>Listo, revisa tu bandeja de entrada (y la carpeta de spam).</p>}
-      {state === 'limit' && <p>Ya pediste varios enlaces. Prueba de nuevo en una hora.</p>}
-      {state === 'error' && <p>No pudimos enviar el enlace. Inténtalo de nuevo más tarde.</p>}
       <button
         type="button"
-        className="btn ghost"
-        disabled={state === 'sending' || state === 'sent'}
-        onClick={resend}
+        className="verify-notice-close"
+        aria-label="Cerrar aviso"
+        onClick={() => {
+          try {
+            sessionStorage.setItem(DISMISSED, '1');
+          } catch {
+            // Sin almacenamiento, el aviso se cierra solo hasta recargar.
+          }
+          setDismissed(true);
+        }}
       >
-        {state === 'sending' ? 'Enviando…' : 'Enviarme otro enlace'}
+        ×
       </button>
     </div>
   );

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { ResendVerification } from '../auth/ResendVerification';
 
 // Las horas se leen en la hora de Colombia, sin importar la zona del teléfono.
 const HOUR = new Intl.DateTimeFormat('es-CO', { timeStyle: 'short', timeZone: 'America/Bogota' });
@@ -39,6 +40,19 @@ export function ReportProblem({ error }: { error: unknown }) {
     return (
       <Notice>
         La hora en que lo viste debe ser de las últimas 24 horas. Revisa «¿Cuándo lo viste?».
+      </Notice>
+    );
+  }
+  // ADR-029: sin el correo verificado no se registran precios. No es un problema de red: no se
+  // guarda para reintentar, y lo escrito sigue en el formulario.
+  if (error.code === 'EMAIL_NOT_VERIFIED') {
+    return (
+      <Notice>
+        <span>
+          Verifica tu correo para registrar precios. Te enviamos un enlace al registrarte (vale 24
+          horas). Tu precio sigue aquí: vuelve a enviarlo cuando lo verifiques.{' '}
+          <ResendVerification />
+        </span>
       </Notice>
     );
   }
