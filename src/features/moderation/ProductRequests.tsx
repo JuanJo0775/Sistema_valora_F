@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { operations } from '../../shared/api/schema';
 import { formatPresentation } from '../catalog/presentation';
-import { ALREADY_DECIDED, decisionBody, decisionOptions, explainWith } from './catalogDecision';
-import { DecisionForm } from './DecisionForm';
+import { ALREADY_DECIDED, CatalogDecision, explainWith } from './CatalogDecision';
 import { PendingList } from './PendingList';
 
 type Request =
@@ -59,19 +58,21 @@ export function ProductRequests() {
               {`Posibles duplicados: ${request.possibleDuplicates.map(({ name }) => name).join(', ')}`}
             </p>
           )}
-          <DecisionForm
+          <CatalogDecision
             id={request.id}
-            options={decisionOptions('Aprobar como producto nuevo', request.possibleDuplicates)}
-            onDecide={(choice, note) =>
+            approveLabel="Aprobar como producto nuevo"
+            duplicates={request.possibleDuplicates}
+            send={(body) =>
               call(
                 api.POST('/moderation/product-requests/{requestId}/decision', {
                   params: { path: { requestId: request.id } },
-                  body: decisionBody(choice, note),
+                  body,
                 }),
-              ).then(() => {
-                done(request.name);
-              })
+              )
             }
+            onDone={() => {
+              done(request.name);
+            }}
             explain={explain}
           />
         </>

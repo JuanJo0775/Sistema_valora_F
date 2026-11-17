@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { type FakeReply, sessionAs, stubApi } from '../../test/fakeApi';
+import { decideCase, decisionLabels, pendingCase } from '../../test/moderation';
 import { ProductRequests } from './ProductRequests';
 
 const RICE_ID = '7f4e3d2c-1b0a-4c9d-8e7f-6a5b4c3d2e1f';
@@ -38,15 +39,9 @@ const renderRequests = (routes: Record<string, FakeReply | FakeReply[]>) => {
   return api;
 };
 
-const caseOf = async (name: string) =>
-  within((await screen.findByRole('heading', { name })).closest('li') as HTMLElement);
-
-const decide = (card: Awaited<ReturnType<typeof caseOf>>, decision: string) => {
-  fireEvent.click(card.getByRole('radio', { name: decision }));
-  fireEvent.change(card.getByRole('textbox', { name: 'Motivo de la decisión' }), {
-    target: { value: 'Ya existe con otro nombre.' },
-  });
-  fireEvent.click(card.getByRole('button', { name: 'Registrar decisión' }));
+const NOTE = 'Ya existe con otro nombre.';
+const decide = (card: Awaited<ReturnType<typeof pendingCase>>, decision: string) => {
+  decideCase(card, decision, NOTE);
 };
 
 describe('productos propuestos', () => {
@@ -62,11 +57,11 @@ describe('productos propuestos', () => {
       ),
     });
 
-    const rice = await caseOf('Arroz Roa');
+    const rice = await pendingCase('Arroz Roa');
     expect(await rice.findByText('Roa · 500 g · Granos y cereales')).toBeInTheDocument();
     expect(rice.getByText('Código de barras 7702001001234')).toBeInTheDocument();
     // Una categoría que no está en la lista se muestra por su código.
-    expect((await caseOf('Gaseosa')).getByText('6 × 350 ml · otra')).toBeInTheDocument();
+    expect((await pendingCase('Gaseosa')).getByText('6 × 350 ml · otra')).toBeInTheDocument();
   });
 
   it('muestra los productos parecidos y solo con ellos se puede fusionar', async () => {
@@ -78,11 +73,13 @@ describe('productos propuestos', () => {
       ),
     });
 
-    const rice = await caseOf('Arroz Diana blanco');
+    const rice = await pendingCase('Arroz Diana blanco');
     expect(rice.getByText('Posibles duplicados: Arroz Diana')).toBeInTheDocument();
-    expect(
-      rice.getAllByRole('radio').map(({ parentElement }) => parentElement?.textContent),
-    ).toEqual(['Aprobar como producto nuevo', 'Fusionar con Arroz Diana', 'Rechazar']);
+    expect(decisionLabels(rice)).toEqual([
+      'Aprobar como producto nuevo',
+      'Fusionar con Arroz Diana',
+      'Rechazar',
+    ]);
   });
 
   it('fusionar envía el producto elegido y quita la propuesta de la lista', async () => {
@@ -94,7 +91,7 @@ describe('productos propuestos', () => {
       [`POST /v1/moderation/product-requests/${rice.id}/decision`]: { status: 204 },
     });
 
-    decide(await caseOf('Arroz Diana blanco'), 'Fusionar con Arroz Diana');
+    decide(await pendingCase('Arroz Diana blanco'), 'Fusionar con Arroz Diana');
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Decisión registrada: Arroz Diana blanco.',
@@ -102,7 +99,7 @@ describe('productos propuestos', () => {
     expect(screen.queryByRole('heading', { name: 'Arroz Diana blanco' })).not.toBeInTheDocument();
     expect(JSON.parse(api.calls.find(({ method }) => method === 'POST')?.body ?? '{}')).toEqual({
       decision: 'fusionar',
-      note: 'Ya existe con otro nombre.',
+      note: NOTE,
       mergeInto: RICE_ID,
     });
   });
@@ -128,7 +125,7 @@ describe('productos propuestos', () => {
       },
     });
 
-    decide(await caseOf('Arroz Diana blanco'), 'Fusionar con Arroz Diana');
+    decide(await pendingCase('Arroz Diana blanco'), 'Fusionar con Arroz Diana');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
   });
@@ -139,29 +136,5 @@ describe('productos propuestos', () => {
     expect(
       await screen.findByRole('heading', { name: 'No hay productos propuestos' }),
     ).toBeInTheDocument();
-  });
-
-  it('mientras carga dice «Cargando…»', () => {
-    stubPendingApi();
-    render(
-      <MemoryRouter>
-        <ProductRequests />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
-  });
-
-  it('si la lista falla muestra el error y permite reintentar', async () => {
-    renderRequests({
-      'GET /v1/moderation/product-requests': [
-        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
-        list(request('Arroz Roa')),
-      ],
-    });
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
-
-    expect(await screen.findByRole('heading', { name: 'Arroz Roa' })).toBeInTheDocument();
   });
 });

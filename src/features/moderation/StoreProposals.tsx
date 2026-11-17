@@ -4,8 +4,7 @@ import { formatDistance } from '../../shared/location';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import { StoreMap } from '../stores/StoreMap';
 import { STORE_TYPES } from '../stores/storeTypes';
-import { ALREADY_DECIDED, decisionBody, decisionOptions, explainWith } from './catalogDecision';
-import { DecisionForm } from './DecisionForm';
+import { ALREADY_DECIDED, CatalogDecision, explainWith } from './CatalogDecision';
 import { PendingList } from './PendingList';
 
 type Proposal =
@@ -43,19 +42,21 @@ export function StoreProposals() {
             </p>
           )}
           <StoreMap stores={[]} label={`Ubicación de ${proposal.name}`} picked={proposal} />
-          <DecisionForm
+          <CatalogDecision
             id={proposal.id}
-            options={decisionOptions('Aprobar como tienda nueva', proposal.possibleDuplicates)}
-            onDecide={(choice, note) =>
+            approveLabel="Aprobar como tienda nueva"
+            duplicates={proposal.possibleDuplicates}
+            send={(body) =>
               call(
                 api.POST('/moderation/store-proposals/{proposalId}/decision', {
                   params: { path: { proposalId: proposal.id } },
-                  body: decisionBody(choice, note),
+                  body,
                 }),
-              ).then(() => {
-                done(proposal.name);
-              })
+              )
             }
+            onDone={() => {
+              done(proposal.name);
+            }}
             explain={explain}
           />
         </>

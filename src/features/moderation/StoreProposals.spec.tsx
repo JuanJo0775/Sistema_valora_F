@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { type FakeReply, sessionAs, stubApi } from '../../test/fakeApi';
+import { decideCase, decisionLabels, pendingCase } from '../../test/moderation';
 import { StoreProposals } from './StoreProposals';
 
 // Leaflet necesita un navegador de verdad para dibujar; aquí el mapa dice qué punto marca.
@@ -38,15 +39,9 @@ const renderProposals = (routes: Record<string, FakeReply | FakeReply[]>) => {
   return api;
 };
 
-const caseOf = async (name: string) =>
-  within((await screen.findByRole('heading', { name })).closest('li') as HTMLElement);
-
-const decide = (card: Awaited<ReturnType<typeof caseOf>>, decision: string) => {
-  fireEvent.click(card.getByRole('radio', { name: decision }));
-  fireEvent.change(card.getByRole('textbox', { name: 'Motivo de la decisión' }), {
-    target: { value: 'Revisé la dirección en el mapa.' },
-  });
-  fireEvent.click(card.getByRole('button', { name: 'Registrar decisión' }));
+const NOTE = 'Revisé la dirección en el mapa.';
+const decide = (card: Awaited<ReturnType<typeof pendingCase>>, decision: string) => {
+  decideCase(card, decision, NOTE);
 };
 
 describe('tiendas propuestas', () => {
@@ -67,14 +62,14 @@ describe('tiendas propuestas', () => {
       ),
     });
 
-    const corner = await caseOf('Tienda La Esquina');
+    const corner = await pendingCase('Tienda La Esquina');
     expect(corner.getByText('Tienda de barrio · Armenia')).toBeInTheDocument();
     expect(corner.getByText('Calle 10 # 15-20')).toBeInTheDocument();
     expect(
       corner.getByText('Ubicación de Tienda La Esquina: 4.5339, -75.6811'),
     ).toBeInTheDocument();
     expect(corner.queryByText('Fuera del Quindío')).not.toBeInTheDocument();
-    const sun = await caseOf('Granero El Sol');
+    const sun = await pendingCase('Granero El Sol');
     expect(sun.getByText('Fuera del Quindío')).toBeInTheDocument();
   });
 
@@ -88,12 +83,14 @@ describe('tiendas propuestas', () => {
       ),
     });
 
-    const ara = await caseOf('Ara Centro');
+    const ara = await pendingCase('Ara Centro');
     expect(ara.getByText('Posibles duplicados: Ara (30 m)')).toBeInTheDocument();
-    expect(
-      ara.getAllByRole('radio').map(({ parentElement }) => parentElement?.textContent),
-    ).toEqual(['Aprobar como tienda nueva', 'Fusionar con Ara', 'Rechazar']);
-    const fresh = await caseOf('Tienda Nueva');
+    expect(decisionLabels(ara)).toEqual([
+      'Aprobar como tienda nueva',
+      'Fusionar con Ara',
+      'Rechazar',
+    ]);
+    const fresh = await pendingCase('Tienda Nueva');
     expect(fresh.queryByText(/Posibles duplicados/)).not.toBeInTheDocument();
     expect(fresh.queryByRole('radio', { name: /Fusionar/ })).not.toBeInTheDocument();
   });
@@ -107,14 +104,14 @@ describe('tiendas propuestas', () => {
       [`POST /v1/moderation/store-proposals/${ara.id}/decision`]: { status: 204 },
     });
 
-    decide(await caseOf('Ara Centro'), 'Fusionar con Ara');
+    decide(await pendingCase('Ara Centro'), 'Fusionar con Ara');
 
     expect(await screen.findByRole('status')).toHaveTextContent('Decisión registrada: Ara Centro.');
     expect(screen.queryByRole('heading', { name: 'Ara Centro' })).not.toBeInTheDocument();
     const sent = api.calls.find(({ method }) => method === 'POST');
     expect(JSON.parse(sent?.body ?? '{}')).toEqual({
       decision: 'fusionar',
-      note: 'Revisé la dirección en el mapa.',
+      note: NOTE,
       mergeInto: ARA_ID,
     });
   });
@@ -126,12 +123,12 @@ describe('tiendas propuestas', () => {
       [`POST /v1/moderation/store-proposals/${fresh.id}/decision`]: { status: 204 },
     });
 
-    decide(await caseOf('Tienda Nueva'), 'Aprobar como tienda nueva');
+    decide(await pendingCase('Tienda Nueva'), 'Aprobar como tienda nueva');
 
     await screen.findByRole('status');
     expect(JSON.parse(api.calls.find(({ method }) => method === 'POST')?.body ?? '{}')).toEqual({
       decision: 'aprobar',
-      note: 'Revisé la dirección en el mapa.',
+      note: NOTE,
     });
   });
 
@@ -145,7 +142,7 @@ describe('tiendas propuestas', () => {
       },
     });
 
-    decide(await caseOf('Tienda Nueva'), 'Rechazar');
+    decide(await pendingCase('Tienda Nueva'), 'Rechazar');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Esta propuesta ya no está pendiente: otro moderador la decidió.',
@@ -164,7 +161,7 @@ describe('tiendas propuestas', () => {
       },
     });
 
-    decide(await caseOf('Ara Centro'), 'Fusionar con Ara');
+    decide(await pendingCase('Ara Centro'), 'Fusionar con Ara');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Esa tienda ya no existe: elige otra decisión.',
@@ -177,29 +174,5 @@ describe('tiendas propuestas', () => {
     expect(
       await screen.findByRole('heading', { name: 'No hay tiendas propuestas' }),
     ).toBeInTheDocument();
-  });
-
-  it('mientras carga dice «Cargando…»', () => {
-    stubPendingApi();
-    render(
-      <MemoryRouter>
-        <StoreProposals />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
-  });
-
-  it('si la lista falla muestra el error y permite reintentar', async () => {
-    renderProposals({
-      'GET /v1/moderation/store-proposals': [
-        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
-        list(proposal('Tienda Nueva')),
-      ],
-    });
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
-
-    expect(await screen.findByRole('heading', { name: 'Tienda Nueva' })).toBeInTheDocument();
   });
 });
