@@ -60,14 +60,17 @@ export function MapPage() {
   // El círculo del radio alrededor de la persona; un objeto estable para no redibujar el mapa.
   const { point, radiusKm } = where;
   const around = useMemo(() => (point ? { ...point, radiusKm } : null), [point, radiusKm]);
-  const subtitle =
-    result && 'stores' in result && stores.length > 0
-      ? `${String(stores.length)} ${stores.length === 1 ? 'tienda registrada' : 'tiendas registradas'} en Valora ${
+  const count = stores.length;
+  // Una sola frase arriba: cuántas tiendas, o que se muestran las primeras 50 del municipio.
+  const subtitle = !(result && 'stores' in result && count > 0)
+    ? null
+    : !where.point && count === LIMIT
+      ? `Se muestran ${String(LIMIT)} tiendas de ${MUNICIPALITIES[where.municipality]}. Usa tu ubicación para ver las más cercanas.`
+      : `${String(count)} ${count === 1 ? 'tienda registrada' : 'tiendas registradas'} en Valora ${
           where.point
             ? `a menos de ${KM.format(where.radiusKm)} km. Tu ubicación no se guarda.`
             : `en ${MUNICIPALITIES[where.municipality]}.`
-        }`
-      : null;
+        }`;
   const basketAt = (storeId: string) => {
     if (totals.status !== 'ready') return undefined;
     const here = totals.totals.find(({ store }) => store.id === storeId);
@@ -106,9 +109,6 @@ export function MapPage() {
         )}
         {result && 'stores' in result && stores.length === 0 && (
           <p className="muted">{`Todavía no hay tiendas registradas ${place}.`}</p>
-        )}
-        {stores.length === LIMIT && (
-          <p className="muted">{`Se muestran ${String(LIMIT)} tiendas. Usa tu ubicación para ver las más cercanas.`}</p>
         )}
         <ul className="store-cards">
           {stores.map((store) => (

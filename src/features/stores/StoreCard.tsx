@@ -5,7 +5,11 @@ import { formatDistance } from '../../shared/location';
 import { formatCop } from '../../shared/money';
 import { STORE_TYPES } from './storeTypes';
 
-type Store = components['schemas']['Establishment'];
+// Las listas del mapa traen también cuántos precios vigentes tiene cada tienda (B#131).
+type Store = components['schemas']['Establishment'] & { priceCount?: number };
+
+const prices = (count: number) =>
+  count === 0 ? 'Sin precios' : `${String(count)} ${count === 1 ? 'precio' : 'precios'}`;
 
 // Cuánto costaría aquí lo que falta de la canasta (#31): la suma la hace useStoreTotals.
 export interface BasketHere {
@@ -19,7 +23,12 @@ export interface BasketHere {
 export function StoreCard({ store, basket }: { store: Store; basket?: BasketHere }) {
   return (
     <li className="store-card">
-      <h2>{store.name}</h2>
+      <div className="store-card-head">
+        <h2>{store.name}</h2>
+        {store.priceCount !== undefined && (
+          <span className="pill mute">{prices(store.priceCount)}</span>
+        )}
+      </div>
       <p className="muted store-kind">
         <span className={`dot type-${store.type}`} aria-hidden="true" />
         <span>{STORE_TYPES[store.type]}</span>
