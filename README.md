@@ -159,12 +159,30 @@ Qué hace hoy la PWA: se instala con el ícono de Valora y guarda en caché los 
 | `pnpm preview`                      | Sirve `dist/` para probar la PWA                                                                         |
 | `pnpm test` / `pnpm test:watch`     | Pruebas con Vitest                                                                                       |
 | `pnpm test:cov`                     | Pruebas con cobertura (umbral de 80 % de líneas)                                                         |
+| `pnpm test:e2e`                     | Pruebas de extremo a extremo con Playwright contra el backend (ver abajo)                                |
 | `pnpm typecheck`                    | TypeScript estricto                                                                                      |
 | `pnpm lint`                         | ESLint (prohíbe pruebas enfocadas o saltadas)                                                            |
 | `pnpm format` / `pnpm format:check` | Prettier                                                                                                 |
 | `pnpm api:types`                    | Regenera los tipos de la API desde `../Sistema_valora_B/docs/openapi.yaml` (ver docs/API_INTEGRATION.md) |
 
-La CI corre en cada pull request hacia `dev` o `main` con los jobs **Calidad** (tipos, lint, formato y compilación), **Pruebas** (Vitest con cobertura) y **SonarQube** (proyecto `JuanJo0775_Sistema_valora_F`, secreto `SONAR_TOKEN`). Si uno falla, no se mezcla.
+La CI corre en cada pull request hacia `dev` o `main` con los jobs **Calidad** (tipos, lint, formato y compilación), **Pruebas** (Vitest con cobertura y, después, las pruebas de extremo a extremo) y **SonarQube** (proyecto `JuanJo0775_Sistema_valora_F`, secreto `SONAR_TOKEN`). Si uno falla, no se mezcla.
+
+### Pruebas de extremo a extremo (#27)
+
+Están en `e2e/` (`*.e2e.ts`) y usan Playwright con el backend de verdad:
+
+- **Camino principal** (B#17): crear cuenta, registrar un precio y verlo en la comparación del producto.
+- **EC-07 / PR-08**: sin señal, tres personas guardan 50 reportes (17, 17 y 16, porque el backend acepta 20 por hora por cuenta); al volver la señal se envían todos, sin duplicados y con p95 de confirmación de 60 s o menos. El resultado queda en `e2e-results/ec-07.json`.
+- **Moderación**: una persona marca un precio, un moderador lo descarta y deja de verse.
+
+En la CI, el job **Pruebas** baja el backend de la rama `dev`, levanta PostGIS, migra, carga la semilla, crea la cuenta moderadora y corre `pnpm test:e2e`. La evidencia y el informe quedan como artefacto `extremo-a-extremo`.
+
+En local (consume bastante memoria):
+
+1. El backend en `http://localhost:3000` con su semilla (`pnpm db:migrate`, `pnpm db:seed`, `pnpm dev` en `Sistema_valora_B`).
+2. Una cuenta moderadora: crear la cuenta en la app y, en `Sistema_valora_B`, `pnpm identity:set-role <correo> moderador "Pruebas de extremo a extremo"`.
+3. Una vez: `pnpm exec playwright install chromium`.
+4. `E2E_MODERATOR_EMAIL=<correo> E2E_MODERATOR_PASSWORD=<clave> pnpm test:e2e` (compila la app y la sirve en el puerto 4173).
 
 ## Variables de entorno
 
