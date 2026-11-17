@@ -1,4 +1,3 @@
-import { ApiError } from '../../shared/api';
 import { DecisionForm } from './DecisionForm';
 
 // Fusionar lleva el id del duplicado elegido dentro del valor de la opción.
@@ -16,12 +15,6 @@ const decisionBody = (choice: string, note: string) =>
   choice.startsWith(MERGE)
     ? { decision: 'fusionar' as const, note, mergeInto: choice.slice(MERGE.length) }
     : { decision: choice as 'aprobar' | 'rechazar', note };
-
-// Mensajes propios por código de error o, si no hay, por estado HTTP («404»).
-export const explainWith =
-  (messages: Partial<Record<string, string>>) =>
-  (error: unknown): string | null =>
-    (error instanceof ApiError && (messages[error.code] ?? messages[String(error.status)])) || null;
 
 export const ALREADY_DECIDED = 'Esta propuesta ya no está pendiente: otro moderador la decidió.';
 

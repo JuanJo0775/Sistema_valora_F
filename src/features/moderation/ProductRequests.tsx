@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { operations } from '../../shared/api/schema';
 import { formatPresentation } from '../catalog/presentation';
-import { ALREADY_DECIDED, CatalogDecision, explainWith } from './CatalogDecision';
+import { ALREADY_DECIDED, CatalogDecision } from './CatalogDecision';
+import { explainWith } from './explain';
 import { PendingList } from './PendingList';
 
 type Request =

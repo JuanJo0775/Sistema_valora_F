@@ -52,13 +52,15 @@ describe('panel del moderador', () => {
     ).toBeInTheDocument();
   });
 
-  it('la vista de roles sigue en construcción', () => {
+  it('la pestaña Roles permite cambiar el rol de una cuenta', () => {
     renderPanel();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Roles' }));
 
-    expect(screen.getByRole('tabpanel', { name: 'Roles' })).toHaveTextContent(
-      'Esta vista está en construcción (issue #58).',
-    );
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Roles' })).getByRole('button', {
+        name: 'Cambiar rol',
+      }),
+    ).toBeInTheDocument();
   });
 });

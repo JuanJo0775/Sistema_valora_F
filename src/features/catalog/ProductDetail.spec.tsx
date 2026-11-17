@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stubApi, stubPendingApi } from '../../test/fakeApi';
+import { SessionProvider } from '../auth/SessionProvider';
+import { sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { ProductDetail } from './ProductDetail';
 
 const rice = {
@@ -55,10 +56,59 @@ const renderDetail = (productId: string) =>
     </MemoryRouter>,
   );
 
+// Con la sesión: el detalle muestra acciones según el rol.
+const renderWithSession = (productId: string) =>
+  render(
+    <SessionProvider>
+      <MemoryRouter initialEntries={[`/productos/${productId}`]}>
+        <Routes>
+          <Route path="/productos/:productId" element={<ProductDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </SessionProvider>,
+  );
+
 describe('detalle del producto', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
+  });
+
+  it('un moderador cambia la foto y el detalle muestra la nueva', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('moderador'),
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`PUT /v1/moderation/products/${rice.id}/image`]: {
+        status: 200,
+        body: {
+          url: 'http://localhost/media/arroz.webp',
+          source: 'equipo',
+          attribution: 'Equipo Valora',
+        },
+      },
+    });
+    renderWithSession(rice.id);
+
+    fireEvent.change(await screen.findByLabelText('Cambiar foto'), {
+      target: { files: [new File(['foto'], 'arroz.jpg', { type: 'image/jpeg' })] },
+    });
+
+    expect(await screen.findByRole('img', { name: 'Arroz blanco' })).toHaveAttribute(
+      'src',
+      'http://localhost/media/arroz.webp',
+    );
+  });
+
+  it('quien no es moderador no puede cambiar la foto', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+    });
+    renderWithSession(rice.id);
+
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+
+    expect(screen.queryByLabelText('Cambiar foto')).not.toBeInTheDocument();
   });
 
   it('muestra el nombre, la marca, la categoría y las presentaciones', async () => {

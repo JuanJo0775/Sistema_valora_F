@@ -1,17 +1,17 @@
 import { useSearchParams } from 'react-router';
-import { EmptyState } from '../../shared/ui/EmptyState';
 import { ModerationQueue } from './ModerationQueue';
 import { ProductRequests } from './ProductRequests';
+import { RoleChange } from './RoleChange';
 import { StoreProposals } from './StoreProposals';
 import './moderation.css';
 
 type View = 'precios' | 'tiendas' | 'productos' | 'roles';
 
-const VIEWS: { value: View; label: string; issue?: number }[] = [
+const VIEWS: { value: View; label: string }[] = [
   { value: 'precios', label: 'Precios' },
   { value: 'tiendas', label: 'Tiendas' },
   { value: 'productos', label: 'Productos' },
-  { value: 'roles', label: 'Roles', issue: 58 },
+  { value: 'roles', label: 'Roles' },
 ];
 
 // #14: el panel del moderador. La vista elegida vive en la dirección (?vista=), para volver a ella.
@@ -44,12 +44,7 @@ export function ModerationPanel() {
         {view.value === 'precios' && <ModerationQueue />}
         {view.value === 'tiendas' && <StoreProposals />}
         {view.value === 'productos' && <ProductRequests />}
-        {view.value === 'roles' && (
-          <EmptyState
-            title={view.label}
-            text={`Esta vista está en construcción (issue #${String(view.issue)}).`}
-          />
-        )}
+        {view.value === 'roles' && <RoleChange />}
       </div>
     </section>
   );
