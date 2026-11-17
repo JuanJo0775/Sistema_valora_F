@@ -1,0 +1,149 @@
+/* Versión web (escritorio y tableta, con ratón y teclado). Las reglas móviles no se tocan: todo lo
+   que cambia el diseño va dentro de @media (width >= 960px), (hover: hover) o (pointer: fine). Se
+   carga al final (main.tsx) para ganar a los estilos de cada pantalla con la misma especificidad. */
+
+:root {
+  /* Ancho del contenido; la barra superior se alinea con él. */
+  --page-max: 1080px;
+}
+
+@media (width >= 1440px) {
+  :root {
+    --page-max: 1240px;
+  }
+}
+
+/* Los precios se alinean en columna: cifras de ancho fijo. */
+.offer-price,
+.offer .unit,
+.cheapest-price,
+.product-card-price,
+.basket-total,
+.cheapest-store-total {
+  font-variant-numeric: tabular-nums;
+}
+
+/* «Saltar al contenido»: solo aparece al enfocarlo con el teclado. */
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 40;
+  padding: 10px 16px;
+  border-radius: var(--r-s);
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+.page:focus {
+  outline: none;
+}
+
+@media (width >= 960px) {
+  .page {
+    max-width: var(--page-max);
+  }
+
+  /* La barra superior queda alineada con el contenido (antes quedaba 16 px a la izquierda). */
+  .top {
+    padding-inline: max(16px, calc((100% - var(--page-max)) / 2 + 16px));
+  }
+
+  .header-search {
+    max-width: 560px;
+  }
+
+  /* Tantas columnas de tarjetas como quepan, de 220 px o más. */
+  .product-cards {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  /* El mapa aprovecha la altura de la ventana. */
+  .stores .store-map {
+    height: clamp(480px, calc(100dvh - 340px), 820px);
+  }
+
+  /* Listas largas: filas más compactas. */
+  .offer-row {
+    padding: 10px 0;
+  }
+}
+
+/* Con ratón no hace falta el blanco táctil de 44 px en enlaces sueltos de las filas: filas más densas. */
+@media (width >= 960px) and (pointer: fine) {
+  .offer-store h3 a,
+  .offer-links a,
+  .offer-links .link-button {
+    min-height: 32px;
+  }
+
+  .store-list,
+  .side {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-2) transparent;
+  }
+}
+
+/* Estados al pasar el ratón en todo lo que se pulsa. */
+@media (hover: hover) {
+  .btn:hover {
+    filter: brightness(0.94);
+  }
+
+  .btn.ghost:hover,
+  .side .btn.ghost:hover,
+  .product-card .btn:hover,
+  .suggest-store:hover {
+    background: var(--bg-3);
+    filter: none;
+  }
+
+  .tab:not([aria-current='page']):hover {
+    background: var(--bg-2);
+    color: var(--ink);
+  }
+
+  .tab.primary:hover {
+    background: var(--accent);
+    color: var(--on-accent);
+    filter: brightness(0.94);
+  }
+
+  .category-chip:not(:has(input:checked)):hover,
+  .choice:not(:has(input:checked)):hover {
+    background: var(--bg-2);
+  }
+
+  .segment:not(:has(input:checked), :has(input:disabled)):hover {
+    color: var(--ink);
+  }
+
+  .where-chip:hover {
+    background: var(--bg-3);
+    color: var(--ink);
+  }
+
+  .product-card:hover,
+  .store-card:hover {
+    border-color: var(--line-2);
+  }
+
+  .offer-row:hover {
+    background: var(--bg-2);
+  }
+
+  .offer-store h3 a:hover {
+    text-decoration: underline;
+  }
+
+  .offer-links a:hover,
+  .link-button:hover {
+    color: var(--ink);
+  }
+}
