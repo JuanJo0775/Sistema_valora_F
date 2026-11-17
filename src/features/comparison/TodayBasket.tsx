@@ -58,6 +58,7 @@ export function TodayBasket() {
   }, []);
 
   useEffect(() => {
+    if (!where.ready) return;
     let current = true;
     const query = { ...where.query, limit, ...(category ? { category } : {}) };
     call(api.GET('/featured-products', { params: { query } }))
@@ -70,7 +71,7 @@ export function TodayBasket() {
     return () => {
       current = false;
     };
-  }, [where.query, category, limit, key]);
+  }, [where.ready, where.query, category, limit, key]);
 
   const result = outcome?.key === key ? outcome : null;
   const featured = result && 'featured' in result ? result.featured : null;

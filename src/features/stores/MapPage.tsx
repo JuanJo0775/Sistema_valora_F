@@ -26,6 +26,7 @@ export function MapPage() {
   const key = `${String(attempt)}|${where.key}`;
 
   useEffect(() => {
+    if (!where.ready) return;
     let current = true;
     const request =
       'municipality' in where.query
@@ -43,7 +44,7 @@ export function MapPage() {
     return () => {
       current = false;
     };
-  }, [where.query, key]);
+  }, [where.ready, where.query, key]);
 
   const result = outcome?.key === key ? outcome : null;
   const place = where.point ? 'cerca de ti' : `en ${MUNICIPALITIES[where.municipality]}`;
