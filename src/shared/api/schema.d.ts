@@ -366,7 +366,7 @@ export interface paths {
         put?: never;
         /**
          * Crear cuenta de reportante con consentimiento de datos (RF-001, Ley 1581)
-         * @description La cuenta nueva siempre es reportante y no inicia sesión. Si el correo ya tiene cuenta, responde 201 igual y no cambia nada, para no revelar qué correos están registrados (EC-08). El correo se guarda sin espacios y en minúsculas.
+         * @description La cuenta nueva siempre es reportante y no inicia sesión. Si el correo ya tiene cuenta, responde 201 igual y no cambia nada, para no revelar qué correos están registrados (EC-08). El correo se guarda sin espacios y en minúsculas. El nombre visible (#133) se guarda sin espacios sobrantes y solo lo devuelve GET /auth/session de la propia cuenta; ninguna otra respuesta lo incluye (EC-08).
          */
         post: operations["register"];
         delete?: never;
@@ -1830,6 +1830,8 @@ export interface operations {
                 "application/json": {
                     /** Format: email */
                     email: string;
+                    /** @description Nombre con el que la app saluda («Hola, Sara»). De 2 a 40 caracteres después de quitar los espacios sobrantes; solo letras (con tildes y ñ), espacios, apóstrofo y guion. Sin números, correos ni símbolos: responde 400 VALIDATION_ERROR. */
+                    displayName: string;
                     password: string;
                     /**
                      * @description Versión vigente de la política de datos (provisional hasta tener el texto).
@@ -1946,6 +1948,8 @@ export interface operations {
                     "application/json": {
                         /** @enum {string} */
                         role: "reportante" | "comercio" | "moderador";
+                        /** @description El nombre visible de la propia cuenta (#133). No viene en las cuentas creadas antes de que se pidiera. Es la única respuesta que lo incluye (EC-08). */
+                        displayName?: string;
                         /** @description Va en la cabecera X-CSRF-Token de las rutas con sesión que modifican datos. El frontend lo guarda en memoria. */
                         csrfToken: string;
                         /**
