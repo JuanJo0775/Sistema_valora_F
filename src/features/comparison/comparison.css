@@ -177,6 +177,49 @@
   font-size: 0.9rem;
 }
 
+/* En el celular la columna del medio queda angosta junto al precio y cada etiqueta cae en su propia
+   línea (31 tiendas, ~9000 px). Nombre y precio comparten la primera línea y el resto de la tienda
+   (dirección, etiquetas, enlaces) usa todo el ancho que queda bajo el número. */
+@media (width < 600px) {
+  .offer-row {
+    gap: 0 12px;
+  }
+
+  .offer-store {
+    display: contents;
+  }
+
+  .offer-row > .rank {
+    grid-area: 1 / 1;
+  }
+
+  .offer-store h3 {
+    grid-area: 1 / 2;
+    align-self: center;
+  }
+
+  .offer-row > .offer-price {
+    grid-area: 1 / 3;
+    align-self: center;
+  }
+
+  .offer-store > :not(h3) {
+    grid-column: 2 / -1;
+  }
+
+  .offer-row:not(:has(.rank)) > .offer-store h3 {
+    grid-area: 1 / 1;
+  }
+
+  .offer-row:not(:has(.rank)) > .offer-price {
+    grid-area: 1 / 2;
+  }
+
+  .offer-row:not(:has(.rank)) .offer-store > :not(h3) {
+    grid-column: 1 / -1;
+  }
+}
+
 .offer-price {
   display: grid;
   justify-items: end;

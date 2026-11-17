@@ -39,6 +39,28 @@
   display: grid;
   gap: 2px;
   min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* El nombre es un enlace al producto: se subraya al apuntarlo y tiene foco visible. */
+.basket-name:hover strong {
+  text-decoration: underline;
+}
+
+.basket-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-s);
+}
+
+.basket-thumb {
+  display: block;
+}
+
+/* La casilla de 44 px de alto (.check) arranca arriba; en la fila se centra con lo demás. */
+.basket-row .check {
+  align-items: center;
 }
 
 .basket-name strong {
@@ -260,4 +282,44 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+/* Barra de compra fija del detalle (solo en el celular): encima de la barra de navegación, con la
+   presentación elegida, el precio más bajo y la acción primaria. */
+.action-bar {
+  position: fixed;
+  inset: auto 0 calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+
+.action-bar-info {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.action-bar-info strong,
+.action-bar-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side .add-to-basket .action-bar .btn {
+  flex: none;
+  width: auto;
+}
+
+@media (width >= 960px) {
+  .action-bar {
+    display: none;
+  }
 }

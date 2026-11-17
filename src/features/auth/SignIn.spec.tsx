@@ -116,6 +116,6 @@ describe('volver desde iniciar sesión', () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     renderSignIn('/entrar');
 
-    expect(screen.getByRole('link', { name: 'Volver a Yo' })).toHaveAttribute('href', '/yo');
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
   });
 });

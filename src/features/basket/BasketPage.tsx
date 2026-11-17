@@ -76,13 +76,22 @@ function BasketRow({
         <input type="checkbox" checked={item.bought} onChange={onBought} />
         <span className="sr-only">Comprado</span>
       </label>
-      <ProductImage name={item.productName} />
-      <span className="basket-name">
+      {/* La foto y el nombre llevan al producto guardado; la foto es decorativa y no repite el enlace
+          para lectores de pantalla ni para el teclado. */}
+      <Link
+        to={`/productos/${item.productId}`}
+        className="basket-thumb"
+        tabIndex={-1}
+        aria-hidden="true"
+      >
+        <ProductImage name={item.productName} />
+      </Link>
+      <Link to={`/productos/${item.productId}`} className="basket-name">
         <strong>{item.productName}</strong>
         <span className="muted">
           {store ? `${item.presentationLabel} · ${store}` : item.presentationLabel}
         </span>
-      </span>
+      </Link>
       <span className="stepper">
         <button
           type="button"
