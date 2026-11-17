@@ -39,11 +39,16 @@ export function AllStores({
   product: Product;
   onComparison?: (comparison: Comparison) => void;
 }) {
-  const [sort, setSort] = useState<Sort>('unit_price');
+  const [chosenSort, setSort] = useState<Sort>('unit_price');
+  // «Más cerca» sin ubicación la pide; cuando llega, ordena por distancia. Si no llega, el orden
+  // anterior se queda y se avisa (nunca un botón mudo).
+  const [wantsDistance, setWantsDistance] = useState(false);
   // Por defecto el último municipio, sin pedir permisos; con la ubicación, las tiendas cercanas
   // (EC-08: la ubicación solo va en la consulta y no se guarda).
   const where = useWhere();
   const { point } = where;
+  const sort: Sort = wantsDistance && point ? 'distance' : chosenSort;
+  const distanceDenied = wantsDistance && !point && where.problem !== '';
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
   const [outcome, setOutcome] = useState<
@@ -95,7 +100,8 @@ export function AllStores({
           backLabel="Comparar por municipio"
           onLeaveLocation={() => {
             // Sin ubicación no hay distancia: el backend responde 400 a sort=distance.
-            if (sort === 'distance') setSort('unit_price');
+            setWantsDistance(false);
+            if (chosenSort === 'distance') setSort('unit_price');
           }}
         />
       </div>
@@ -108,9 +114,14 @@ export function AllStores({
               name="sort"
               value={option.value}
               checked={sort === option.value}
-              // Sin la ubicación no hay distancia: el backend responde 400 a sort=distance.
-              disabled={option.value === 'distance' && !point}
               onChange={() => {
+                if (option.value === 'distance' && !point) {
+                  // Sin la ubicación no hay distancia (el backend responde 400): se pide.
+                  setWantsDistance(true);
+                  where.locateMe();
+                  return;
+                }
+                setWantsDistance(false);
                 setSort(option.value);
               }}
             />
@@ -118,6 +129,16 @@ export function AllStores({
           </label>
         ))}
       </fieldset>
+      {wantsDistance && !point && !where.problem && (
+        <p role="status" className="muted">
+          Buscando tu ubicación para ordenar por distancia…
+        </p>
+      )}
+      {distanceDenied && (
+        <p role="alert" className="banner warn">
+          Activa la ubicación del navegador para ordenar por distancia.
+        </p>
+      )}
       {!result && <SkeletonList kind="offer" />}
       {result && 'error' in result && (
         <ErrorState

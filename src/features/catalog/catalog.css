@@ -158,19 +158,70 @@
   margin: 0;
 }
 
-.detail .all-stores {
-  margin-top: 16px;
-}
-
-/* En el panel del detalle, las acciones ocupan todo el ancho, como en el prototipo. */
+/* En el panel del detalle, las acciones ocupan todo el ancho: «Agregar a la canasta» es la primaria
+   (naranja) y «Registrar un precio», la secundaria (contorno). */
 .side > .btn,
 .side .add-to-basket .btn {
   width: 100%;
 }
 
-.side .add-to-basket .btn.ghost {
+.side .btn.ghost {
   border: 1px solid var(--field-line);
   background: var(--bg);
+}
+
+.add-to-basket {
+  display: grid;
+  gap: 12px;
+}
+
+.add-to-basket .add-hint {
+  margin: -4px 0 0;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* La presentación elegida se ve marcada, como los chips de categoría: tinta llena y una marca. */
+.add-to-basket .choice:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.add-to-basket .choice:has(input:checked)::before {
+  content: '✓';
+  margin-right: 6px;
+}
+
+/* El detalle: en el celular, producto, panel de compra y luego la lista de tiendas; en escritorio,
+   producto y lista a la izquierda y el panel fijo a la derecha. */
+.with-side.product {
+  grid-template-areas:
+    'head'
+    'side'
+    'list';
+}
+
+.with-side.product > .detail {
+  grid-area: head;
+}
+
+.with-side.product > .side {
+  grid-area: side;
+}
+
+.with-side.product > .all-stores {
+  grid-area: list;
+  min-width: 0;
+}
+
+@media (width >= 960px) {
+  .with-side.product {
+    grid-template-areas:
+      'head side'
+      'list side';
+    grid-template-rows: auto 1fr;
+  }
 }
 
 /* #83: las sugerencias del buscador, una lista que flota bajo el campo. */

@@ -47,12 +47,37 @@ describe('agregar a la canasta', () => {
     expect(screen.getByText('1 kg × 1')).toBeInTheDocument();
   });
 
-  it('sin elegir la presentación pide elegirla', () => {
-    renderAdd();
+  it('la presentación sugerida llega marcada y es la que se agrega', () => {
+    render(
+      <BasketProvider>
+        <MemoryRouter>
+          <AddToBasket product={rice} suggestedPresentationId={rice.presentations[1]?.id} />
+          <BasketContents />
+        </MemoryRouter>
+      </BasketProvider>,
+    );
 
+    expect(screen.getByRole('radio', { name: '1 kg' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '500 g' })).not.toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Agregar a la canasta' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Elige la presentación.');
+    expect(screen.getByText('1 kg × 1')).toBeInTheDocument();
+  });
+
+  it('sin sugerencia queda marcada la primera presentación, nunca ninguna', () => {
+    renderAdd();
+
+    expect(screen.getByRole('radio', { name: '500 g' })).toBeChecked();
+    expect(
+      screen.getByRole('button', { name: 'Agregar a la canasta' }),
+    ).toHaveAccessibleDescription('Se agrega 500 g');
+  });
+
+  it('«Agregar a la canasta» es el botón primario', () => {
+    renderAdd();
+
+    expect(screen.getByRole('button', { name: 'Agregar a la canasta' })).toHaveClass('btn');
+    expect(screen.getByRole('button', { name: 'Agregar a la canasta' })).not.toHaveClass('ghost');
   });
 
   it('con una sola presentación no hay que elegir', () => {
