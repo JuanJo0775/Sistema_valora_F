@@ -8,6 +8,7 @@ import { isUsabilityMode, setUsabilityMode } from '../../shared/usabilityMode';
 import { RecentReports } from '../contributions/RecentReports';
 import { SettingSwitch } from './SettingSwitch';
 import { SuspendedNotice } from './SuspendedNotice';
+import { ThemeChoice } from './ThemeChoice';
 import './auth.css';
 
 // La sección privada de cada rol. La del comercio llega en el Corte 3.
@@ -49,6 +50,9 @@ export function Profile() {
             Ajustes
           </h2>
           <ul className="settings-list">
+            <li>
+              <ThemeChoice />
+            </li>
             {/* #28: solo para la prueba de usabilidad; se quita al cerrar la #28. */}
             <SettingSwitch
               title="Modo prueba de usabilidad"
@@ -94,6 +98,7 @@ export function Profile() {
           <Link to="/crear-cuenta" className="btn ghost">
             Crear cuenta
           </Link>
+          <ThemeChoice />
         </div>
       }
     />
