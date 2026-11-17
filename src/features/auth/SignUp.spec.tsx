@@ -153,3 +153,16 @@ describe('crear cuenta', () => {
     );
   });
 });
+
+describe('volver desde crear cuenta', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('trae un enlace de volver con respaldo en Yo', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignUp('/crear-cuenta');
+
+    expect(screen.getByRole('link', { name: 'Volver a Yo' })).toHaveAttribute('href', '/yo');
+  });
+});
