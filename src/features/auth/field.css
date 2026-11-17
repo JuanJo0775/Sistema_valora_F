@@ -1,0 +1,39 @@
+/* Control del campo. En la contraseña el ojo va dentro, a la derecha, con 44 px de área táctil. */
+.field-control {
+  position: relative;
+  display: grid;
+}
+
+.field-control:has(.field-eye) input {
+  padding-inline-end: var(--touch);
+}
+
+.field-eye {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  min-height: var(--touch);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-m);
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.field-eye:hover {
+  color: var(--ink);
+}
+
+.field-eye[aria-pressed='true'] {
+  color: var(--accent-ink);
+}
+
+.field-eye:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
