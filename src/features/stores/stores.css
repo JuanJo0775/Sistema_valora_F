@@ -165,8 +165,6 @@
   stroke-width: 3;
 }
 
-/* #73: la barra del radio, naranja hasta el valor elegido (prototipo). */
-
 .store-card-head {
   display: flex;
   align-items: flex-start;

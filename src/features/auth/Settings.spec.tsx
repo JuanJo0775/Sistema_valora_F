@@ -44,6 +44,19 @@ describe('ajustes', () => {
     expect(localStorage.getItem('valora:radio')).toBe('3');
   });
 
+  it('la barra del radio lo mueve y se guarda al soltar', () => {
+    renderSettings();
+    const slider = screen.getByRole('slider', { name: 'Radio' });
+    expect(slider).toHaveValue('1.5');
+
+    fireEvent.change(slider, { target: { value: '2.4' } });
+    expect(localStorage.getItem('valora:radio')).toBeNull();
+    fireEvent.pointerUp(slider);
+
+    expect(localStorage.getItem('valora:radio')).toBe('2.4');
+    expect(screen.getByText('2,4 km', { selector: '.radius-value' })).toBeInTheDocument();
+  });
+
   it('el municipio se elige y queda recordado', () => {
     renderSettings();
 
