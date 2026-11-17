@@ -59,6 +59,7 @@ export function AllStores({
   const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${where.key}`;
 
   useEffect(() => {
+    if (!where.ready) return;
     let current = true;
     call(
       api.GET('/products/{productId}/comparison', {
@@ -76,7 +77,7 @@ export function AllStores({
     return () => {
       current = false;
     };
-  }, [productId, sort, where.query, onlyCurrent, key]);
+  }, [where.ready, productId, sort, where.query, onlyCurrent, key]);
 
   const result = outcome?.key === key ? outcome : null;
   const sizeOf = (presentationId: string) => {
