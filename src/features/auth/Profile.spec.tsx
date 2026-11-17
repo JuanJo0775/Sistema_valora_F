@@ -152,7 +152,7 @@ describe('pestaña Yo', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Cerrar sesión' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error inesperado.');
-    expect(screen.getByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hola' })).toBeInTheDocument();
   });
 
   it('sin red no da la sesión por cerrada: muestra el error y «Reintentar» vuelve a preguntar', async () => {
@@ -168,11 +168,11 @@ describe('pestaña Yo', () => {
       'GET /v1/auth/session': sessionAs('reportante'),
     });
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
-    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hola' })).toBeInTheDocument();
   });
 
   it.each([
-    ['reportante', 'Mis aportes', '/mis-aportes'],
+    ['reportante', 'Ver todos mis aportes', '/mis-aportes'],
     ['moderador', 'Moderación', '/moderacion'],
   ])('un %s encuentra en Yo su sección «%s»', async (role, name, href) => {
     stubApi({ 'GET /v1/auth/session': { status: 200, body: { role, csrfToken: 'token-1' } } });

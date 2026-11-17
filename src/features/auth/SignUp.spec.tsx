@@ -44,7 +44,7 @@ describe('crear cuenta', () => {
 
     fill();
 
-    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hola' })).toBeInTheDocument();
     const register = api.calls.find(({ path }) => path === '/v1/auth/register');
     expect(JSON.parse(register?.body ?? '{}')).toEqual({
       email: 'ana@correo.co',

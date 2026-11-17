@@ -109,7 +109,7 @@ describe('inicio', () => {
 
     render(<App />);
 
-    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hola' })).toBeInTheDocument();
   });
 
   it('desde Yo, «Iniciar sesión» lleva al formulario para entrar', async () => {
@@ -405,7 +405,7 @@ describe('inicio', () => {
     window.history.pushState({}, '', '/yo');
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('link', { name: 'Mis aportes' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Ver todos mis aportes' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Todavía no has registrado precios' }),
