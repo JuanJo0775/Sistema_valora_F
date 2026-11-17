@@ -26,7 +26,7 @@ export function CheapestCard({
       <h2 id={title} className="eyebrow">{`Más barato ${where}`}</h2>
       <p className="cheapest-price">
         <strong>{formatCop(cheapest.priceCop)}</strong>
-        <span className="muted">{`${sizeOf(cheapest.presentationId)} · ${formatUnitPrice(cheapest.unitPrice)}`}</span>
+        <span className="muted">{`Presentación de ${sizeOf(cheapest.presentationId)} · ${formatUnitPrice(cheapest.unitPrice)}`}</span>
       </p>
       <p className="cheapest-card-store">
         <strong>{establishment.name}</strong>
@@ -36,7 +36,7 @@ export function CheapestCard({
         <FreshnessBadge freshness={cheapest.freshness} observedAt={cheapest.observedAt} />
       </p>
       {/* B#128: el ahorro lo calcula el backend con el precio por unidad. */}
-      {comparison.savingsPercent !== undefined && (
+      {comparison.savingsPercent !== undefined && comparison.savingsPercent > 0 && (
         <p className="muted">{`Hasta ${String(comparison.savingsPercent)} % menos que la tienda más cara.`}</p>
       )}
     </section>

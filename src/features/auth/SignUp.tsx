@@ -1,6 +1,7 @@
 import { type SyntheticEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
+import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
 import { safeReturn, withReturn } from './safeReturn';
@@ -86,6 +87,7 @@ export function SignUp() {
 
   return (
     <form className="form" onSubmit={submit}>
+      <BackLink fallback="/yo" />
       <h1>Crear cuenta</h1>
       {problem && (
         <p role="alert" className="banner warn">

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components, operations } from '../../shared/api/schema';
 import { formatDistance } from '../../shared/location';
 import { formatCop } from '../../shared/money';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { SkeletonList } from '../../shared/ui/Skeleton';
+import { SkeletonCard, SkeletonList } from '../../shared/ui/Skeleton';
 import { useBasket } from '../basket/basketContext';
 import { ProductThumb } from '../catalog/ProductThumb';
 import '../catalog/catalog.css';
@@ -46,7 +46,14 @@ export function TodayBasket() {
   const [outcome, setOutcome] = useState<
     { key: string; featured: Featured } | { key: string; error: unknown } | null
   >(null);
-  const key = `${where.key}|${category}|${String(limit)}|${String(attempt)}`;
+  // Lo ya cargado del MISMO filtro (lugar y categoría) se queda en pantalla mientras llegan más
+  // productos: pedir más no vacía la lista ni mueve el scroll.
+  const [kept, setKept] = useState<{ filter: string; featured: Featured } | null>(null);
+  const [announce, setAnnounce] = useState('');
+  const list = useRef<HTMLUListElement>(null);
+  const focusNew = useRef(false);
+  const filter = `${where.key}|${category}`;
+  const key = `${filter}|${String(limit)}|${String(attempt)}`;
 
   useEffect(() => {
     call(api.GET('/categories'))
@@ -63,7 +70,9 @@ export function TodayBasket() {
     const query = { ...where.query, limit, ...(category ? { category } : {}) };
     call(api.GET('/featured-products', { params: { query } }))
       .then((featured) => {
-        if (current) setOutcome({ key, featured });
+        if (!current) return;
+        setOutcome({ key, featured });
+        setKept({ filter, featured });
       })
       .catch((error: unknown) => {
         if (current) setOutcome({ key, error });
@@ -71,10 +80,25 @@ export function TodayBasket() {
     return () => {
       current = false;
     };
-  }, [where.ready, where.query, category, limit, key]);
+  }, [where.ready, where.query, category, limit, key, filter]);
 
   const result = outcome?.key === key ? outcome : null;
-  const featured = result && 'featured' in result ? result.featured : null;
+  const previous = kept?.filter === filter ? kept.featured : null;
+  const featured = result && 'featured' in result ? result.featured : previous;
+  const more = limit > FEW && previous !== null;
+  const loadingMore = more && !result;
+  const moreFailed = more && result !== null && 'error' in result;
+  const total = featured?.items.length ?? 0;
+  const added = more && result && 'featured' in result ? total - FEW : 0;
+
+  useEffect(() => {
+    if (added <= 0 || !focusNew.current) return;
+    focusNew.current = false;
+    setAnnounce(`Se cargaron ${String(added)} ${added === 1 ? 'producto más' : 'productos más'}`);
+    // Sin scroll: la lista crece hacia abajo y lo que ya se veía no se mueve.
+    const target = list.current?.querySelectorAll('a')[FEW] as HTMLElement | undefined;
+    target?.focus({ preventScroll: true });
+  }, [added]);
   const place = where.point ? 'cerca de ti' : `en ${MUNICIPALITIES[where.municipality]}`;
   return (
     <section className="today-basket" aria-label="Canasta básica de hoy">
@@ -109,8 +133,8 @@ export function TodayBasket() {
         </fieldset>
       )}
       <p className="muted small">Primero los productos con precio en más tiendas.</p>
-      {!result && <SkeletonList kind="card" count={4} />}
-      {result && 'error' in result && (
+      {!result && !featured && <SkeletonList kind="card" count={4} />}
+      {result && 'error' in result && !moreFailed && (
         <ErrorState
           error={result.error}
           onRetry={() => {
@@ -123,24 +147,44 @@ export function TodayBasket() {
       )}
       {featured && featured.items.length > 0 && (
         <>
-          <ul className="product-cards">
+          <ul className="product-cards" ref={list}>
             {featured.items.map((item) => (
               <ProductCard key={item.productId} item={item} />
             ))}
           </ul>
-          {limit === FEW && featured.items.length === FEW && (
+          {((limit === FEW && featured.items.length === FEW) || loadingMore) && (
             <button
               type="button"
               className="btn ghost"
+              disabled={loadingMore}
+              aria-busy={loadingMore}
               onClick={() => {
+                focusNew.current = true;
                 setLimit(MORE);
               }}
             >
-              Ver más
+              {loadingMore ? 'Cargando…' : 'Ver más'}
             </button>
+          )}
+          {loadingMore && (
+            <ul className="product-cards" aria-hidden="true">
+              <SkeletonCard />
+              <SkeletonCard />
+            </ul>
+          )}
+          {moreFailed && 'error' in result && (
+            <ErrorState
+              error={result.error}
+              onRetry={() => {
+                setAttempt((count) => count + 1);
+              }}
+            />
           )}
         </>
       )}
+      <p className="sr-only" aria-live="polite">
+        {announce}
+      </p>
     </section>
   );
 }

@@ -106,3 +106,16 @@ describe('iniciar sesión', () => {
     expect(window.location.href).not.toContain('clave');
   });
 });
+
+describe('volver desde iniciar sesión', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('trae un enlace de volver con respaldo en Yo', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignIn('/entrar');
+
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
+  });
+});

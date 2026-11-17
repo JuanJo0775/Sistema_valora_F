@@ -10,9 +10,14 @@ export function askLocation(): Promise<Point> {
   const { geolocation } = navigator as Partial<Navigator>;
   if (!geolocation) return Promise.reject(new Error('Sin geolocalización en este navegador'));
   return new Promise((resolve, reject) => {
-    geolocation.getCurrentPosition(({ coords }) => {
-      resolve({ lat: coords.latitude, lng: coords.longitude });
-    }, reject);
+    // Si el aviso del navegador se ignora, a los 15 s falla en vez de quedarse esperando.
+    geolocation.getCurrentPosition(
+      ({ coords }) => {
+        resolve({ lat: coords.latitude, lng: coords.longitude });
+      },
+      reject,
+      { timeout: 15_000 },
+    );
   });
 }
 
