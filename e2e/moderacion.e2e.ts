@@ -10,7 +10,7 @@ import {
   someProducts,
   someStores,
 } from './support/api';
-import { choose, pesos } from './support/screens';
+import { choose, eventually, pesos } from './support/screens';
 
 // RF-012 y RF-013: una persona marca un precio como dudoso, un moderador lo descarta y el precio
 // deja de verse en la comparación.
@@ -43,7 +43,9 @@ test('un moderador descarta un precio marcado y deja de verse', async ({ page, b
 
   await page.goto(`/productos/${product.id}`);
   const stores = page.getByRole('region', { name: 'Todas las tiendas' });
-  await expect(stores).toContainText(pesos(price));
+  await eventually(page, async () => {
+    await expect(stores).toContainText(pesos(price), { timeout: 2_000 });
+  });
 
   // El moderador lo encuentra en la cola y lo descarta con su motivo.
   await signIn(page.request, moderator());
@@ -65,9 +67,12 @@ test('un moderador descarta un precio marcado y deja de verse', async ({ page, b
   await expect(page.getByRole('status')).toContainText('Decisión registrada');
 
   await page.goto(`/productos/${product.id}`);
-  await expect(page.getByRole('region', { name: 'Todas las tiendas' })).not.toContainText(
-    pesos(price),
-  );
+  await eventually(page, async () => {
+    await expect(page.getByRole('region', { name: 'Todas las tiendas' })).not.toContainText(
+      pesos(price),
+      { timeout: 2_000 },
+    );
+  });
   await reporter.dispose();
   await flagger.dispose();
 });

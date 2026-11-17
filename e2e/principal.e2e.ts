@@ -3,6 +3,7 @@ import { newAccount, someProducts, someStores } from './support/api';
 import {
   chooseFirstPresentation,
   chooseStoreByName,
+  eventually,
   expectHeading,
   pesos,
   sendPrice,
@@ -36,5 +37,7 @@ test('una persona crea su cuenta, registra un precio y lo ve en la comparación 
   await page.goto(`/productos/${product.id}`);
   const stores = page.getByRole('region', { name: 'Todas las tiendas' });
   const row = stores.getByRole('listitem').filter({ hasText: store.name });
-  await expect(row.first()).toContainText(pesos(price));
+  await eventually(page, async () => {
+    await expect(row.first()).toContainText(pesos(price), { timeout: 2_000 });
+  });
 });

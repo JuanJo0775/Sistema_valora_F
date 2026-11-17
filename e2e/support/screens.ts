@@ -31,3 +31,12 @@ export const pesos = (value: number) => `$${new Intl.NumberFormat('es-CO').forma
 export async function expectHeading(page: Page, name: string) {
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
 }
+
+// La comparación se arma con el repartidor de eventos (ADR-015): un precio nuevo, o uno recién
+// descartado, tarda un momento en verse. Se recarga hasta que la condición se cumple.
+export async function eventually(page: Page, check: () => Promise<void>) {
+  await expect(async () => {
+    await page.reload();
+    await check();
+  }).toPass({ timeout: 30_000 });
+}
