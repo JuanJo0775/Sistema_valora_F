@@ -30,3 +30,25 @@ describe('logo del encabezado según el tema', () => {
     expect(css).toMatch(/\.logo-img\s*\{[^}]*height: 34px/);
   });
 });
+
+// En el celular el logo va centrado en la barra superior; desde 960 px sigue a la izquierda con el
+// buscador y las secciones.
+describe('logo centrado en el celular', () => {
+  const corte = css.indexOf('@media (width >= 960px)');
+  const mobile = css.slice(0, corte);
+  const desktop = css.slice(corte);
+
+  it('la barra superior centra el logo por defecto (celular)', () => {
+    expect(mobile).toMatch(/\.top\s*\{[^}]*justify-content: center/);
+  });
+
+  it('desde 960 px el logo vuelve a la izquierda', () => {
+    expect(desktop).toMatch(/\.top\s*\{[^}]*justify-content: flex-start/);
+    expect(desktop).toMatch(/\.logo-img\s*\{\s*height: 34px/);
+  });
+
+  it('el enlace a inicio conserva los 44 px táctiles y el logo no desborda', () => {
+    expect(css).toMatch(/\.logo-link\s*\{[^}]*min-height: var\(--touch\)/);
+    expect(css).toMatch(/\.logo-img\s*\{[^}]*max-width: 100%/);
+  });
+});
