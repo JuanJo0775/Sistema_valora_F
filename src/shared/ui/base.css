@@ -1,0 +1,294 @@
+/* Estilos base y piezas comunes, con los nombres del prototipo de MC-E4. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 var(--f-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2 {
+  font-family: var(--f-display);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+
+h1 {
+  font-size: 24px;
+}
+
+h2 {
+  font-size: 18px;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.muted {
+  color: var(--ink-2);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--touch);
+  padding: 0 20px;
+  border-radius: var(--r-m);
+  font-weight: 700;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn.ghost {
+  background: var(--bg-2);
+  color: var(--ink);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pill.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.pill.warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.pill.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.pill.info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.pill.mute {
+  background: var(--bg-2);
+  color: var(--ink-2);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.banner.warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actions .btn {
+  text-decoration: none;
+}
+
+/* Campos de formulario con su etiqueta visible y casillas de 44 px (WCAG 2.2). */
+.field {
+  display: grid;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.field input,
+.field select,
+.field textarea {
+  min-height: var(--touch);
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: var(--touch);
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* Opciones como fichas (presentación, tienda, orden). */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choices legend {
+  width: 100%;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* Cada opción es una ficha táctil de 44 px; la elegida va en naranja (prototipo MC-E4). */
+.choice {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  padding: 0 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* #48: contenido principal y panel lateral. En el celular, uno debajo del otro; desde 960 px, dos
+   columnas (1,5 : 1) con el panel fijo al desplazarse, como en el prototipo de referencia. */
+.with-side {
+  display: grid;
+  gap: 24px;
+}
+
+.side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+@media (width >= 960px) {
+  .with-side {
+    grid-template-columns: 1.5fr 1fr;
+    align-items: start;
+  }
+
+  .side {
+    position: sticky;
+    top: 88px;
+  }
+}
+
+/* Tarjetas de precio: la comparación y la página de una tienda. */
+.offers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.offer {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+}
+
+.offer p {
+  margin: 0;
+}
+
+.offer .unit {
+  font-family: var(--f-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.offer h2,
+.offer h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+/* Una acción secundaria que se lee como enlace (por ejemplo, «¿Este precio está mal?»). */
+.link-button {
+  justify-self: start;
+  min-height: var(--touch);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.field textarea {
+  padding: 10px 14px;
+  resize: vertical;
+}

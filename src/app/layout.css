@@ -1,0 +1,201 @@
+/* Celular primero: logo arriba y barra principal abajo, como en el prototipo. Desde 960 px (#48),
+   una sola barra superior: logo, buscador, secciones y «Registrar precio». */
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.logo-link {
+  display: inline-flex;
+  min-height: var(--touch);
+  align-items: center;
+}
+
+/* En el celular el Inicio ya tiene su buscador. */
+.header-search {
+  display: none;
+}
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px 16px 96px;
+}
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--touch);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+
+.tab[aria-current='page'] {
+  color: var(--ink);
+}
+
+.tab {
+  position: relative;
+}
+
+/* Cuántos productos faltan por comprar en la canasta. */
+.badge {
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 6px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.tab[aria-current='page'] .ico {
+  color: var(--accent);
+}
+
+/* El botón naranja de registrar: la acción principal de la app. En el celular, un círculo con «+». */
+.tab.primary {
+  justify-self: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow);
+}
+
+.tab.primary .tab-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tab.primary[aria-current='page'] .ico {
+  color: var(--on-accent);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (width >= 960px) {
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    padding: 10px max(16px, calc((100% - 1080px) / 2));
+  }
+
+  .header-search {
+    display: block;
+    flex: 1;
+    max-width: 440px;
+  }
+
+  .header-search input {
+    width: 100%;
+    min-height: var(--touch);
+    padding: 0 16px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: var(--bg-2);
+    color: var(--ink);
+    font: inherit;
+  }
+
+  .tabbar {
+    position: static;
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    padding: 0;
+    border-top: 0;
+    background: none;
+  }
+
+  .tab {
+    flex-direction: row;
+    gap: 8px;
+    padding: 0 12px;
+    border-radius: var(--r-s);
+    font-size: 14px;
+  }
+
+  .tab[aria-current='page'] {
+    background: var(--bg-2);
+  }
+
+  .badge {
+    position: static;
+  }
+
+  /* En escritorio «Registrar precio» se lee completo: botón naranja con texto, al final. */
+  .tab.primary {
+    order: 1;
+    width: auto;
+    height: auto;
+    min-height: var(--touch);
+    padding: 0 16px;
+    border-radius: 999px;
+    box-shadow: none;
+  }
+
+  .tab.primary .tab-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .page {
+    padding-bottom: 32px;
+  }
+
+  /* El Inicio ya tiene el buscador en la barra superior. */
+  .home-search {
+    display: none;
+  }
+}

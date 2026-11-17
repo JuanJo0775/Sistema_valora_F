@@ -1,0 +1,46 @@
+.compare {
+  display: grid;
+  gap: 12px;
+}
+
+.offer .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wholesale {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-l);
+  background: var(--bg-2);
+}
+
+.wholesale h2,
+.wholesale p {
+  margin: 0;
+}
+
+/* #61: canasta básica de hoy, en el Inicio. */
+.today-basket {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.today-basket h2,
+.today-basket h3,
+.today-basket p {
+  margin: 0;
+}
+
+.today-basket h3 {
+  font-size: 1rem;
+}
+
+.today-basket .price {
+  color: var(--ink);
+  font-size: 1.125rem;
+}

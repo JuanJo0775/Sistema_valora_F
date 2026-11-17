@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/v1/:path*",
+      "destination": "https://valora-api.onrender.com/v1/:path*"
+    },
+    {
+      "source": "/((?!v1/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
