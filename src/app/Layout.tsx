@@ -6,6 +6,7 @@ import { BasketToast } from '../features/basket/BasketToast';
 import { PendingBanner } from '../pwa/PendingBanner';
 import { UpdateBanner } from '../pwa/UpdateBanner';
 import { OfflineBanner } from '../shared/ui/OfflineBanner';
+import { CookieNotice } from '../features/legal/CookieNotice';
 import { HeaderSearch } from './HeaderSearch';
 import { Icon, type IconName } from './Icon';
 import './layout.css';
@@ -60,6 +61,7 @@ export function Layout() {
         <Outlet />
       </main>
       <BasketToast />
+      <CookieNotice />
     </div>
   );
 }
