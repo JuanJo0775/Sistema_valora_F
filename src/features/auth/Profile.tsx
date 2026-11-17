@@ -119,6 +119,7 @@ export function Profile() {
     <section className="profile">
       <EmptyState
         title="Tu cuenta"
+        level={1}
         text="Con una cuenta puedes registrar precios y ver tus aportes. Para comparar no la necesitas."
         action={
           <div className="actions profile-guest">

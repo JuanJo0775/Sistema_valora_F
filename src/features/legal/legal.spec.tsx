@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CookieNotice } from './CookieNotice';
@@ -73,5 +75,37 @@ describe('aviso de cookies', () => {
     expect(
       screen.queryByRole('complementary', { name: 'Aviso de cookies' }),
     ).not.toBeInTheDocument();
+  });
+
+  // H-11: franja de una línea, con «Entendido» como botón secundario y el texto breve.
+  it('es una franja breve: texto corto, enlace a la política y «Entendido» secundario', () => {
+    render(
+      <MemoryRouter>
+        <CookieNotice />
+      </MemoryRouter>,
+    );
+    const notice = screen.getByRole('complementary', { name: 'Aviso de cookies' });
+    expect(notice).toHaveTextContent('Solo usamos cookies necesarias');
+    expect(notice.textContent.length).toBeLessThan(90);
+    expect(screen.getByRole('button', { name: 'Entendido' })).toHaveClass('ghost');
+  });
+});
+
+describe('aviso de cookies: estilos', () => {
+  const legalCss = readFileSync(join(process.cwd(), 'src/features/legal/legal.css'), 'utf-8');
+  const layoutCss = readFileSync(join(process.cwd(), 'src/app/layout.css'), 'utf-8');
+
+  it('es una fila compacta, sin tarjeta de varias líneas', () => {
+    const block = /\.cookie-notice\s*\{[^}]*\}/.exec(legalCss)?.[0] ?? '';
+    expect(block).toMatch(/display:\s*flex/);
+    expect(block).toMatch(/align-items:\s*center/);
+    expect(block).not.toMatch(/display:\s*grid/);
+  });
+
+  it('la altura del aviso solo cuenta mientras existe y la página la suma a su relleno', () => {
+    expect(layoutCss).toMatch(/:root\s*\{[^}]*--cookie-h:\s*0px/);
+    expect(layoutCss).toMatch(/:root:has\(\.cookie-notice\)\s*\{\s*--cookie-h:\s*\d+px/);
+    expect(layoutCss).toMatch(/\.page\s*\{[^}]*padding:[^;]*var\(--cookie-h\)/);
+    expect(layoutCss).toMatch(/html\s*\{[^}]*scroll-padding-bottom:[^;]*var\(--cookie-h\)/);
   });
 });
