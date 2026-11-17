@@ -48,6 +48,19 @@ describe('pestaña Yo', () => {
     expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
   });
 
+  it('ordena la pantalla en Tu actividad, Ajustes y Cuenta', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
+    });
+
+    renderProfile();
+
+    const titles = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent);
+    expect(titles).toEqual(['Tu actividad', 'Ajustes', 'Cuenta']);
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
+  });
+
   it('saluda por el nombre cuando la cuenta lo tiene', async () => {
     stubApi({
       'GET /v1/auth/session': {

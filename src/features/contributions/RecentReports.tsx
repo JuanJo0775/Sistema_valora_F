@@ -26,9 +26,9 @@ export function RecentReports() {
 
   return (
     <section className="recent-reports" aria-labelledby="mis-aportes">
-      <h2 id="mis-aportes" className="eyebrow">
+      <h3 id="mis-aportes" className="recent-title">
         Mis aportes
-      </h2>
+      </h3>
       {failed && <p className="muted">No pudimos cargar tus aportes.</p>}
       {reports?.length === 0 && (
         <p className="muted">Todavía no has registrado precios. Cada uno ayuda a tu barrio.</p>
@@ -48,7 +48,7 @@ export function RecentReports() {
           ))}
         </ul>
       )}
-      <Link to="/mis-aportes" aria-label="Ver todos mis aportes">
+      <Link to="/mis-aportes" aria-label="Ver todos mis aportes" className="recent-all">
         Ver todos
       </Link>
     </section>

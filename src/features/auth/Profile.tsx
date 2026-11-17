@@ -33,23 +33,35 @@ export function Profile() {
     const section = SECTION_OF[session.role];
     return (
       <section className="profile">
-        <div>
-          <h1>{session.displayName ? `Hola, ${session.displayName}` : 'Hola'}</h1>
-          <p className="muted">{ROLE_LABEL[session.role]}</p>
-        </div>
+        <header className="profile-head">
+          <span className="profile-avatar" aria-hidden="true">
+            {(session.displayName?.trim().charAt(0) || 'V').toUpperCase()}
+          </span>
+          <div className="profile-who">
+            <h1>{session.displayName ? `Hola, ${session.displayName}` : 'Hola'}</h1>
+            <p className="pill mute">{ROLE_LABEL[session.role]}</p>
+          </div>
+        </header>
         {session.suspendedUntil && <SuspendedNotice until={session.suspendedUntil} />}
         {error !== null && <ErrorState error={error} />}
-        {session.role === 'reportante' && <RecentReports />}
-        {section && session.role !== 'reportante' && (
-          <Link to={section.to} className="btn">
-            {section.label}
-          </Link>
+        {(session.role === 'reportante' || section) && (
+          <section className="profile-block" aria-labelledby="actividad">
+            <h2 id="actividad" className="eyebrow">
+              Tu actividad
+            </h2>
+            {session.role === 'reportante' && <RecentReports />}
+            {section && session.role !== 'reportante' && (
+              <Link to={section.to} className="btn">
+                {section.label}
+              </Link>
+            )}
+          </section>
         )}
-        <section className="settings" aria-labelledby="ajustes">
+        <section className="settings profile-block" aria-labelledby="ajustes">
           <h2 id="ajustes" className="eyebrow">
             Ajustes
           </h2>
-          <ul className="settings-list">
+          <ul className="settings-list profile-card">
             <li>
               <ThemeChoice />
             </li>
@@ -67,23 +79,30 @@ export function Profile() {
               <span className="settings-text">
                 <strong>Privacidad</strong>
                 <span className="muted">Tu nombre y tu ubicación nunca se publican</span>
-                <Link to="/privacidad">Política de datos y cookies</Link>
+                <Link to="/privacidad" className="settings-link">
+                  Política de datos y cookies
+                </Link>
               </span>
             </li>
           </ul>
         </section>
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            setError(null);
-            signOut().catch((failure: unknown) => {
-              setError(failure);
-            });
-          }}
-        >
-          Cerrar sesión
-        </button>
+        <section className="profile-block" aria-labelledby="cuenta">
+          <h2 id="cuenta" className="eyebrow">
+            Cuenta
+          </h2>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setError(null);
+              signOut().catch((failure: unknown) => {
+                setError(failure);
+              });
+            }}
+          >
+            Cerrar sesión
+          </button>
+        </section>
       </section>
     );
   }
@@ -92,7 +111,7 @@ export function Profile() {
       title="Tu cuenta"
       text="Con una cuenta puedes registrar precios y ver tus aportes. Para comparar no la necesitas."
       action={
-        <div className="actions">
+        <div className="actions profile-guest">
           <Link to="/entrar" className="btn">
             Iniciar sesión
           </Link>
