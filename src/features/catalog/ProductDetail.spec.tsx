@@ -117,10 +117,9 @@ describe('detalle del producto', () => {
     renderDetail(rice.id);
 
     expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
-    expect(screen.getByText('Diana · Granos y abarrotes')).toBeInTheDocument();
-    const presentations = screen.getByRole('list', { name: 'Presentaciones' });
-    expect(presentations).toHaveTextContent('500 g');
-    expect(presentations).toHaveTextContent('1 kg');
+    expect(screen.getByText('Diana')).toBeInTheDocument();
+    expect(screen.getByText('Granos y abarrotes')).toBeInTheDocument();
+    expect(screen.getByText('500 g, 1 kg')).toBeInTheDocument();
   });
 
   it('si el producto no existe lo dice y ofrece volver a buscar', async () => {

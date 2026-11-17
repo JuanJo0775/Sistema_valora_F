@@ -160,7 +160,7 @@ describe('inicio', () => {
     expect(await screen.findByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
   });
 
-  it('desde el detalle, «Comparar precios» abre la comparación en Armenia', async () => {
+  it('el detalle muestra la comparación del producto en Armenia', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
       [`GET /v1/products/${rice.id}/comparison`]: {
@@ -175,8 +175,6 @@ describe('inicio', () => {
     });
     window.history.pushState({}, '', `/productos/${rice.id}`);
     render(<App />);
-
-    fireEvent.click(await screen.findByRole('link', { name: 'Comparar precios' }));
 
     expect(
       await screen.findByRole('heading', {
@@ -285,18 +283,36 @@ describe('inicio', () => {
     localStorage.clear();
   });
 
-  it('desde el detalle, «Historial» abre los precios de los últimos 30 días', async () => {
+  it('desde la gráfica del detalle, «Ver el historial» abre los últimos 30 días', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
       [`GET /v1/products/${rice.id}/history`]: {
         status: 200,
-        body: { from: '2026-10-18', to: '2026-11-16', presentations: [] },
+        body: {
+          from: '2026-10-18',
+          to: '2026-11-16',
+          presentations: [
+            {
+              presentationId: rice.presentations[0]?.id,
+              label: '500 g',
+              points: [
+                {
+                  date: '2026-11-16',
+                  minPriceCop: 2300,
+                  avgPriceCop: 2300,
+                  reports: 1,
+                  source: 'reportado',
+                },
+              ],
+            },
+          ],
+        },
       },
     });
     window.history.pushState({}, '', `/productos/${rice.id}`);
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('link', { name: 'Historial' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Ver el historial' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Historial de precios · Arroz blanco' }),
