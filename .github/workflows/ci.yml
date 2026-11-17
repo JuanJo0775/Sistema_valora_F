@@ -43,7 +43,40 @@ jobs:
   pruebas:
     name: Pruebas
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
+    # #27: las pruebas de extremo a extremo corren contra el backend de verdad (rama dev), con su
+    # base PostGIS desechable y su semilla (ADR-003; la CI sí puede usar contenedores, ADR-012).
+    services:
+      postgres:
+        image: postgis/postgis:17-3.6
+        env:
+          POSTGRES_USER: valora
+          # La contraseña cambia en cada corrida y no queda escrita en el código (secrets:S6698).
+          POSTGRES_PASSWORD: ci-${{ github.run_id }}-${{ github.run_attempt }}
+          POSTGRES_DB: valora_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U valora -d valora_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Backend de las pruebas: secretos desechables de cada corrida, nada guardado en el repositorio.
+      PORT: 3000
+      NODE_ENV: development
+      DATABASE_URL: postgresql://valora:ci-${{ github.run_id }}-${{ github.run_attempt }}@localhost:5432/valora_e2e
+      DATABASE_URL_TEST: postgresql://valora:ci-${{ github.run_id }}-${{ github.run_attempt }}@localhost:5432/valora_e2e
+      SESSION_SECRET: e2e-${{ github.run_id }}-${{ github.run_attempt }}-sesion
+      REPORTER_KEY_SECRET: e2e-${{ github.run_id }}-${{ github.run_attempt }}-reportante
+      OUTBOX_POLL_INTERVAL_MS: 1000
+      OUTBOX_MAX_ATTEMPTS: 5
+      MEDIA_DIR: media
+      MEDIA_PUBLIC_URL: http://localhost:3000/media
+      TRUST_PROXY: 0
+      API_PROXY_TARGET: http://localhost:3000
+      E2E_MODERATOR_EMAIL: moderacion-e2e@valora.test
+      E2E_MODERATOR_PASSWORD: e2e-${{ github.run_id }}-${{ github.run_attempt }}-clave
     steps:
       - uses: actions/checkout@v4
 
@@ -67,6 +100,50 @@ jobs:
           name: cobertura
           path: coverage/lcov.info
           retention-days: 7
+
+      # --- #27: extremo a extremo (Playwright) ---
+      # Después de Vitest: así sus pruebas no recogen las del backend.
+      - name: Traer el backend (rama dev)
+        uses: actions/checkout@v4
+        with:
+          repository: JuanJo0775/Sistema_valora_B
+          ref: dev
+          path: backend
+
+      - name: Backend - dependencias, migraciones, semilla y compilación
+        working-directory: backend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm db:migrate
+          pnpm build
+          node dist/seed.js
+
+      - name: Backend - arrancar y crear la cuenta moderadora
+        working-directory: backend
+        run: |
+          node dist/main.js > ../backend.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/v1/categories > /dev/null && break; sleep 1; done
+          curl -sf http://localhost:3000/v1/categories > /dev/null
+          curl -sf -X POST http://localhost:3000/v1/auth/register -H 'Content-Type: application/json'             -d "{\"email\":\"$E2E_MODERATOR_EMAIL\",\"displayName\":\"Moderacion\",\"password\":\"$E2E_MODERATOR_PASSWORD\",\"acceptedPolicyVersion\":\"2026-11\"}"
+          node dist/set-role.js "$E2E_MODERATOR_EMAIL" moderador "Cuenta de las pruebas de extremo a extremo"
+
+      - name: Navegador de Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Si una sola prueba de extremo a extremo falla, el job falla (forbidOnly, sin reintentos).
+      - name: Pruebas de extremo a extremo
+        run: pnpm test:e2e
+
+      - name: Guardar la evidencia de EC-07 y el informe de Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extremo-a-extremo
+          path: |
+            e2e-results/
+            playwright-report/
+            backend.log
+          retention-days: 14
 
   sonarqube:
     name: SonarQube

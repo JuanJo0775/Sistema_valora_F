@@ -110,7 +110,7 @@
 
 .suggest-store {
   width: 100%;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--field-line);
   background: var(--bg);
 }
 
@@ -148,7 +148,7 @@
 }
 
 .store-actions .btn:first-child {
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--field-line);
   background: var(--bg);
 }
 

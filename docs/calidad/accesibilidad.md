@@ -1,0 +1,56 @@
+# Accesibilidad — WCAG 2.2 AA (#28)
+
+Revisión del 17-nov-2026 sobre los flujos críticos: buscar, comparar (detalle), registrar un precio, crear cuenta e iniciar sesión, canasta, mapa, «Yo» y el panel del moderador. Meta de la issue #28: **0 fallas graves**.
+
+## 1. Revisión automática (axe)
+
+- **Herramienta:** `axe-core` 4.10 dentro de las pruebas de Vitest (`src/app/accessibility.spec.tsx`), con la app completa y el backend simulado.
+- **Cómo correrla:** `pnpm test` (corre en la CI, en el job «Pruebas»).
+- **Por qué Vitest y no Playwright:** Playwright es la #27 y todavía no está montado. El resultado que pide la issue (0 fallas graves) se puede revisar igual.
+- **Qué revisa:** todas las reglas de axe (WCAG 2.0, 2.1 y 2.2, niveles A y AA), menos el contraste. El contraste no se puede medir en jsdom, porque jsdom no pinta (ver la sección 2).
+- **Que la revisión sí detecta fallas:** `src/test/axe.spec.tsx` comprueba que encuentra un botón sin nombre y un campo sin etiqueta.
+
+| Pantalla | Graves o críticas | Moderadas | Estado |
+|---|---|---|---|
+| Inicio | 0 | 1 → 0 | `heading-order`: las tarjetas usaban h3 sin h2. **Corregido**: ahora son h2, y una prueba lo vigila |
+| Detalle del producto | 0 | 0 | OK |
+| Registrar un precio | 0 | 0 | OK |
+| Iniciar sesión | 0 | 0 | OK |
+| Crear cuenta | 0 | 0 | OK |
+| Canasta | 0 | 0 | OK |
+| Mapa | 0 | 0 | OK |
+| Yo | 0 | 0 | OK |
+| Panel del moderador | 0 | 0 | OK |
+
+## 2. Contraste (1.4.3 texto y 1.4.11 controles)
+
+`src/shared/ui/tokens.spec.ts` calcula la relación de contraste con la fórmula de WCAG sobre los colores de `tokens.css`, en tema claro y oscuro. Pide **4,5:1 para el texto** y **3:1 para los bordes de los controles**. Corre en la CI.
+
+| Hallazgo | Antes | Después |
+|---|---|---|
+| Rótulos en versalitas («TODAS LAS TIENDAS», «ÚLTIMOS 30 DÍAS»), tema claro | 3,65:1 y 3,35:1 ✗ | 5,17:1 y 4,75:1 ✓ (`--ink-3` = `#736c64`) |
+| Bordes de campos, contador y botones con borde, tema claro | 1,45:1 ✗ | 3,65:1 ✓ (`--field-line` nuevo) |
+| Lo mismo, tema oscuro | 1,61:1 ✗ | 3,64:1 ✓ |
+| Texto principal, secundario, botón naranja, tarjeta naranja y píldoras de estado (13 pares × 2 temas) | — | todos ≥ 4,5:1 ✓ |
+
+## 3. Teclado y foco visible (2.1.1, 2.4.3, 2.4.7)
+
+Se recorrió el Inicio y el detalle solo con Tab y Mayús+Tab, en el navegador de escritorio:
+
+- **Foco visible:** todos los controles muestran el contorno naranja (`:focus-visible` en `base.css`; los chips, el control segmentado, el contador, la papelera, los interruptores y la barra del radio tienen su propio contorno). Ningún estilo quita el contorno (`outline: none`).
+- **Orden lógico:** buscador → navegación → chip de ubicación → categorías (un solo paso de Tab; se cambia con las flechas) → tarjeta → «Agregar a la canasta» → panel lateral.
+- **Sin trampas de teclado:** el mapa de Leaflet se atraviesa con Tab, y su equivalente accesible es la lista de tiendas.
+- **Controles personalizados:** el buscador del registro, los chips (radios), el control segmentado (radios), los interruptores (`role="switch"`), el aviso de la canasta (`role="status"`) y el cronómetro (`role="timer"`) se anuncian con su rol.
+
+## 4. Tamaño de toque (2.5.8 y la meta propia de 44 px)
+
+Se midió, a 375 px de ancho, el tamaño de cada botón, enlace y campo visible en el Inicio, el detalle, el mapa y crear cuenta.
+
+- **Inicio, mapa y crear cuenta:** sin controles menores de 44 px, salvo enlaces dentro de una frase («¿Ya tienes cuenta? Inicia sesión»), que WCAG 2.5.8 exceptúa. La casilla de la política se toca con toda su frase.
+- **Detalle:** el nombre de la tienda en la lista y «Ver el historial» medían 20 px y 22 px de alto. **Corregido**: ahora miden 44 px de alto. «Ver el boletín» queda dentro de una frase (excepción).
+
+## 5. Pendiente
+
+- **Prueba de usabilidad EC-01** con 8 a 10 personas: ver `docs/calidad/prueba-usabilidad.md`. La hace el equipo.
+- **Lector de pantalla real** (NVDA en Windows o TalkBack en Android) en el registro de un precio: recomendable para el informe del entregable. axe no reemplaza a una persona.
+- **Playwright con `@axe-core/playwright`** (#27): repetir la revisión automática en un navegador de verdad, que sí mide el contraste pintado.

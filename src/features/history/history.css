@@ -76,6 +76,14 @@
 }
 
 /* Prototipo: «ÚLTIMOS 30 DÍAS» en versalitas, como los demás rótulos del panel. */
+.history-summary > a {
+  /* #28: «Ver el historial» es un enlace suelto; se toca en 44 px o más. */
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: var(--touch);
+}
+
 .history-summary h2 {
   margin: 0;
   color: var(--ink-3);
