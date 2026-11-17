@@ -379,7 +379,7 @@
 }
 
 .cheapest-price,
-.cheapest-store {
+.cheapest-card-store {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -394,6 +394,6 @@
   line-height: 1.1;
 }
 
-.cheapest-store {
+.cheapest-card-store {
   justify-content: flex-start;
 }
