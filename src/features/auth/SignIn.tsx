@@ -35,7 +35,7 @@ export function SignIn() {
 
   return (
     <form className="form" onSubmit={submit}>
-      <BackLink fallback="/yo" label="Yo" />
+      <BackLink fallback="/yo" />
       <h1>Iniciar sesión</h1>
       {/* 401, 429 y sin red: el servidor y el cliente ya traen el mensaje en español. */}
       {error !== null && <ErrorState error={error} />}

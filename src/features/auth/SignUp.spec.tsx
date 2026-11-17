@@ -163,6 +163,6 @@ describe('volver desde crear cuenta', () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     renderSignUp('/crear-cuenta');
 
-    expect(screen.getByRole('link', { name: 'Volver a Yo' })).toHaveAttribute('href', '/yo');
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
   });
 });
