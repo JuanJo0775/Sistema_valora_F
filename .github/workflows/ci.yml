@@ -80,13 +80,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Traer el backend (rama dev)
-        uses: actions/checkout@v4
-        with:
-          repository: JuanJo0775/Sistema_valora_B
-          ref: dev
-          path: backend
-
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 
       - uses: actions/setup-node@v4
@@ -109,6 +102,14 @@ jobs:
           retention-days: 7
 
       # --- #27: extremo a extremo (Playwright) ---
+      # Después de Vitest: así sus pruebas no recogen las del backend.
+      - name: Traer el backend (rama dev)
+        uses: actions/checkout@v4
+        with:
+          repository: JuanJo0775/Sistema_valora_B
+          ref: dev
+          path: backend
+
       - name: Backend - dependencias, migraciones, semilla y compilación
         working-directory: backend
         run: |
