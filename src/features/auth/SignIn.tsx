@@ -1,5 +1,6 @@
 import { type SyntheticEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
 import { safeReturn, withReturn } from './safeReturn';
@@ -34,6 +35,7 @@ export function SignIn() {
 
   return (
     <form className="form" onSubmit={submit}>
+      <BackLink fallback="/yo" label="Yo" />
       <h1>Iniciar sesión</h1>
       {/* 401, 429 y sin red: el servidor y el cliente ya traen el mensaje en español. */}
       {error !== null && <ErrorState error={error} />}
