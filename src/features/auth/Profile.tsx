@@ -33,7 +33,7 @@ export function Profile() {
     return (
       <section className="profile">
         <div>
-          <h1>Hola</h1>
+          <h1>{session.displayName ? `Hola, ${session.displayName}` : 'Hola'}</h1>
           <p className="muted">{ROLE_LABEL[session.role]}</p>
         </div>
         {session.suspendedUntil && <SuspendedNotice until={session.suspendedUntil} />}

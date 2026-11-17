@@ -11,9 +11,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     call(api.GET('/auth/session'))
-      .then(({ role, suspendedUntil }) => {
+      .then(({ role, suspendedUntil, displayName }) => {
         saveLastRole(role);
-        setSession({ status: 'active', role, suspendedUntil });
+        setSession({ status: 'active', role, suspendedUntil, displayName });
       })
       .catch((error: unknown) => {
         // Solo un 401 dice que no hay sesión; sin red no se sabe.

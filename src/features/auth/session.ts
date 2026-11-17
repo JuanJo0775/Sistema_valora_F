@@ -10,7 +10,13 @@ export type Session =
   | { status: 'anonymous' }
   // Sin respuesta del servidor (sin red, error 500): no se sabe si hay sesión.
   | { status: 'unknown'; error: unknown; lastRole: Role | null }
-  | { status: 'active'; role: Role; suspendedUntil?: string | undefined };
+  | {
+      status: 'active';
+      role: Role;
+      suspendedUntil?: string | undefined;
+      // B#133: el nombre visible, solo para la propia cuenta (las anteriores no lo tienen).
+      displayName?: string | undefined;
+    };
 
 export interface SessionState {
   session: Session;
