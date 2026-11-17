@@ -291,6 +291,7 @@ describe('todas las tiendas, en el detalle del producto', () => {
     renderCompare();
 
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+    expect(document.querySelectorAll('.skeleton-offer').length).toBeGreaterThan(0);
   });
 
   it('sin precios lo dice e invita a registrar el primero', async () => {

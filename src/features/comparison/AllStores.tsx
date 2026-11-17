@@ -4,7 +4,7 @@ import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { Loading } from '../../shared/ui/Loading';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, MUNICIPALITIES } from './criteria';
 import { Offer } from './Offer';
@@ -118,7 +118,7 @@ export function AllStores({
           </label>
         ))}
       </fieldset>
-      {!result && <Loading />}
+      {!result && <SkeletonList kind="offer" />}
       {result && 'error' in result && (
         <ErrorState
           error={result.error}

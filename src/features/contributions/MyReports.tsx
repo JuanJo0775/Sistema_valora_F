@@ -6,7 +6,7 @@ import { dayInColombia } from '../../shared/days';
 import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { Loading } from '../../shared/ui/Loading';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import { useSession } from '../auth/session';
 import { SuspendedNotice } from '../auth/SuspendedNotice';
 import { AppealForm } from './AppealForm';
@@ -72,7 +72,7 @@ export function MyReports() {
       />
     );
   }
-  if (!reports) return <Loading />;
+  if (!reports) return <SkeletonList kind="row" />;
   if (reports.length === 0) {
     return (
       <EmptyState
