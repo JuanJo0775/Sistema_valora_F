@@ -22,6 +22,8 @@ export function SearchSuggest({
   initial = '',
   formClassName = 'search',
   onSearch,
+  linkTo = (productId) => `/productos/${productId}`,
+  submitLabel,
 }: {
   label: string;
   placeholder?: string;
@@ -29,6 +31,10 @@ export function SearchSuggest({
   formClassName?: string;
   // Enter sin elegir sugerencia. Por defecto, los resultados del Inicio (/?q=…).
   onSearch?: (text: string) => void;
+  // A dónde lleva una sugerencia. El registro de precios la trae de vuelta a sí mismo.
+  linkTo?: (productId: string) => string;
+  // El botón de buscar, cuando la pantalla lo muestra (el Inicio en el celular).
+  submitLabel?: string;
 }) {
   const navigate = useNavigate();
   const base = useId();
@@ -39,7 +45,8 @@ export function SearchSuggest({
   const query = text.trim();
 
   useEffect(() => {
-    if (query.length < MIN_LETTERS) return;
+    // Un código de barras (solo números) se busca con Enter, sin sugerencias.
+    if (query.length < MIN_LETTERS || /^\d+$/.test(query)) return;
     let current = true;
     const timer = window.setTimeout(() => {
       call(api.GET('/products', { params: { query: { q: query } } }))
@@ -61,7 +68,7 @@ export function SearchSuggest({
 
   const openProduct = (product: Product) => {
     setOpen(false);
-    void navigate(`/productos/${product.id}`);
+    void navigate(linkTo(product.id));
   };
 
   const submit = (event: SyntheticEvent) => {
@@ -152,6 +159,11 @@ export function SearchSuggest({
             : ''}
         </p>
       </div>
+      {submitLabel && (
+        <button type="submit" className="btn">
+          {submitLabel}
+        </button>
+      )}
     </form>
   );
 }

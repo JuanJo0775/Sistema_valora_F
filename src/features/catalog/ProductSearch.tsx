@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
@@ -6,6 +6,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
+import { SearchSuggest } from './SearchSuggest';
 import './catalog.css';
 
 type Product = components['schemas']['Product'];
@@ -27,7 +28,6 @@ export function ProductSearch({
 }) {
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
-  const [text, setText] = useState(query);
   const [hint, setHint] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -51,9 +51,8 @@ export function ProductSearch({
     };
   }, [query, key]);
 
-  const submit = (event: SyntheticEvent) => {
-    event.preventDefault();
-    const wanted = text.trim();
+  // Enter sin elegir sugerencia: busca lo escrito.
+  const search = (wanted: string) => {
     // El contrato pide al menos 2 letras (minLength de q): se avisa sin llamar a la API.
     if (wanted.length < 2) {
       setHint('Escribe al menos 2 letras.');
@@ -67,20 +66,15 @@ export function ProductSearch({
 
   return (
     <>
-      <form role="search" aria-label="Buscar producto" className={formClassName} onSubmit={submit}>
-        <input
-          type="search"
-          aria-label="Buscar producto"
-          placeholder="Busca arroz, leche, huevos…"
-          value={text}
-          onChange={(event) => {
-            setText(event.target.value);
-          }}
-        />
-        <button type="submit" className="btn">
-          Buscar
-        </button>
-      </form>
+      {/* #83: mientras se escribe, sugiere productos. */}
+      <SearchSuggest
+        label="Buscar producto"
+        initial={query}
+        formClassName={formClassName}
+        onSearch={search}
+        linkTo={linkTo}
+        submitLabel="Buscar"
+      />
       {hint && <p className="muted">{hint}</p>}
       {query && !result && <Loading text="Buscando…" />}
       {result && 'error' in result && (
