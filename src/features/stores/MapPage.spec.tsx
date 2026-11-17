@@ -102,6 +102,41 @@ describe('mapa de tiendas', () => {
     });
   });
 
+  it('si la última vez usó su ubicación, la vuelve a pedir y muestra las cercanas, sin guardar dónde está', async () => {
+    localStorage.setItem('valora:donde', 'ubicacion');
+    const api = stubApi({
+      'GET /v1/establishments/nearby': {
+        status: 200,
+        body: { items: [{ ...pepe, distanceM: 350 }] },
+      },
+    });
+    stubLocation();
+
+    renderMap();
+
+    expect(await screen.findByRole('heading', { name: 'Tiendas cerca de ti' })).toBeInTheDocument();
+    expect(api.requested.some(({ pathname }) => pathname === '/v1/establishments')).toBe(false);
+    const stored = Object.keys(localStorage).map((key) => localStorage.getItem(key) ?? '');
+    expect(stored.join(' ')).not.toMatch(/4\.53|-75\.68/);
+  });
+
+  it('usar la ubicación queda recordado, y volver al municipio también', async () => {
+    stubApi({
+      'GET /v1/establishments': { status: 200, body: { items: [ara] } },
+      'GET /v1/establishments/nearby': { status: 200, body: { items: [] } },
+    });
+    stubLocation();
+    renderMap();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    await screen.findByRole('heading', { name: 'Tiendas cerca de ti' });
+    expect(localStorage.getItem('valora:donde')).toBe('ubicacion');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver por municipio' }));
+    await screen.findByRole('heading', { name: 'Tiendas en Armenia' });
+    expect(localStorage.getItem('valora:donde')).toBeNull();
+  });
+
   it('mientras busca dice «Buscando tiendas…»', () => {
     stubPendingApi();
 
