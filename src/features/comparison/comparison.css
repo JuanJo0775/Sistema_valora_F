@@ -242,6 +242,16 @@
   scrollbar-width: none;
 }
 
+/* Con ratón (puntero preciso) no hay forma cómoda de deslizar un renglón: la rueda solo mueve la página
+   hacia arriba y abajo. Ahí los chips pasan a varias líneas y se ven todos; con el dedo se sigue
+   deslizando. */
+@media (pointer: fine) {
+  .category-chips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
 .category-chip {
   /* El radio oculto es absoluto: sin un padre posicionado se sale del renglón deslizable y
      ensancha la página (se veía a 1200 px en el celular). */
