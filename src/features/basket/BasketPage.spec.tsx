@@ -108,6 +108,16 @@ describe('mi canasta', () => {
     expect(screen.getByRole('heading', { name: 'Tu canasta está vacía' })).toBeInTheDocument();
   });
 
+  it('la papelera quita el producto de una vez', () => {
+    stubApi({});
+    renderBasket(rice, milk);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar Arroz blanco de la canasta' }));
+
+    expect(screen.queryByText('Arroz blanco')).not.toBeInTheDocument();
+    expect(screen.getByText('Leche entera')).toBeInTheDocument();
+  });
+
   it('lo comprado se tacha, va al final y se puede quitar', () => {
     stubApi({});
     renderBasket(rice, milk);
