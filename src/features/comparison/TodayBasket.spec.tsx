@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -210,6 +210,102 @@ describe('canasta básica de hoy, en el Inicio', () => {
     expect(await screen.findByRole('heading', { name: 'Café' })).toBeInTheDocument();
     expect(asked(api)?.get('limit')).toBe('20');
     expect(screen.queryByRole('button', { name: 'Ver más' })).not.toBeInTheDocument();
+  });
+
+  const SIX = ['Arroz', 'Leche', 'Huevos', 'Azúcar', 'Aceite', 'Panela'];
+
+  // Una respuesta que el test suelta cuando quiere, para mirar la pantalla mientras «llega».
+  const gate = () => {
+    let release: (reply: FakeReply) => void = () => undefined;
+    const reply = new Promise<FakeReply>((resolve) => {
+      release = resolve;
+    });
+    return { reply, release };
+  };
+
+  it('«Ver más» no vacía la lista: muestra esqueletos y «Cargando…» y agrega abajo', async () => {
+    const six = SIX.map((name) => featured(name));
+    const next = gate();
+    const real = stubApi({
+      'GET /v1/categories': CATEGORIES,
+      'GET /v1/featured-products': basket(six),
+    });
+    const original = globalThis.fetch;
+    vi.stubGlobal('fetch', (input: Request) =>
+      new URL(input.url).searchParams.get('limit') === '20'
+        ? next.reply.then((r) => new Response(JSON.stringify(r.body), { status: r.status }))
+        : original(input),
+    );
+    expect(real).toBeDefined();
+    render(
+      <BasketProvider>
+        <MemoryRouter>
+          <TodayBasket />
+        </MemoryRouter>
+      </BasketProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver más' }));
+
+    // Mientras llegan: las 6 siguen, hay 2 esqueletos y el botón no se movió.
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(6);
+    expect(document.querySelectorAll('.skeleton-card')).toHaveLength(2);
+    const busy = screen.getByRole('button', { name: 'Cargando…' });
+    expect(busy).toBeDisabled();
+    expect(busy).toHaveAttribute('aria-busy', 'true');
+    const first = screen.getByRole('heading', { name: 'Arroz' });
+
+    await act(async () => {
+      next.release(basket([...six, featured('Café'), featured('Pan')]));
+      await next.reply;
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Pan' })).toBeInTheDocument();
+    // Las 6 primeras no se volvieron a pintar: es el mismo nodo.
+    expect(screen.getByRole('heading', { name: 'Arroz' })).toBe(first);
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(8);
+    expect(document.querySelectorAll('.skeleton-card')).toHaveLength(0);
+    expect(screen.getByText('Se cargaron 2 productos más')).toBeInTheDocument();
+    expect(
+      (await screen.findByRole('heading', { name: 'Café' })).closest('li')?.querySelector('a'),
+    ).toHaveFocus();
+  });
+
+  it('cambiar de categoría sí reinicia la lista y muestra el esqueleto', async () => {
+    const six = SIX.map((name) => featured(name));
+    renderBasket({
+      'GET /v1/featured-products': [
+        basket(six),
+        basket([...six, featured('Café')]),
+        { status: 200, pending: true },
+      ],
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver más' }));
+    await screen.findByRole('heading', { name: 'Café' });
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Aceites' }));
+
+    expect(screen.queryByRole('heading', { name: 'Arroz' })).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.skeleton-card')).toHaveLength(4);
+  });
+
+  it('si falla la carga adicional conserva la lista y permite reintentar', async () => {
+    const six = SIX.map((name) => featured(name));
+    renderBasket({
+      'GET /v1/featured-products': [
+        basket(six),
+        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
+        basket([...six, featured('Café')]),
+      ],
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver más' }));
+
+    expect(await screen.findByText('Ocurrió un error inesperado.')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(6);
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByRole('heading', { name: 'Café' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(7);
   });
 
   it('sin precios lo dice', async () => {
