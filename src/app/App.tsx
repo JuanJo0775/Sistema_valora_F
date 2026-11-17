@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, useParams, useSearchParams } from 'react-router';
 import { Profile } from '../features/auth/Profile';
+import { Settings } from '../features/auth/Settings';
 import { RequireRole } from '../features/auth/RequireRole';
 import { SessionProvider } from '../features/auth/SessionProvider';
 import { SignIn } from '../features/auth/SignIn';
@@ -114,6 +115,7 @@ export function App() {
                 <Route path="/pendientes" element={<PendingReports />} />
                 <Route path="/canasta" element={<BasketPage />} />
                 <Route path="/yo" element={<Profile />} />
+                <Route path="/yo/ajustes" element={<Settings />} />
                 <Route path="/entrar" element={<SignIn />} />
                 <Route path="/crear-cuenta" element={<SignUp />} />
                 <Route path="/privacidad" element={<PrivacyPolicy />} />
