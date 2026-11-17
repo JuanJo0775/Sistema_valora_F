@@ -8,7 +8,9 @@ import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
 import { useSession } from '../auth/session';
 import { AddToBasket } from '../basket/AddToBasket';
-import { CheapestOffers } from '../comparison/CheapestOffers';
+import { AllStores, type Comparison, competes } from '../comparison/AllStores';
+import { CheapestCard } from '../comparison/CheapestCard';
+import { MUNICIPALITIES } from '../comparison/criteria';
 import { HistorySummary } from '../history/HistorySummary';
 import { ChangeProductPhoto } from '../moderation/ChangeProductPhoto';
 import { ProductImage } from './ProductImage';
@@ -29,6 +31,11 @@ export function ProductDetail() {
     null,
   );
   const { session } = useSession();
+  // La última comparación de «Todas las tiendas»: el panel muestra su más barato.
+  const [compared, setCompared] = useState<{ productId: string; comparison: Comparison } | null>(
+    null,
+  );
+  const comparison = compared?.productId === productId ? compared.comparison : null;
   const key = `${productId}|${String(attempt)}`;
 
   useEffect(() => {
@@ -77,49 +84,63 @@ export function ProductDetail() {
   return (
     <div className="with-side">
       <article className="detail">
-        <ProductImage name={product.name} image={product.image} />
-        {/* #58: solo un moderador cambia la foto (en el Corte 2, fotos del equipo, ADR-020). */}
-        {moderator && (
-          <ChangeProductPhoto
-            productId={product.id}
-            onChanged={(image) => {
-              setUploaded({ productId: product.id, image });
-            }}
-          />
-        )}
-        <h1>{product.name}</h1>
-        <p className="muted">
-          {[product.brand, product.category.name].filter(Boolean).join(' · ')}
-        </p>
-        <h2 id="presentaciones">Presentaciones</h2>
-        <ul aria-labelledby="presentaciones" className="chips">
-          {product.presentations.map((presentation) => (
-            <li key={presentation.id} className="pill mute">
-              {formatPresentation(presentation)}
-            </li>
-          ))}
-        </ul>
+        <header className="detail-head">
+          <div className="detail-photo">
+            <ProductImage name={product.name} image={product.image} />
+            {/* #58: solo un moderador cambia la foto (en el Corte 2, fotos del equipo, ADR-020). */}
+            {moderator && (
+              <ChangeProductPhoto
+                productId={product.id}
+                onChanged={(image) => {
+                  setUploaded({ productId: product.id, image });
+                }}
+              />
+            )}
+          </div>
+          <div className="detail-title">
+            <p className="eyebrow">{product.category.name}</p>
+            <h1>{product.name}</h1>
+            {product.brand && <p className="muted">{product.brand}</p>}
+            <p className="muted">{summary(product, comparison)}</p>
+          </div>
+        </header>
+        <AllStores
+          product={product}
+          onComparison={(latest) => {
+            setCompared({ productId: product.id, comparison: latest });
+          }}
+        />
       </article>
       {/* #48: en escritorio, el panel fijo de la derecha; en el celular, debajo del producto. */}
       <aside className="side" aria-label="Precios y acciones">
-        <CheapestOffers product={product} />
-        <AddToBasket product={product} />
+        {comparison && <CheapestCard comparison={comparison} sizeOf={sizeOf(product)} />}
         <HistorySummary productId={product.id} />
-        {/* Prototipo: la acción principal (naranja) es comparar; las demás, secundarias. */}
-        <div className="actions">
-          <Link to={`/productos/${product.id}/comparar`} className="btn">
-            Comparar precios
-          </Link>
-          <Link to={`/productos/${product.id}/historial`} className="btn ghost">
-            Historial
-          </Link>
-          <Link to={`/registrar?producto=${product.id}`} className="btn ghost">
-            Registrar un precio
-          </Link>
-        </div>
+        {/* Prototipo: la acción principal (naranja) es registrar un precio de este producto. */}
+        <Link to={`/registrar?producto=${product.id}`} className="btn">
+          {`Registrar un precio de ${product.name}`}
+        </Link>
+        <AddToBasket product={product} />
       </aside>
     </div>
   );
+}
+
+const sizeOf = (product: Product) => (presentationId: string) => {
+  const presentation = product.presentations.find(({ id }) => id === presentationId);
+  return presentation ? formatPresentation(presentation) : '';
+};
+
+// «500 g, 1 kg · 6 tiendas en Armenia»: las presentaciones y cuántas tiendas tienen un precio que
+// compite (vigente y no en revisión), de la última comparación.
+function summary(product: Product, comparison: Comparison | null): string {
+  const sizes = product.presentations.map(formatPresentation).join(', ');
+  if (!comparison || comparison.results.length === 0) return sizes;
+  const stores = new Set(
+    comparison.results.filter(competes).map(({ establishment }) => establishment.id),
+  ).size;
+  const { municipality } = comparison.criteria;
+  const where = municipality ? `en ${MUNICIPALITIES[municipality]}` : 'cerca';
+  return `${sizes} · ${String(stores)} ${stores === 1 ? 'tienda' : 'tiendas'} ${where}`;
 }
 
 const isNotFound = (error: unknown) => error instanceof ApiError && error.status === 404;

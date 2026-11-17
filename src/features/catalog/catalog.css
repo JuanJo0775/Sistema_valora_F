@@ -80,3 +80,50 @@
 .product-image figcaption {
   font-size: 0.8rem;
 }
+
+/* #65: encabezado del prototipo. La foto pequeña al lado del nombre; en el celular, arriba. */
+.detail-head {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.detail-photo {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-photo .product-image img,
+.detail-photo .product-image.illustration {
+  max-width: 96px;
+}
+
+.detail-photo .product-image.illustration {
+  padding: 20px;
+}
+
+.detail-title {
+  display: grid;
+  gap: 4px;
+}
+
+.detail-title h1,
+.detail-title p {
+  margin: 0;
+}
+
+.detail .all-stores {
+  margin-top: 16px;
+}
+
+/* En el panel del detalle, las acciones ocupan todo el ancho, como en el prototipo. */
+.side > .btn,
+.side .add-to-basket .btn {
+  width: 100%;
+}
+
+.side .add-to-basket .btn.ghost {
+  border: 1px solid var(--line-2);
+  background: var(--bg);
+}
