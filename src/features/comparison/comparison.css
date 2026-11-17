@@ -244,7 +244,7 @@
   align-items: center;
   min-height: var(--touch);
   padding: 0 18px;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--field-line);
   border-radius: 999px;
   cursor: pointer;
 }
@@ -347,7 +347,7 @@
 
 .product-card .btn {
   width: 100%;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--field-line);
   background: var(--bg);
 }
 

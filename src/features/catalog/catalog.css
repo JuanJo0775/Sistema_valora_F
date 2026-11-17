@@ -8,7 +8,7 @@
   flex: 1;
   min-height: var(--touch);
   padding: 0 14px;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--field-line);
   border-radius: var(--r-m);
   background: var(--bg);
   color: var(--ink);
@@ -124,6 +124,6 @@
 }
 
 .side .add-to-basket .btn.ghost {
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--field-line);
   background: var(--bg);
 }
