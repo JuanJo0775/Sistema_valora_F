@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
+import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { SkeletonDetail } from '../../shared/ui/Skeleton';
@@ -85,6 +86,7 @@ export function ProductDetail() {
   const cheapestPresentationId = comparison?.results.find(
     ({ isCheapest }) => isCheapest,
   )?.presentationId;
+  const cheapest = comparison?.results.find(({ isCheapest }) => isCheapest);
   const moderator = session.status === 'active' && session.role === 'moderador';
   return (
     <div className="with-side product">
@@ -116,7 +118,11 @@ export function ProductDetail() {
           barato, la presentación, agregar a la canasta (primaria) y registrar un precio. */}
       <aside className="side" aria-label="Precios y acciones">
         {comparison && <CheapestCard comparison={comparison} sizeOf={sizeOf(product)} />}
-        <AddToBasket product={product} suggestedPresentationId={cheapestPresentationId} />
+        <AddToBasket
+          product={product}
+          suggestedPresentationId={cheapestPresentationId}
+          lowestPrice={cheapest ? formatCop(cheapest.priceCop) : undefined}
+        />
         <Link to={`/registrar?producto=${product.id}`} className="btn ghost">
           {`Registrar un precio de ${product.name}`}
         </Link>
