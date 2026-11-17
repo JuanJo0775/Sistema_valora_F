@@ -153,7 +153,7 @@ export interface paths {
         };
         /**
          * Buscar tiendas por nombre o municipio, sin ubicación (RF-005,
-         * @description Para elegir la tienda sin compartir la ubicación (EC-08), por ejemplo al registrar un precio (RF-006). Se envía al menos uno de q o municipality; sin ninguno responde 400 VALIDATION_ERROR («Envía q o municipality»), para no devolver todo el directorio. Con q, cada palabra debe aparecer en el nombre de la tienda, en cualquier orden y también como pedazo, sin distinguir tildes ni mayúsculas (como la búsqueda de productos). Ordenadas por nombre. Sin ubicación no hay distancia: los items no traen distanceM. Caché pública de 5 minutos (valor inicial calibrable, EC-04).
+         * @description Para elegir la tienda sin compartir la ubicación (EC-08), por ejemplo al registrar un precio (RF-006). Se envía al menos uno de q o municipality; sin ninguno responde 400 VALIDATION_ERROR («Envía q o municipality»), para no devolver todo el directorio. Con q, cada palabra debe aparecer en el nombre de la tienda, en cualquier orden y también como pedazo, sin distinguir tildes ni mayúsculas (como la búsqueda de productos). Ordenadas por nombre. Sin ubicación no hay distancia: los items no traen distanceM. Cada tienda dice cuántos precios vigentes tiene (priceCount, B#131). Caché pública de 5 minutos (valor inicial calibrable, EC-04).
          */
         get: operations["searchEstablishments"];
         put?: never;
@@ -173,7 +173,7 @@ export interface paths {
         };
         /**
          * Establecimientos cercanos (RF-005)
-         * @description La ubicación aproximada del usuario (lat, lng) se usa solo para calcular la cercanía: no se guarda, no se registra en los logs ni aparece en la respuesta (RF-005 RN5, EC-08). Por eso la respuesta lleva Cache-Control no-store, aunque es una lectura pública. Devuelve las tiendas registradas dentro del radio, de la más cercana a la más lejana.
+         * @description La ubicación aproximada del usuario (lat, lng) se usa solo para calcular la cercanía: no se guarda, no se registra en los logs ni aparece en la respuesta (RF-005 RN5, EC-08). Por eso la respuesta lleva Cache-Control no-store, aunque es una lectura pública. Devuelve las tiendas registradas dentro del radio, de la más cercana a la más lejana, cada una con cuántos precios vigentes tiene (priceCount, B#131).
          */
         get: operations["listNearbyEstablishments"];
         put?: never;
@@ -735,6 +735,25 @@ export interface components {
             municipality: components["schemas"]["Municipality"];
             /** @description Metros desde el punto consultado; viene en GET /establishments/nearby y en la comparación cuando se envió la ubicación (#106). */
             distanceM?: number;
+        };
+        /** @description Una tienda de las listas GET /establishments y GET /establishments/nearby: los campos de Establishment más cuántos precios vigentes tiene (B#131). La comparación y los precios de una tienda siguen usando Establishment. Va sin allOf porque las respuestas no admiten campos de más. */
+        EstablishmentWithPrices: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            type: "barrio" | "minimercado" | "supermercado" | "descuento";
+            /** @description Opcional; muchas tiendas no tienen dirección formal. */
+            address?: string;
+            /** @description Latitud de la tienda (nunca la del usuario */
+            lat: number;
+            /** @description Longitud de la tienda. */
+            lng: number;
+            municipality: components["schemas"]["Municipality"];
+            /** @description Metros desde el punto consultado; solo en GET /establishments/nearby. */
+            distanceM?: number;
+            /** @description Cuántas presentaciones tienen hoy un precio en la tienda, con el mismo criterio que GET /establishments/{establishmentId}/prices con onlyCurrent=true: no cuentan los desactualizados ni los que están en revisión; los por confirmar sí cuentan. */
+            priceCount: number;
         };
         /**
          * @description Municipio del Quindío (#106). Las tiendas de la semilla son de Armenia.
@@ -1303,7 +1322,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        items: components["schemas"]["Establishment"][];
+                        items: components["schemas"]["EstablishmentWithPrices"][];
                     };
                 };
             };
@@ -1333,7 +1352,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        items: components["schemas"]["Establishment"][];
+                        items: components["schemas"]["EstablishmentWithPrices"][];
                     };
                 };
             };
