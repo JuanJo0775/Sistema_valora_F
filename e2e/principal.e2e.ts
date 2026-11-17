@@ -22,7 +22,7 @@ test('una persona crea su cuenta, registra un precio y lo ve en la comparación 
   await page.goto('/crear-cuenta?volver=/yo');
   await page.getByLabel('Tu nombre').fill(account.displayName);
   await page.getByLabel('Correo').fill(account.email);
-  await page.getByLabel('Contraseña').fill(account.password);
+  await page.getByLabel('Contraseña', { exact: true }).fill(account.password);
   await page.getByRole('checkbox', { name: /política de tratamiento de datos/ }).check();
   await page.getByRole('button', { name: 'Crear cuenta' }).click();
   await expectHeading(page, 'Hola, Ana Prueba');
