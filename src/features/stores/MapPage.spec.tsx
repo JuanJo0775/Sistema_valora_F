@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { stubLocation } from '../../test/location';
+import { BasketProvider } from '../basket/BasketProvider';
 import { MapPage } from './MapPage';
 
 // Leaflet necesita un navegador de verdad para dibujar; aquí el mapa dice qué tiendas recibió.
@@ -26,9 +27,11 @@ const pepe = shop('6e3d2c1b-0a9f-4b8c-9d7e-6f5a4b3c2d1e', 'Tienda Don Pepe');
 
 const renderMap = () =>
   render(
-    <MemoryRouter>
-      <MapPage />
-    </MemoryRouter>,
+    <BasketProvider>
+      <MemoryRouter>
+        <MapPage />
+      </MemoryRouter>
+    </BasketProvider>,
   );
 
 describe('mapa de tiendas', () => {
@@ -62,6 +65,86 @@ describe('mapa de tiendas', () => {
     const asked = api.requested.find(({ pathname }) => pathname === '/v1/establishments');
     expect(asked?.searchParams.get('municipality')).toBe('armenia');
     expect(asked?.searchParams.get('limit')).toBe('50');
+  });
+
+  it('dice cuántas tiendas hay y que la ubicación no se guarda', async () => {
+    stubApi({
+      'GET /v1/establishments': { status: 200, body: { items: [ara, pepe] } },
+      'GET /v1/establishments/nearby': {
+        status: 200,
+        body: { items: [{ ...pepe, distanceM: 350 }] },
+      },
+    });
+    stubLocation();
+    renderMap();
+
+    expect(
+      await screen.findByText('2 tiendas registradas en Valora en Armenia.'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+    expect(
+      await screen.findByText(
+        '1 tienda registrada en Valora a menos de 2,0 km. Tu ubicación no se guarda.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('las tarjetas van en un panel al lado, con el color del tipo y cuánto cuesta allí tu canasta', async () => {
+    localStorage.setItem(
+      'valora:canasta',
+      JSON.stringify([
+        {
+          productId: 'arroz',
+          productName: 'Arroz',
+          presentationId: 'arroz-500g',
+          presentationLabel: '500 g',
+          quantity: 2,
+          bought: false,
+        },
+      ]),
+    );
+    stubApi({
+      'GET /v1/establishments': { status: 200, body: { items: [ara, pepe] } },
+      'GET /v1/products/arroz/comparison': {
+        status: 200,
+        body: {
+          productId: 'arroz',
+          criteria: { sort: 'unit_price', municipality: 'armenia' },
+          results: [
+            {
+              establishment: ara,
+              reportId: crypto.randomUUID(),
+              presentationId: 'arroz-500g',
+              priceCop: 2600,
+              unitPrice: { valueCop: 520, per: '100g' },
+              source: 'comunidad',
+              freshness: 'vigente',
+              reliability: 'alta',
+              confirmations: 1,
+              isCheapest: true,
+              observedAt: new Date().toISOString(),
+            },
+          ],
+        },
+      },
+    });
+
+    renderMap();
+
+    const side = await screen.findByRole('complementary', { name: 'Lista de tiendas' });
+    expect(
+      within(side).getByRole('link', { name: 'Sugerir una tienda que no aparece' }),
+    ).toBeInTheDocument();
+    const card = within(
+      within(side).getByRole('heading', { name: 'Ara' }).closest('li') as HTMLElement,
+    );
+    expect(card.getByText('Descuento').previousElementSibling).toHaveClass('dot', 'type-descuento');
+    expect(await card.findByText('$5.200')).toBeInTheDocument();
+    expect(card.getByText(/1 de 1 productos/)).toBeInTheDocument();
+    const other = within(
+      within(side).getByRole('heading', { name: 'Tienda Don Pepe' }).closest('li') as HTMLElement,
+    );
+    expect(other.queryByText(/Tu canasta aquí/)).not.toBeInTheDocument();
   });
 
   it('se elige otro municipio y muestra sus tiendas', async () => {
