@@ -231,6 +231,8 @@ describe('canasta básica de hoy, en el Inicio', () => {
     );
 
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(document.querySelectorAll('.skeleton-card')).toHaveLength(4);
   });
 
   it('si falla muestra el error y permite reintentar', async () => {

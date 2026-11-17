@@ -134,5 +134,6 @@ describe('buscar productos', () => {
     search('arroz');
 
     expect(screen.getByRole('status')).toHaveTextContent('Buscando…');
+    expect(document.querySelectorAll('.skeleton-row').length).toBeGreaterThan(0);
   });
 });

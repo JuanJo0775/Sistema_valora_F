@@ -5,7 +5,7 @@ import type { components, operations } from '../../shared/api/schema';
 import { formatDistance } from '../../shared/location';
 import { formatCop } from '../../shared/money';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { Loading } from '../../shared/ui/Loading';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import { useBasket } from '../basket/basketContext';
 import { ProductThumb } from '../catalog/ProductThumb';
 import '../catalog/catalog.css';
@@ -109,7 +109,7 @@ export function TodayBasket() {
         </fieldset>
       )}
       <p className="muted small">Primero los productos con precio en más tiendas.</p>
-      {!result && <Loading />}
+      {!result && <SkeletonList kind="card" count={4} />}
       {result && 'error' in result && (
         <ErrorState
           error={result.error}
