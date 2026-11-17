@@ -7,6 +7,7 @@ import { Loading } from '../../shared/ui/Loading';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import { useWhere, WhereChooser } from '../comparison/WhereChooser';
 import { StoreCard } from './StoreCard';
+import { RadiusSlider } from './RadiusSlider';
 import { StoreMap } from './StoreMap';
 import { STORE_TYPES } from './storeTypes';
 import './stores.css';
@@ -56,8 +57,9 @@ export function MapPage() {
   return (
     <section className="stores">
       <h1>{`Tiendas ${place}`}</h1>
-      <WhereChooser where={where} backLabel="Ver por municipio" />
+      <WhereChooser where={where} backLabel="Ver por municipio" showRadius={false} />
       <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} around={around} />
+      {where.point && <RadiusSlider radiusKm={where.radiusKm} onChange={where.setRadiusKm} />}
       <ul className="map-legend" aria-label="Colores del mapa">
         {Object.entries(STORE_TYPES).map(([type, name]) => (
           <li key={type}>

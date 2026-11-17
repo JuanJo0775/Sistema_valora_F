@@ -117,3 +117,69 @@
   stroke: var(--bg);
   stroke-width: 3;
 }
+
+/* #73: la barra del radio, naranja hasta el valor elegido (prototipo). */
+.radius-slider {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+
+.radius-slider output {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.radius-slider input[type='range'] {
+  width: 100%;
+  height: var(--touch);
+  margin: 0;
+  background: transparent;
+  accent-color: var(--accent);
+  appearance: none;
+  cursor: pointer;
+}
+
+.radius-slider input[type='range']::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--ink-2) var(--fill));
+}
+
+.radius-slider input[type='range']::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink-2);
+}
+
+.radius-slider input[type='range']::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.radius-slider input[type='range']::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: -7px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  appearance: none;
+}
+
+.radius-slider input[type='range']::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.radius-slider input[type='range']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

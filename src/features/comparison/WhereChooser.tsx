@@ -80,27 +80,32 @@ export function WhereChooser({
   where,
   backLabel,
   onLeaveLocation,
+  showRadius = true,
 }: {
   where: Where;
   backLabel: string;
   onLeaveLocation?: () => void;
+  // El mapa pone su propio radio, con una barra debajo (#73).
+  showRadius?: boolean;
 }) {
   return (
     <>
       {where.point ? (
         <>
           {/* ADR-019: radio calibrable de 0,5 a 3 km; 2 km por defecto. */}
-          <SelectField
-            label="Radio"
-            value={String(where.radiusKm)}
-            options={RADII.map((km) => ({
-              value: String(km),
-              label: `${String(km).replace('.', ',')} km`,
-            }))}
-            onChange={(km) => {
-              where.setRadiusKm(Number(km));
-            }}
-          />
+          {showRadius && (
+            <SelectField
+              label="Radio"
+              value={String(where.radiusKm)}
+              options={RADII.map((km) => ({
+                value: String(km),
+                label: `${String(km).replace('.', ',')} km`,
+              }))}
+              onChange={(km) => {
+                where.setRadiusKm(Number(km));
+              }}
+            />
+          )}
           <button
             type="button"
             className="btn ghost"
