@@ -15,7 +15,7 @@ const rice = {
 };
 
 const search = (text: string) => {
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
+  fireEvent.change(screen.getByRole('combobox', { name: 'Buscar producto' }), {
     target: { value: text },
   });
   fireEvent.submit(screen.getByRole('search'));

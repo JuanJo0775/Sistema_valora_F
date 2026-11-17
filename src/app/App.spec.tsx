@@ -30,7 +30,7 @@ describe('inicio', () => {
 
     render(<App />);
     expect(screen.getByRole('heading', { name: '¿Qué vas a comprar hoy?' })).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Buscar producto' }), {
       target: { value: 'arroz' },
     });
     fireEvent.submit(screen.getByRole('search', { name: 'Buscar producto' }));
@@ -53,7 +53,7 @@ describe('inicio', () => {
     expect(
       await screen.findByRole('region', { name: 'Canasta básica de hoy' }),
     ).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Buscar producto' }), {
       target: { value: 'arroz' },
     });
     fireEvent.submit(screen.getByRole('search', { name: 'Buscar producto' }));
@@ -251,13 +251,31 @@ describe('inicio', () => {
     render(<App />);
     const header = within(screen.getByRole('banner'));
 
-    fireEvent.change(header.getByRole('searchbox', { name: 'Buscar en Valora' }), {
+    fireEvent.change(header.getByRole('combobox', { name: 'Buscar en Valora' }), {
       target: { value: 'arroz' },
     });
     fireEvent.submit(header.getByRole('search'));
 
     expect(await screen.findByRole('link', { name: /Arroz blanco/ })).toBeInTheDocument();
     expect(window.location.pathname + window.location.search).toBe('/?q=arroz');
+  });
+
+  it('el buscador de la barra sugiere productos mientras se escribe y abre el elegido', async () => {
+    stubApi({
+      'GET /v1/products': { status: 200, body: { items: [rice] } },
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+    });
+    window.history.pushState({}, '', '/mapa');
+    render(<App />);
+    const header = within(screen.getByRole('banner'));
+
+    fireEvent.change(header.getByRole('combobox', { name: 'Buscar en Valora' }), {
+      target: { value: 'arr' },
+    });
+    fireEvent.click(await header.findByRole('option', { name: /Arroz blanco/ }));
+
+    expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/productos/${rice.id}`);
   });
 
   // #31: la canasta vuelve como lista de compras.

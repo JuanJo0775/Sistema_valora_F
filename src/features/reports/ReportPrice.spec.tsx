@@ -288,7 +288,7 @@ describe('registrar un precio', () => {
     renderReport('/registrar');
 
     expect(screen.getByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Buscar producto' }), {
       target: { value: 'arroz' },
     });
     fireEvent.submit(screen.getByRole('search'));
