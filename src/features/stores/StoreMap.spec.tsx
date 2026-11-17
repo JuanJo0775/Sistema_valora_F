@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { StoreMap } from './StoreMap';
 
 const stores = [
-  { id: 'a1', name: 'Ara', lat: 4.5339, lng: -75.6811 },
-  { id: 'd1', name: 'D1', lat: 4.5401, lng: -75.6702 },
+  { id: 'a1', name: 'Ara', type: 'descuento' as const, lat: 4.5339, lng: -75.6811 },
+  { id: 'd1', name: 'D1', type: 'barrio' as const, lat: 4.5401, lng: -75.6702 },
 ];
 
 function WhereAmI() {
@@ -78,5 +78,34 @@ describe('mapa de Leaflet', () => {
     );
 
     expect(container.querySelectorAll('path.picked-pin')).toHaveLength(1);
+  });
+
+  // #73 (prototipo): cada tienda con el color de su tipo, como en la leyenda.
+  it('cada tienda lleva el color de su tipo', () => {
+    const { container } = renderMap();
+
+    expect(container.querySelectorAll('path.store-pin.type-descuento')).toHaveLength(1);
+    expect(container.querySelectorAll('path.store-pin.type-barrio')).toHaveLength(1);
+  });
+
+  it('con la ubicación dibuja el punto de la persona y el círculo del radio', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <StoreMap
+          stores={stores}
+          label="Mapa de las tiendas"
+          around={{ lat: 4.53, lng: -75.68, radiusKm: 2 }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(container.querySelectorAll('path.user-pin')).toHaveLength(1);
+    expect(container.querySelectorAll('path.radius-circle')).toHaveLength(1);
+  });
+
+  it('sin la ubicación no dibuja ni el punto ni el radio', () => {
+    const { container } = renderMap();
+
+    expect(container.querySelectorAll('path.user-pin, path.radius-circle')).toHaveLength(0);
   });
 });

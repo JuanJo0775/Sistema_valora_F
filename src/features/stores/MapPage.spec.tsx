@@ -137,6 +137,19 @@ describe('mapa de tiendas', () => {
     expect(localStorage.getItem('valora:donde')).toBeNull();
   });
 
+  it('la leyenda dice el color de cada tipo de tienda', async () => {
+    stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
+
+    renderMap();
+
+    const legend = await screen.findByRole('list', { name: 'Colores del mapa' });
+    expect(
+      within(legend)
+        .getAllByRole('listitem')
+        .map(({ textContent }) => textContent),
+    ).toEqual(['Tienda de barrio', 'Minimercado', 'Supermercado', 'Descuento']);
+  });
+
   it('mientras busca dice «Buscando tiendas…»', () => {
     stubPendingApi();
 
