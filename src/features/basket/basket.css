@@ -117,3 +117,69 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* #76: el aviso oscuro de abajo al agregar a la canasta (prototipo). Encima de la barra del
+   celular; en escritorio, abajo a la derecha. */
+.basket-toast {
+  position: fixed;
+  right: 16px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  left: 16px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--r-l);
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+@media (width >= 960px) {
+  .basket-toast {
+    bottom: 24px;
+    left: auto;
+    width: min(440px, calc(100vw - 32px));
+  }
+}
+
+.basket-toast-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.basket-toast-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.basket-toast-text span {
+  opacity: 0.75;
+  font-size: 0.85rem;
+}
+
+.basket-toast-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.basket-toast-close {
+  width: var(--touch);
+  height: var(--touch);
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1.4rem;
+  cursor: pointer;
+}

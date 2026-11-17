@@ -184,12 +184,18 @@ function ProductCard({ item }: { item: Item }) {
             setQuantity(saved.presentationId, 0);
             return;
           }
-          add({
-            productId: item.productId,
-            productName: item.name,
-            presentationId: cheapest.presentationId,
-            presentationLabel: presentation,
-          });
+          add(
+            {
+              productId: item.productId,
+              productName: item.name,
+              presentationId: cheapest.presentationId,
+              presentationLabel: presentation,
+            },
+            // #76: el aviso dice dónde sale más barato, con el ahorro que calculó el backend.
+            item.savingsPercent === undefined
+              ? `Desde ${formatCop(cheapest.priceCop)} en ${cheapest.establishment.name}`
+              : `Hasta ${String(item.savingsPercent)} % menos comprándolo en ${cheapest.establishment.name}`,
+          );
         }}
       >
         {saved ? 'En tu canasta' : 'Agregar a la canasta'}

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
 import type { components } from '../../shared/api/schema';
 import { formatPresentation } from '../catalog/presentation';
 import { PresentationChoices } from '../catalog/PresentationChoices';
@@ -13,7 +12,6 @@ export function AddToBasket({ product }: { product: Product }) {
   const { items, add, setQuantity } = useBasket();
   const [only] = product.presentations.length === 1 ? product.presentations : [];
   const [presentationId, setPresentationId] = useState(only?.id ?? '');
-  const [added, setAdded] = useState('');
   const [problem, setProblem] = useState('');
   const inBasket = items.filter(({ productId }) => productId === product.id);
 
@@ -24,14 +22,13 @@ export function AddToBasket({ product }: { product: Product }) {
       return;
     }
     const presentationLabel = formatPresentation(presentation);
+    // El aviso de abajo dice qué se agregó (#76).
     add({ productId: product.id, productName: product.name, presentationId, presentationLabel });
     setProblem('');
-    setAdded(`${product.name} · ${presentationLabel}`);
   };
 
   const removeAll = () => {
     for (const item of inBasket) setQuantity(item.presentationId, 0);
-    setAdded('');
   };
 
   return (
@@ -58,12 +55,6 @@ export function AddToBasket({ product }: { product: Product }) {
             Agregar a la canasta
           </button>
         </>
-      )}
-      {added && (
-        <p role="status" className="muted">
-          {`${added} agregado a tu canasta. `}
-          <Link to="/canasta">Ver canasta</Link>
-        </p>
       )}
     </div>
   );

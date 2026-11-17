@@ -14,9 +14,19 @@ export type NewBasketItem = Pick<
   'productId' | 'productName' | 'presentationId' | 'presentationLabel'
 >;
 
+// #76: el aviso de lo último que se agregó. `id` cambia con cada agregado, para reiniciar el aviso.
+export interface BasketNotice {
+  id: number;
+  productName: string;
+  detail: string | undefined;
+}
+
 export interface BasketState {
   items: BasketItem[];
-  add: (item: NewBasketItem) => void;
+  // `detail` es una línea opcional para el aviso, por ejemplo dónde sale más barato.
+  add: (item: NewBasketItem, detail?: string) => void;
+  notice: BasketNotice | null;
+  dismiss: () => void;
   setQuantity: (presentationId: string, quantity: number) => void;
   toggleBought: (presentationId: string) => void;
   removeBought: () => void;
@@ -25,6 +35,8 @@ export interface BasketState {
 export const BasketContext = createContext<BasketState>({
   items: [],
   add: () => undefined,
+  notice: null,
+  dismiss: () => undefined,
   setQuantity: () => undefined,
   toggleBought: () => undefined,
   removeBought: () => undefined,
