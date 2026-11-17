@@ -2,11 +2,12 @@ import type { components } from '../api/schema';
 
 type Reliability = components['schemas']['ComparisonItem']['reliability'];
 
-// El nivel lo calcula el backend (RF-011); aquí solo se nombra y se colorea como en el prototipo.
+// El nivel lo calcula el backend (RF-011); aquí solo se nombra y se colorea. El rojo queda para lo que es una
+// advertencia de verdad (precio desactualizado): la confiabilidad baja va en ámbar y la media, neutra.
 const LABELS: Record<Reliability, { text: string; tone: string }> = {
   alta: { text: 'Confiabilidad alta', tone: 'ok' },
-  media: { text: 'Confiabilidad media', tone: 'warn' },
-  baja: { text: 'Confiabilidad baja', tone: 'bad' },
+  media: { text: 'Confiabilidad media', tone: 'mute' },
+  baja: { text: 'Confiabilidad baja', tone: 'warn' },
   en_revision: { text: 'En revisión', tone: 'mute' },
 };
 

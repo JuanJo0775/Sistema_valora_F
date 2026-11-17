@@ -30,6 +30,10 @@ export function Offer({ offer, size, rank }: { offer: Item; size: string; rank?:
         <h3>
           <Link to={`/tiendas/${offer.establishment.id}`}>{offer.establishment.name}</Link>
         </h3>
+        {/* Dato que distingue tiendas con el mismo nombre; solo si la API lo trae. */}
+        {offer.establishment.address && (
+          <p className="muted offer-address">{offer.establishment.address}</p>
+        )}
         {/* El primer lugar se ve en naranja; quien no ve el color lo oye. */}
         {offer.isCheapest && <span className="sr-only">Más barato</span>}
         <p className="muted offer-meta">

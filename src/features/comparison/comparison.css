@@ -404,3 +404,21 @@
 .cheapest-card-store {
   justify-content: flex-start;
 }
+
+/* Las etiquetas se repiten en cada fila: van con el peso justo (sin relleno, borde fino y texto de
+   su color, que sigue pasando AA). La advertencia en rojo («Desactualizado») conserva su relleno. */
+.offer-meta .pill:not(.bad) {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  font-weight: 500;
+}
+
+.offer-address {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.cheapest-card .muted {
+  font-size: 0.9rem;
+}
