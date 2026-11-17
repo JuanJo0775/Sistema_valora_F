@@ -2,6 +2,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
+import { directionsTo } from '../../shared/directions';
 
 export interface MapStore {
   id: string;
@@ -82,6 +83,14 @@ export function StoreMap({
       const popup = document.createElement('div');
       const name = document.createElement('strong');
       name.textContent = store.name;
+      // «Cómo llegar» va primero: quien solo quiere ir a la tienda no tiene que pasar por los precios.
+      const route = document.createElement('a');
+      route.href = directionsTo(store);
+      route.target = '_blank';
+      route.rel = 'noopener noreferrer';
+      route.className = 'pin-link pin-route';
+      route.textContent = 'Cómo llegar';
+      route.setAttribute('aria-label', `Cómo llegar a ${store.name}`);
       const open = document.createElement('button');
       open.type = 'button';
       open.className = 'pin-link';
@@ -89,11 +98,34 @@ export function StoreMap({
       open.addEventListener('click', () => {
         void navigate(`/tiendas/${store.id}`);
       });
-      popup.append(name, document.createElement('br'), open);
+      popup.append(name, document.createElement('br'), route, open);
       const kind = store.type ? ` type-${store.type}` : '';
-      L.circleMarker([store.lat, store.lng], { radius: 9, className: `store-pin${kind}` })
-        .bindPopup(popup)
-        .addTo(layer);
+      const marker = L.circleMarker([store.lat, store.lng], {
+        radius: 9,
+        className: `store-pin${kind}`,
+      }).bindPopup(popup);
+      // H-32: el pin es un trazo SVG; para el teclado se vuelve un botón con el nombre de la tienda.
+      // Enter o Espacio abren el globo y llevan el foco a su primer enlace; Escape lo cierra y
+      // devuelve el foco al pin. La lista de tiendas sigue siendo la alternativa completa.
+      marker.on('add', () => {
+        const pin = marker.getElement();
+        if (!pin) return;
+        pin.setAttribute('tabindex', '0');
+        pin.setAttribute('role', 'button');
+        pin.setAttribute('aria-label', store.name);
+        pin.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          marker.openPopup();
+          route.focus();
+        });
+      });
+      popup.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        marker.closePopup();
+        marker.getElement()?.focus();
+      });
+      marker.addTo(layer);
     }
     // Con el radio, el mapa encuadra el círculo (abajo); sin él, las tiendas.
     if (stores.length > 0 && !around) {

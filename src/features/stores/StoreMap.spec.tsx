@@ -56,6 +56,43 @@ describe('mapa de Leaflet', () => {
     expect(await screen.findByText('Estás en /tiendas/a1')).toBeInTheDocument();
   });
 
+  // H-32: los pines se alcanzan con Tab, dicen la tienda y abren su globo con Enter.
+  it('cada pin recibe foco con Tab y se nombra con su tienda', () => {
+    const { container } = renderMap();
+
+    const pins = container.querySelectorAll('path.store-pin');
+    expect([...pins].map((pin) => pin.getAttribute('tabindex'))).toEqual(['0', '0']);
+    expect([...pins].map((pin) => pin.getAttribute('aria-label'))).toEqual(['Ara', 'D1']);
+    expect(screen.getByRole('button', { name: 'Ara' })).toBeInTheDocument();
+  });
+
+  it('Enter sobre un pin abre su globo, con «Cómo llegar» y «Ver precios», y el foco entra en él', async () => {
+    renderMap();
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Ara' }), { key: 'Enter' });
+
+    const directions = await screen.findByRole('link', { name: 'Cómo llegar a Ara' });
+    expect(directions).toHaveAttribute(
+      'href',
+      expect.stringContaining('destination=4.5339%2C-75.6811'),
+    );
+    expect(directions).toHaveTextContent('Cómo llegar');
+    expect(screen.getByRole('button', { name: 'Ver precios' })).toBeInTheDocument();
+    expect(directions).toHaveFocus();
+  });
+
+  it('el globo de un pin ofrece «Cómo llegar» antes que «Ver precios»', async () => {
+    const { container } = renderMap();
+
+    fireEvent.click(container.querySelector('path.store-pin') as Element);
+
+    const directions = await screen.findByRole('link', { name: 'Cómo llegar a Ara' });
+    const prices = screen.getByRole('button', { name: 'Ver precios' });
+    expect(
+      directions.compareDocumentPosition(prices) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   // #12: al proponer una tienda, se toca el mapa para poner su ubicación.
   it('al tocar el mapa elige ese punto y lo marca', () => {
     const onPick = vi.fn();
