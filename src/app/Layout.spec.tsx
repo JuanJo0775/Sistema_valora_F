@@ -51,9 +51,10 @@ describe('encabezado', () => {
 
     expect(document.title).toBe('Canasta · Valora');
     expect(screen.getByRole('main')).toHaveFocus();
-    expect(screen.getByTestId('route-announcer')).toHaveAttribute('role', 'status');
+    expect(screen.getByTestId('route-announcer')).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByTestId('route-announcer')).not.toHaveAttribute('role');
     expect(
-      await screen.findByText('Canasta · Valora', { selector: '[role="status"]' }),
+      await screen.findByText('Canasta · Valora', { selector: '[aria-live="polite"]' }),
     ).toBeInTheDocument();
   });
 

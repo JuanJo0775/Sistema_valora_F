@@ -92,8 +92,10 @@ export function Layout() {
       <main className="page" id="contenido" tabIndex={-1} ref={mainRef}>
         <Outlet />
       </main>
-      {/* Al cambiar de pantalla se anuncia su título a los lectores de pantalla. */}
-      <p className="sr-only" role="status" data-testid="route-announcer">
+      {/* Al cambiar de pantalla se anuncia su título a los lectores de pantalla. Es una región viva sin
+          role="status": las pantallas ya usan ese rol para sus propios avisos y las pruebas buscan «el»
+          estado de la pantalla (un segundo role="status" las vuelve ambiguas). */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="route-announcer">
         {title}
       </p>
       <BasketToast />
