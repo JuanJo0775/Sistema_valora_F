@@ -2,6 +2,7 @@ import { type KeyboardEvent, type SyntheticEvent, useEffect, useId, useState } f
 import { useNavigate } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
+import { ProductThumb } from './ProductThumb';
 import { formatPresentation } from './presentation';
 import './catalog.css';
 
@@ -140,11 +141,14 @@ export function SearchSuggest({
                   openProduct(product);
                 }}
               >
-                <span className="suggest-name">{product.name}</span>
-                <span className="muted">
-                  {[product.brand, product.presentations.map(formatPresentation).join(', ')]
-                    .filter(Boolean)
-                    .join(' · ')}
+                <ProductThumb image={product.image} size="row" />
+                <span className="suggest-text">
+                  <span className="suggest-name">{product.name}</span>
+                  <span className="muted">
+                    {[product.brand, product.presentations.map(formatPresentation).join(', ')]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
                 </span>
               </li>
             ))}

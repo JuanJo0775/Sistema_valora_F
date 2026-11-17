@@ -743,6 +743,13 @@ export interface components {
             /** @example Lácteos y huevos */
             name: string;
         };
+        ProductImage: {
+            /** Format: uri */
+            url: string;
+            /** @enum {string} */
+            source: "open_food_facts" | "equipo";
+            attribution: string;
+        };
         Product: {
             /** Format: uuid */
             id: string;
@@ -751,13 +758,7 @@ export interface components {
             brand?: string;
             category: components["schemas"]["Category"];
             /** @description Opcional; enlace a la foto con su fuente y su atribución (ADR-020, #26). Sin image, el frontend muestra la ilustración genérica. */
-            image?: {
-                /** Format: uri */
-                url: string;
-                /** @enum {string} */
-                source: "open_food_facts" | "equipo";
-                attribution: string;
-            };
+            image?: components["schemas"]["ProductImage"];
             presentations: components["schemas"]["Presentation"][];
         };
         Establishment: {
@@ -1324,6 +1325,8 @@ export interface operations {
                             /** @description Opcional */
                             brand?: string;
                             category: components["schemas"]["Category"];
+                            /** @description Opcional, como en Product: la foto con su fuente y su atribución. Sin image, el frontend muestra la ilustración genérica. */
+                            image?: components["schemas"]["ProductImage"];
                             /** @description Tiendas del área con al menos un precio vigente del producto. */
                             storeCount: number;
                             /** @description El precio vigente más bajo por unidad del producto en el área. */
