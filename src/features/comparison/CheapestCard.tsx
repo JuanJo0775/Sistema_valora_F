@@ -28,7 +28,7 @@ export function CheapestCard({
         <strong>{formatCop(cheapest.priceCop)}</strong>
         <span className="muted">{`${sizeOf(cheapest.presentationId)} · ${formatUnitPrice(cheapest.unitPrice)}`}</span>
       </p>
-      <p className="cheapest-store">
+      <p className="cheapest-card-store">
         <strong>{establishment.name}</strong>
         {establishment.distanceM !== undefined && (
           <span className="muted">{formatDistance(establishment.distanceM)}</span>
