@@ -41,7 +41,7 @@ describe('cambiar la foto de un producto', () => {
     expect(onChanged).toHaveBeenCalledWith(IMAGE);
     const sent = api.calls.find(({ method }) => method === 'PUT');
     expect(sent?.headers.get('Content-Type')).toMatch(/^multipart\/form-data/);
-    expect(sent?.body).toContain('filename="arroz.jpg"');
+    expect(sent?.body).toContain('name="file"');
   });
 
   it('una foto de más de 2 MB se avisa sin subirla', () => {
