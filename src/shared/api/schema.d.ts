@@ -124,6 +124,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/featured-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Canasta básica de hoy en un municipio (RF-008, RF-009, B#120)
+         * @description Pública, sin cuenta. Los productos con más tiendas del municipio que tienen un precio vigente, cada uno con su precio más bajo por unidad y la tienda donde está. Lee price_current (ADR-004) con el mismo criterio que la comparación con onlyCurrent=true: solo precios vigentes (ni por confirmar, ni desactualizados, ni en revisión). El más bajo se elige con el valor exacto del precio por unidad y los desempates de la comparación (la fecha más reciente y luego los ids). Las promociones no entran (ADR-009) y no hay datos de quién reportó (EC-08). Orden declarado en criteria (EC-06): más tiendas con precio vigente primero; en empate, el menor precio por unidad que se muestra (entre productos de bases distintas, 100 g o unidad, es solo un desempate) y al final el id del producto. La ruta no cuelga de /products porque /products/{productId} tomaría «featured» como un id. Caché pública de 60 segundos (valor provisional, EC-04) y ETag: con If-None-Match igual al ETag responde 304.
+         */
+        get: operations["listFeaturedProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/establishments": {
         parameters: {
             query?: never;
@@ -1164,6 +1184,76 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listFeaturedProducts: {
+        parameters: {
+            query: {
+                municipality: components["schemas"]["Municipality"];
+                /** @description Los mismos valores del parámetro común Limit, con 5 por defecto. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los productos de la canasta, en el orden declarado */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Criterio declarado al usuario (EC-06). */
+                        criteria: {
+                            municipality: components["schemas"]["Municipality"];
+                            /**
+                             * @description Más tiendas con precio vigente primero.
+                             * @enum {string}
+                             */
+                            sort: "store_count";
+                        };
+                        /** @description Vacío si ninguna tienda del municipio tiene precios vigentes. */
+                        items: {
+                            /** Format: uuid */
+                            productId: string;
+                            name: string;
+                            /** @description Opcional */
+                            brand?: string;
+                            category: components["schemas"]["Category"];
+                            /** @description Tiendas del municipio con al menos un precio vigente del producto. */
+                            storeCount: number;
+                            /** @description El precio vigente más bajo por unidad del producto en el municipio. */
+                            cheapest: {
+                                /** Format: uuid */
+                                presentationId: string;
+                                /**
+                                 * @description Producto y presentación, como label del historial.
+                                 * @example Arroz Diana · 500 g
+                                 */
+                                label: string;
+                                priceCop: number;
+                                /** @description Redondeado al peso entero con la mitad hacia arriba (RF-004). */
+                                unitPrice: {
+                                    valueCop: number;
+                                    /** @enum {string} */
+                                    per: "100g" | "100ml" | "und";
+                                };
+                                establishment: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                            };
+                        }[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
         };
     };
     searchEstablishments: {
