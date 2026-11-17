@@ -9,6 +9,7 @@ import { PendingBanner } from '../pwa/PendingBanner';
 import { UpdateBanner } from '../pwa/UpdateBanner';
 import { OfflineBanner } from '../shared/ui/OfflineBanner';
 import { CookieNotice } from '../features/legal/CookieNotice';
+import { useRouteTitle } from './routeTitle';
 import { HeaderSearch } from './HeaderSearch';
 import { Icon, type IconName } from './Icon';
 import './layout.css';
@@ -26,6 +27,7 @@ const SECTIONS: { to: string; label: string; icon: IconName; primary?: boolean }
 export function Layout() {
   const { items } = useBasket();
   const mainRef = useRef<HTMLElement>(null);
+  const title = useRouteTitle(mainRef);
   const toBuy = items.filter(({ bought }) => !bought).length;
   return (
     <div className="shell">
@@ -44,17 +46,25 @@ export function Layout() {
       {/* Celular: el logo arriba y la navegación fija abajo. Escritorio (#48): una sola barra arriba
           con logo, buscador, secciones y «Registrar precio». */}
       <header className="top">
-        <NavLink to="/" className="logo-link">
+        <NavLink to="/" className="logo-link" aria-label="Valora, inicio">
           {/* Dos imágenes y CSS según el tema real (layout.css): <picture> con prefers-color-scheme
-              ignoraría la elección manual. La oculta lleva alt vacío para que se lea una sola vez. */}
+              ignoraría la elección manual. El nombre va en el enlace (aria-label): con el tema oscuro la imagen clara se oculta. */}
           <img
             className="logo-img logo-light"
             src={logoLight}
-            alt="Valora, inicio"
+            alt=""
+            aria-hidden="true"
             width="144"
             height="48"
           />
-          <img className="logo-img logo-dark" src={logoDark} alt="" width="154" height="48" />
+          <img
+            className="logo-img logo-dark"
+            src={logoDark}
+            alt=""
+            aria-hidden="true"
+            width="154"
+            height="48"
+          />
         </NavLink>
         <HeaderSearch />
         <nav className="tabbar" aria-label="Principal">
@@ -82,6 +92,10 @@ export function Layout() {
       <main className="page" id="contenido" tabIndex={-1} ref={mainRef}>
         <Outlet />
       </main>
+      {/* Al cambiar de pantalla se anuncia su título a los lectores de pantalla. */}
+      <p className="sr-only" role="status" data-testid="route-announcer">
+        {title}
+      </p>
       <BasketToast />
       <CookieNotice />
     </div>

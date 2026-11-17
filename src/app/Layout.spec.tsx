@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, stubApi } from '../test/fakeApi';
 import { App } from './App';
@@ -12,16 +12,20 @@ describe('encabezado', () => {
     window.history.pushState({}, '', '/');
   });
 
-  it('el logo lleva a inicio y solo una de sus dos imágenes es accesible', () => {
+  it('el logo lleva a inicio y el enlace (no las imágenes) trae el nombre accesible', () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     render(<App />);
 
     const link = screen.getByRole('link', { name: 'Valora, inicio' });
     expect(link).toHaveAttribute('href', '/');
-    // La variante del otro tema lleva alt vacío: el lector de pantalla lee «Valora, inicio» una vez.
-    expect(within(link).getAllByRole('img')).toHaveLength(1);
-    expect(link.querySelectorAll('img')).toHaveLength(2);
-    expect(link.querySelectorAll('img[alt=""]')).toHaveLength(1);
+    expect(link).toHaveAttribute('aria-label', 'Valora, inicio');
+    // Con el tema oscuro la imagen clara se oculta: el nombre no puede depender de ella.
+    const images = link.querySelectorAll('img');
+    expect(images).toHaveLength(2);
+    for (const image of images) {
+      expect(image).toHaveAttribute('alt', '');
+      expect(image).toHaveAttribute('aria-hidden', 'true');
+    }
   });
 
   it('�Saltar al contenido� es el primer enlace y enfoca el contenido sin cambiar la direcci�n', () => {
@@ -34,5 +38,32 @@ describe('encabezado', () => {
 
     expect(screen.getByRole('main')).toHaveFocus();
     expect(window.location.hash).toBe('');
+  });
+
+  it('cada pantalla pone su título y, al navegar, el foco va al contenido y se anuncia', async () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    render(<App />);
+    expect(document.title).toBe('Inicio · Valora');
+    // La carga inicial no roba el foco.
+    expect(screen.getByRole('main')).not.toHaveFocus();
+
+    fireEvent.click(screen.getByRole('link', { name: /^Canasta/ }));
+
+    expect(document.title).toBe('Canasta · Valora');
+    expect(screen.getByRole('main')).toHaveFocus();
+    expect(screen.getByTestId('route-announcer')).toHaveAttribute('role', 'status');
+    expect(
+      await screen.findByText('Canasta · Valora', { selector: '[role="status"]' }),
+    ).toBeInTheDocument();
+  });
+
+  it('el foco pasa sin saltar el scroll', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    render(<App />);
+    const focus = vi.spyOn(screen.getByRole('main'), 'focus');
+
+    fireEvent.click(screen.getByRole('link', { name: /^Mapa/ }));
+
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
   });
 });
