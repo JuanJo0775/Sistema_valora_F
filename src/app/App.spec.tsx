@@ -72,6 +72,18 @@ describe('inicio', () => {
     expect(window.location.pathname).toBe(`/productos/${rice.id}`);
   });
 
+  it('el inicio invita a registrar un precio visto en la tienda', async () => {
+    stubApi({});
+
+    render(<App />);
+
+    const invite = await screen.findByRole('region', { name: '¿Viste un precio en la tienda?' });
+    expect(within(invite).getByRole('link', { name: 'Registrar precio' })).toHaveAttribute(
+      'href',
+      '/registrar',
+    );
+  });
+
   it('la navegación principal lleva a cada sección y marca en la que está', () => {
     vi.stubGlobal(
       'fetch',
