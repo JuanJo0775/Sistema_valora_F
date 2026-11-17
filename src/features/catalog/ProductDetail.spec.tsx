@@ -184,46 +184,6 @@ describe('detalle del producto', () => {
     expect(await screen.findByRole('img', { name: 'Arroz blanco (sin foto)' })).toBeInTheDocument();
   });
 
-  it('muestra los 3 precios más baratos y lleva a ver todas las tiendas', async () => {
-    const api = stubApi({
-      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
-      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([
-        offer('Ara', 2000, true),
-        offer('D1', 2100),
-        offer('Tienda Don Pepe', 2300),
-        offer('Éxito', 2600),
-      ]),
-    });
-
-    renderDetail(rice.id);
-
-    const cheapest = await screen.findByRole('list', { name: 'Más baratos en Armenia' });
-    const names = within(cheapest)
-      .getAllByRole('heading')
-      .map(({ textContent }) => textContent);
-    expect(names).toEqual(['Ara', 'D1', 'Tienda Don Pepe']);
-    expect(cheapest).toHaveTextContent('Más barato');
-    expect(screen.getByRole('link', { name: 'Ver todas las tiendas' })).toHaveAttribute(
-      'href',
-      `/productos/${rice.id}/comparar`,
-    );
-    const asked = api.requested.find(({ pathname }) => pathname.endsWith('/comparison'));
-    expect(asked?.searchParams.get('onlyCurrent')).toBe('true');
-  });
-
-  it('sin precios vigentes en Armenia lo dice', async () => {
-    stubApi({
-      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
-      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([]),
-    });
-
-    renderDetail(rice.id);
-
-    expect(
-      await screen.findByText('Todavía no hay precios vigentes de este producto en Armenia.'),
-    ).toBeInTheDocument();
-  });
-
   it('si los precios no cargan lo dice y el producto se sigue viendo', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
@@ -235,25 +195,10 @@ describe('detalle del producto', () => {
 
     renderDetail(rice.id);
 
-    expect(await screen.findByText('No pudimos cargar los precios.')).toBeInTheDocument();
+    expect(await screen.findByText('Ocurrió un error inesperado.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
   });
 
-  it('los más baratos son del municipio que se eligió al comparar', async () => {
-    localStorage.setItem('valora:municipio', 'calarca');
-    const api = stubApi({
-      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
-      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([offer('Ara', 2000, true)]),
-    });
-
-    renderDetail(rice.id);
-
-    expect(await screen.findByRole('list', { name: 'Más baratos en Calarcá' })).toBeInTheDocument();
-    const asked = api.requested.find(({ pathname }) => pathname.endsWith('/comparison'));
-    expect(asked?.searchParams.get('municipality')).toBe('calarca');
-  });
-
-  // #48: en escritorio el panel derecho lleva los más baratos y las acciones.
   it('los precios y las acciones van en un panel aparte del producto', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
@@ -263,9 +208,6 @@ describe('detalle del producto', () => {
     renderDetail(rice.id);
 
     const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
-    expect(
-      await within(side).findByRole('list', { name: 'Más baratos en Armenia' }),
-    ).toBeInTheDocument();
     expect(within(side).getByRole('link', { name: 'Comparar precios' })).toBeInTheDocument();
     expect(within(side).getByRole('link', { name: 'Registrar un precio' })).toBeInTheDocument();
     expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();

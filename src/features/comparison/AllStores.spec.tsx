@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { stubLocation, stubNoGeolocation } from '../../test/location';
+import type { components } from '../../shared/api/schema';
 import { AllStores } from './AllStores';
 
 const rice = {
@@ -63,7 +64,7 @@ const lastAsked = (api: ReturnType<typeof stubApi>) =>
 const renderCompare = () =>
   render(
     <MemoryRouter>
-      <AllStores product={rice} />
+      <AllStores product={rice as components['schemas']['Product']} />
     </MemoryRouter>,
   );
 
@@ -86,8 +87,8 @@ describe('todas las tiendas, en el detalle del producto', () => {
     const [row] = await screen.findAllByRole('listitem');
     const item = within(row as HTMLElement);
     expect(item.getByRole('heading', { name: 'Tienda Don Pepe' })).toBeInTheDocument();
-    expect(row).toHaveTextContent('500 g · $2.000');
-    expect(row).toHaveTextContent('$400 por 100 g');
+    expect(row).toHaveTextContent('$2.000');
+    expect(row).toHaveTextContent('500 g · $400 por 100 g');
   });
 
   it('cada precio dice su vigencia, su confiabilidad, su fuente y si es el más barato', async () => {

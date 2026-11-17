@@ -8,7 +8,7 @@ import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
 import { useSession } from '../auth/session';
 import { AddToBasket } from '../basket/AddToBasket';
-import { CheapestOffers } from '../comparison/CheapestOffers';
+import { AllStores } from '../comparison/AllStores';
 import { HistorySummary } from '../history/HistorySummary';
 import { ChangeProductPhoto } from '../moderation/ChangeProductPhoto';
 import { ProductImage } from './ProductImage';
@@ -99,10 +99,10 @@ export function ProductDetail() {
             </li>
           ))}
         </ul>
+        <AllStores product={product} />
       </article>
       {/* #48: en escritorio, el panel fijo de la derecha; en el celular, debajo del producto. */}
       <aside className="side" aria-label="Precios y acciones">
-        <CheapestOffers product={product} />
         <AddToBasket product={product} />
         <HistorySummary productId={product.id} />
         {/* Prototipo: la acción principal (naranja) es comparar; las demás, secundarias. */}

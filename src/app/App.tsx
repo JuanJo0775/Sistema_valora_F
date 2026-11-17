@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes, useSearchParams } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes, useParams, useSearchParams } from 'react-router';
 import { Profile } from '../features/auth/Profile';
 import { RequireRole } from '../features/auth/RequireRole';
 import { SessionProvider } from '../features/auth/SessionProvider';
@@ -9,7 +9,6 @@ import { ReportQueueProvider } from '../pwa/ReportQueueProvider';
 import { BasketPage } from '../features/basket/BasketPage';
 import { BasketProvider } from '../features/basket/BasketProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
-import { ComparePrices } from '../features/comparison/ComparePrices';
 import { TodayBasket } from '../features/comparison/TodayBasket';
 import { MyReports } from '../features/contributions/MyReports';
 import { ModerationPanel } from '../features/moderation/ModerationPanel';
@@ -38,6 +37,11 @@ function Home() {
   );
 }
 
+function ToDetail() {
+  const { productId = '' } = useParams();
+  return <Navigate to={`/productos/${productId}`} replace />;
+}
+
 export function App() {
   return (
     <SessionProvider>
@@ -48,7 +52,8 @@ export function App() {
               <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/productos/:productId" element={<ProductDetail />} />
-                <Route path="/productos/:productId/comparar" element={<ComparePrices />} />
+                {/* #65: la comparación vive en el detalle; la dirección vieja sigue sirviendo. */}
+                <Route path="/productos/:productId/comparar" element={<ToDetail />} />
                 <Route path="/productos/:productId/historial" element={<PriceHistory />} />
                 <Route path="/mapa" element={<MapPage />} />
                 <Route
