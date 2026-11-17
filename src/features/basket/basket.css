@@ -183,3 +183,32 @@
   font-size: 1.4rem;
   cursor: pointer;
 }
+
+/* #76: «Dónde te sale más barata» como la tarjeta naranja del prototipo. */
+.cheapest-store {
+  padding: 18px 20px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-l);
+  background: var(--accent-soft);
+}
+
+.cheapest-store h2 {
+  margin: 0;
+  color: var(--accent-ink);
+  font-family: var(--f-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cheapest-store p {
+  margin: 0;
+}
+
+.cheapest-store .unit {
+  font-family: var(--f-display);
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
