@@ -212,6 +212,63 @@ describe('detalle del producto', () => {
     expect(await screen.findByText('Hasta 15 % menos que la tienda más cara.')).toBeInTheDocument();
   });
 
+  it('el panel va en orden: más barato, presentación, agregar (primario) y registrar (secundario)', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([offer('Ara', 2000, true)]),
+    });
+
+    renderDetail(rice.id);
+
+    const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
+    await within(side).findByRole('region', { name: 'Más barato en Armenia' });
+    const add = within(side).getByRole('button', { name: 'Agregar a la canasta' });
+    const register = within(side).getByRole('link', {
+      name: 'Registrar un precio de Arroz blanco',
+    });
+    expect(add).not.toHaveClass('ghost');
+    expect(register).toHaveClass('btn', 'ghost');
+    const group = within(side).getByRole('radiogroup', { name: 'Presentación' });
+    const region = within(side).getByRole('region', { name: 'Más barato en Armenia' });
+    const before = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(region, group)).toBe(true);
+    expect(before(group, add)).toBe(true);
+    expect(before(add, register)).toBe(true);
+  });
+
+  it('la presentación del más barato llega marcada y el precio dice a cuál corresponde', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([offer('Ara', 2000, true)]),
+    });
+
+    renderDetail(rice.id);
+
+    const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
+    const cheapest = await within(side).findByRole('region', { name: 'Más barato en Armenia' });
+    expect(cheapest).toHaveTextContent('Presentación de 500 g');
+    expect(within(side).getByRole('radio', { name: '500 g' })).toBeChecked();
+  });
+
+  it('con un ahorro de 0 % no dice «Hasta 0 % menos»', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: {
+        status: 200,
+        body: {
+          ...comparisonOf([offer('Ara', 2000, true), offer('D1', 2000)]).body,
+          savingsPercent: 0,
+        },
+      },
+    });
+
+    renderDetail(rice.id);
+
+    await screen.findByRole('region', { name: 'Más barato en Armenia' });
+    expect(screen.queryByText(/menos que la tienda más cara/)).not.toBeInTheDocument();
+  });
+
   it('sin precios el panel no muestra el más barato', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },

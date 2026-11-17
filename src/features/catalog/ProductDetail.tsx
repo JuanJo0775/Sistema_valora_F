@@ -81,9 +81,13 @@ export function ProductDetail() {
     uploaded?.productId === productId
       ? { ...result.product, image: uploaded.image }
       : result.product;
+  // La presentación del precio que el backend marcó como el más barato (EC-06: la pantalla no elige).
+  const cheapestPresentationId = comparison?.results.find(
+    ({ isCheapest }) => isCheapest,
+  )?.presentationId;
   const moderator = session.status === 'active' && session.role === 'moderador';
   return (
-    <div className="with-side">
+    <div className="with-side product">
       <article className="detail">
         <BackLink fallback="/" />
         <header className="detail-head">
@@ -106,23 +110,24 @@ export function ProductDetail() {
             <p className="muted">{summary(product, comparison)}</p>
           </div>
         </header>
-        <AllStores
-          product={product}
-          onComparison={(latest) => {
-            setCompared({ productId: product.id, comparison: latest });
-          }}
-        />
       </article>
-      {/* #48: en escritorio, el panel fijo de la derecha; en el celular, debajo del producto. */}
+      {/* #48: en escritorio, el panel fijo de la derecha; en el celular, entre el producto y la
+          lista de tiendas, para que lo que decide la compra quede primero. Orden del panel: el más
+          barato, la presentación, agregar a la canasta (primaria) y registrar un precio. */}
       <aside className="side" aria-label="Precios y acciones">
         {comparison && <CheapestCard comparison={comparison} sizeOf={sizeOf(product)} />}
-        <HistorySummary productId={product.id} />
-        {/* Prototipo: la acción principal (naranja) es registrar un precio de este producto. */}
-        <Link to={`/registrar?producto=${product.id}`} className="btn">
+        <AddToBasket product={product} suggestedPresentationId={cheapestPresentationId} />
+        <Link to={`/registrar?producto=${product.id}`} className="btn ghost">
           {`Registrar un precio de ${product.name}`}
         </Link>
-        <AddToBasket product={product} />
+        <HistorySummary productId={product.id} />
       </aside>
+      <AllStores
+        product={product}
+        onComparison={(latest) => {
+          setCompared({ productId: product.id, comparison: latest });
+        }}
+      />
     </div>
   );
 }
