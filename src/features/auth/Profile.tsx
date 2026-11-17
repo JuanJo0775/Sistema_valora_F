@@ -4,7 +4,9 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { type Role, useSession } from './session';
+import { isUsabilityMode, setUsabilityMode } from '../../shared/usabilityMode';
 import { RecentReports } from '../contributions/RecentReports';
+import { SettingSwitch } from './SettingSwitch';
 import { SuspendedNotice } from './SuspendedNotice';
 import './auth.css';
 
@@ -23,6 +25,7 @@ const ROLE_LABEL: Record<Role, string> = {
 export function Profile() {
   const { session, signOut, reload } = useSession();
   const [error, setError] = useState<unknown>(null);
+  const [testing, setTesting] = useState(isUsabilityMode);
   if (session.status === 'loading') return <Loading />;
   if (session.status === 'unknown') return <ErrorState error={session.error} onRetry={reload} />;
   if (session.status === 'active') {
@@ -46,6 +49,16 @@ export function Profile() {
             Ajustes
           </h2>
           <ul className="settings-list">
+            {/* #28: solo para la prueba de usabilidad; se quita al cerrar la #28. */}
+            <SettingSwitch
+              title="Modo prueba de usabilidad"
+              description="Muestra el cronómetro al registrar (EC-01)"
+              on={testing}
+              onChange={(on) => {
+                setUsabilityMode(on);
+                setTesting(on);
+              }}
+            />
             <li>
               <span className="settings-text">
                 <strong>Privacidad</strong>
