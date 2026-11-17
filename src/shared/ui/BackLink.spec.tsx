@@ -3,12 +3,12 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { BackLink } from './BackLink';
 
-function renderAt(entries: string[], index: number, label?: string) {
+function renderAt(entries: string[], index: number) {
   const router = createMemoryRouter(
     [
       { path: '/mapa', element: <p>pantalla mapa</p> },
       { path: '/otra', element: <p>pantalla otra</p> },
-      { path: '/tiendas/1', element: <BackLink fallback="/mapa" label={label} /> },
+      { path: '/tiendas/1', element: <BackLink fallback="/mapa" /> },
     ],
     { initialEntries: entries, initialIndex: index },
   );
@@ -50,12 +50,12 @@ describe('BackLink', () => {
     expect(router.state.location.pathname).toBe('/mapa');
   });
 
-  it('tiene nombre accesible y apunta al respaldo', () => {
+  it('dice solo «Volver», sin nombrar el destino, y apunta al respaldo', () => {
     setHistoryIdx(0);
-    renderAt(['/tiendas/1'], 0, 'Mapa');
+    renderAt(['/tiendas/1'], 0);
 
-    const link = screen.getByRole('link', { name: 'Volver a Mapa' });
+    const link = screen.getByRole('link', { name: 'Volver' });
     expect(link).toHaveAttribute('href', '/mapa');
-    expect(link).toHaveTextContent('Mapa');
+    expect(link).toHaveTextContent(/^Volver$/);
   });
 });

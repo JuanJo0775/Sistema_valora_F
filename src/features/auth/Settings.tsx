@@ -18,7 +18,7 @@ export function Settings() {
   return (
     <section className="profile">
       <div className="profile-top">
-        <BackLink fallback="/yo" label="Yo" />
+        <BackLink fallback="/yo" />
         <h1>Ajustes</h1>
       </div>
       <section className="profile-block" aria-labelledby="apariencia">

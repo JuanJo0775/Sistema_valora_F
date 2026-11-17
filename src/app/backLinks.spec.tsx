@@ -72,7 +72,7 @@ describe('botón de volver', () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     open('/yo/ajustes');
 
-    expect(screen.getByRole('link', { name: 'Volver a Yo' })).toHaveAttribute('href', '/yo');
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
   });
 
   it.each(['/', '/mapa', '/canasta', '/yo', '/registrar'])(

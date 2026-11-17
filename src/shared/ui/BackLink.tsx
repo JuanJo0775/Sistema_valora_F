@@ -14,11 +14,11 @@ function hasAppHistory(): boolean {
 type Props = {
   /** Ruta a la que se va cuando no hay historial de la app. */
   fallback: string;
-  /** Nombre del destino («Yo»); sin él, el texto es «Volver». */
-  label?: string;
 };
 
-export function BackLink({ fallback, label }: Props) {
+// El texto es siempre «Volver», sin nombrar el destino: con historial el destino real puede no ser el
+// del respaldo.
+export function BackLink({ fallback }: Props) {
   const navigate = useNavigate();
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -29,14 +29,9 @@ export function BackLink({ fallback, label }: Props) {
     void navigate(-1);
   };
   return (
-    <Link
-      to={fallback}
-      className="back-link"
-      aria-label={label ? `Volver a ${label}` : 'Volver'}
-      onClick={onClick}
-    >
+    <Link to={fallback} className="back-link" onClick={onClick}>
       <Icon name="back" />
-      <span>{label ?? 'Volver'}</span>
+      <span>Volver</span>
     </Link>
   );
 }

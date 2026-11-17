@@ -125,6 +125,22 @@ describe('mi canasta', () => {
     expect(screen.getByText('Leche entera')).toBeInTheDocument();
   });
 
+  it('el nombre del producto guardado lleva a su página, con una sola entrada para teclado y lectores', () => {
+    stubApi({});
+    renderBasket(rice, milk);
+
+    expect(screen.getByRole('link', { name: /Arroz blanco/ })).toHaveAttribute(
+      'href',
+      `/productos/${RICE}`,
+    );
+    expect(screen.getByRole('link', { name: /Leche entera/ })).toHaveAttribute(
+      'href',
+      `/productos/${MILK}`,
+    );
+    // La foto también enlaza, pero es decorativa: no repite el enlace para lectores ni para el teclado.
+    expect(screen.getAllByRole('link')).toHaveLength(2);
+  });
+
   it('lo comprado se tacha, va al final y se puede quitar', () => {
     stubApi({});
     renderBasket(rice, milk);
