@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -34,15 +34,70 @@ describe('pestaña Yo', () => {
     );
   });
 
-  it('con sesión dice con qué rol entraste', async () => {
+  it('con sesión saluda y dice con qué rol entraste', async () => {
     stubApi({
       'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
     });
 
     renderProfile();
 
-    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hola' })).toBeInTheDocument();
+    expect(screen.getByText('Reportante')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
+  });
+
+  it('un reportante ve sus últimos 3 aportes con su estado y puede ver todos', async () => {
+    const mine = (productName: string, status: string, priceCop: number) => ({
+      reportId: crypto.randomUUID(),
+      productName,
+      establishmentName: 'Tienda Doña Rosa',
+      priceCop,
+      priceType: 'normal',
+      observedAt: new Date().toISOString(),
+      status,
+    });
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': {
+        status: 200,
+        body: {
+          items: [
+            mine('Leche entera', 'normal', 4200),
+            mine('Panela', 'en_revision', 2500),
+            mine('Huevos AA', 'normal', 16200),
+            mine('Arroz', 'normal', 3900),
+          ],
+        },
+      },
+    });
+
+    renderProfile();
+
+    const list = await screen.findByRole('list', { name: 'Mis aportes' });
+    const rows = within(list).getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent('Leche entera · $4.200');
+    expect(rows[0]).toHaveTextContent('Tienda Doña Rosa · Hoy');
+    expect(rows[0]).toHaveTextContent('Vigente');
+    expect(rows[1]).toHaveTextContent('En revisión');
+    expect(screen.getByRole('link', { name: 'Ver todos mis aportes' })).toHaveAttribute(
+      'href',
+      '/mis-aportes',
+    );
+  });
+
+  it('dice que el nombre y la ubicación nunca se publican', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
+    });
+
+    renderProfile();
+
+    expect(
+      await screen.findByText('Tu nombre y tu ubicación nunca se publican'),
+    ).toBeInTheDocument();
   });
 
   it('con la cuenta suspendida dice hasta cuándo y qué puede hacer', async () => {
