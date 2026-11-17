@@ -91,6 +91,19 @@ function BasketRow({
           +
         </button>
       </span>
+      {/* Prototipo: la papelera quita el producto de una vez. */}
+      <button
+        type="button"
+        className="trash"
+        aria-label={`Quitar ${item.productName} de la canasta`}
+        onClick={() => {
+          onQuantity(0);
+        }}
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" />
+        </svg>
+      </button>
     </li>
   );
 }

@@ -38,17 +38,13 @@ describe('agregar a la canasta', () => {
     localStorage.clear();
   });
 
-  it('se elige la presentación y queda en la canasta, con un aviso para verla', () => {
+  it('se elige la presentación y queda en la canasta (el aviso lo da BasketToast)', () => {
     renderAdd();
 
     fireEvent.click(screen.getByRole('radio', { name: '1 kg' }));
     fireEvent.click(screen.getByRole('button', { name: 'Agregar a la canasta' }));
 
     expect(screen.getByText('1 kg × 1')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Arroz blanco · 1 kg agregado a tu canasta',
-    );
-    expect(screen.getByRole('link', { name: 'Ver canasta' })).toHaveAttribute('href', '/canasta');
   });
 
   it('sin elegir la presentación pide elegirla', () => {

@@ -1,6 +1,11 @@
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { readStored, writeStored } from '../../shared/storage';
-import { type BasketItem, BasketContext, type NewBasketItem } from './basketContext';
+import {
+  type BasketItem,
+  BasketContext,
+  type BasketNotice,
+  type NewBasketItem,
+} from './basketContext';
 
 // #31: la canasta vive en este navegador. No necesita cuenta ni conexión y no sale del teléfono.
 const KEY = 'valora:canasta';
@@ -16,6 +21,7 @@ function readBasket(): BasketItem[] {
 
 export function BasketProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<BasketItem[]>(readBasket);
+  const [notice, setNotice] = useState<BasketNotice | null>(null);
 
   const save = useCallback((change: (current: BasketItem[]) => BasketItem[]) => {
     setItems((current) => {
@@ -26,7 +32,12 @@ export function BasketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const add = useCallback(
-    (item: NewBasketItem) => {
+    (item: NewBasketItem, detail?: string) => {
+      setNotice((current) => ({
+        id: (current?.id ?? 0) + 1,
+        productName: item.productName,
+        detail,
+      }));
       save((current) =>
         current.some(({ presentationId }) => presentationId === item.presentationId)
           ? current.map((saved) =>
@@ -69,9 +80,13 @@ export function BasketProvider({ children }: { children: ReactNode }) {
     save((current) => current.filter(({ bought }) => !bought));
   }, [save]);
 
+  const dismiss = useCallback(() => {
+    setNotice(null);
+  }, []);
+
   const value = useMemo(
-    () => ({ items, add, setQuantity, toggleBought, removeBought }),
-    [items, add, setQuantity, toggleBought, removeBought],
+    () => ({ items, add, notice, dismiss, setQuantity, toggleBought, removeBought }),
+    [items, add, notice, dismiss, setQuantity, toggleBought, removeBought],
   );
   return <BasketContext value={value}>{children}</BasketContext>;
 }

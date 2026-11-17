@@ -13,7 +13,7 @@
 
 .basket-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
@@ -83,4 +83,132 @@
 .basket-summary .btn {
   width: 100%;
   margin-top: 4px;
+}
+
+/* #76: la papelera de cada producto, táctil de 44 px y discreta hasta que se usa. */
+.trash {
+  display: grid;
+  place-items: center;
+  width: var(--touch);
+  height: var(--touch);
+  border: 0;
+  border-radius: var(--r-s);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.trash:hover {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.trash:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.trash svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* #76: el aviso oscuro de abajo al agregar a la canasta (prototipo). Encima de la barra del
+   celular; en escritorio, abajo a la derecha. */
+.basket-toast {
+  position: fixed;
+  right: 16px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  left: 16px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--r-l);
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+@media (width >= 960px) {
+  .basket-toast {
+    bottom: 24px;
+    left: auto;
+    width: min(440px, calc(100vw - 32px));
+  }
+}
+
+.basket-toast-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.basket-toast-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.basket-toast-text span {
+  opacity: 0.75;
+  font-size: 0.85rem;
+}
+
+.basket-toast-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.basket-toast-close {
+  width: var(--touch);
+  height: var(--touch);
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+/* #76: «Dónde te sale más barata» como la tarjeta naranja del prototipo. */
+.cheapest-store {
+  padding: 18px 20px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-l);
+  background: var(--accent-soft);
+}
+
+.cheapest-store h2 {
+  margin: 0;
+  color: var(--accent-ink);
+  font-family: var(--f-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cheapest-store p {
+  margin: 0;
+}
+
+.cheapest-store .unit {
+  font-family: var(--f-display);
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
 }
