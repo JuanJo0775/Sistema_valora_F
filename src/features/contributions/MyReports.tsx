@@ -12,11 +12,11 @@ import { SuspendedNotice } from '../auth/SuspendedNotice';
 import { AppealForm } from './AppealForm';
 import './contributions.css';
 
-type MyReport =
+export type MyReport =
   paths['/me/reports']['get']['responses'][200]['content']['application/json']['items'][number];
 
 // RF-013: el estado en palabras de quien reporta, sin decir quién decidió ni quién marcó (EC-08).
-const STATUS: Record<MyReport['status'], { text: string; tone: string }> = {
+export const STATUS: Record<MyReport['status'], { text: string; tone: string }> = {
   normal: { text: 'Vigente', tone: 'ok' },
   en_revision: { text: 'En revisión', tone: 'warn' },
   descartado: { text: 'Descartado', tone: 'bad' },

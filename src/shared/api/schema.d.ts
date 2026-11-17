@@ -132,8 +132,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Canasta básica de hoy en un municipio (RF-008, RF-009, B#120)
-         * @description Pública, sin cuenta. Los productos con más tiendas del municipio que tienen un precio vigente, cada uno con su precio más bajo por unidad y la tienda donde está. Lee price_current (ADR-004) con el mismo criterio que la comparación con onlyCurrent=true: solo precios vigentes (ni por confirmar, ni desactualizados, ni en revisión). El más bajo se elige con el valor exacto del precio por unidad y los desempates de la comparación (la fecha más reciente y luego los ids). Las promociones no entran (ADR-009) y no hay datos de quién reportó (EC-08). Orden declarado en criteria (EC-06): más tiendas con precio vigente primero; en empate, el menor precio por unidad que se muestra (entre productos de bases distintas, 100 g o unidad, es solo un desempate) y al final el id del producto. La ruta no cuelga de /products porque /products/{productId} tomaría «featured» como un id. Caché pública de 60 segundos (valor provisional, EC-04) y ETag: con If-None-Match igual al ETag responde 304.
+         * Canasta básica de hoy cerca de ti o en un municipio (RF-008, RF-009, B#120, B#128)
+         * @description Pública, sin cuenta. Los productos con más tiendas del área que tienen un precio vigente, cada uno con su precio más bajo por unidad y la tienda donde está. El área es un municipio, la ubicación del usuario con un radio, o las dos cosas, como en la comparación (#106, B#128). Lee price_current (ADR-004) con el mismo criterio que la comparación con onlyCurrent=true: solo precios vigentes (ni por confirmar, ni desactualizados, ni en revisión). El más bajo y el más caro se eligen con el valor exacto del precio por unidad y los desempates de la comparación. Las promociones no entran (ADR-009) y no hay datos de quién reportó (EC-08). Orden declarado en criteria (EC-06): más tiendas con precio vigente primero; en empate, el menor precio por unidad que se muestra (entre productos de bases distintas, 100 g o unidad, es solo un desempate) y al final el id del producto. Con la ubicación, la respuesta lleva Cache-Control no-store: la ubicación se usa solo para elegir las tiendas del radio, no se guarda, no se registra en los logs ni aparece en la respuesta (RF-005 RN5, EC-08). Sin ubicación, caché pública de 60 segundos (valor provisional, EC-04) y ETag: con If-None-Match igual al ETag responde 304. La ruta no cuelga de /products porque /products/{productId} tomaría «featured» como un id.
          */
         get: operations["listFeaturedProducts"];
         put?: never;
@@ -153,7 +153,7 @@ export interface paths {
         };
         /**
          * Buscar tiendas por nombre o municipio, sin ubicación (RF-005,
-         * @description Para elegir la tienda sin compartir la ubicación (EC-08), por ejemplo al registrar un precio (RF-006). Se envía al menos uno de q o municipality; sin ninguno responde 400 VALIDATION_ERROR («Envía q o municipality»), para no devolver todo el directorio. Con q, cada palabra debe aparecer en el nombre de la tienda, en cualquier orden y también como pedazo, sin distinguir tildes ni mayúsculas (como la búsqueda de productos). Ordenadas por nombre. Sin ubicación no hay distancia: los items no traen distanceM. Caché pública de 5 minutos (valor inicial calibrable, EC-04).
+         * @description Para elegir la tienda sin compartir la ubicación (EC-08), por ejemplo al registrar un precio (RF-006). Se envía al menos uno de q o municipality; sin ninguno responde 400 VALIDATION_ERROR («Envía q o municipality»), para no devolver todo el directorio. Con q, cada palabra debe aparecer en el nombre de la tienda, en cualquier orden y también como pedazo, sin distinguir tildes ni mayúsculas (como la búsqueda de productos). Ordenadas por nombre. Sin ubicación no hay distancia: los items no traen distanceM. Cada tienda dice cuántos precios vigentes tiene (priceCount, B#131). Caché pública de 5 minutos (valor inicial calibrable, EC-04).
          */
         get: operations["searchEstablishments"];
         put?: never;
@@ -173,7 +173,7 @@ export interface paths {
         };
         /**
          * Establecimientos cercanos (RF-005)
-         * @description La ubicación aproximada del usuario (lat, lng) se usa solo para calcular la cercanía: no se guarda, no se registra en los logs ni aparece en la respuesta (RF-005 RN5, EC-08). Por eso la respuesta lleva Cache-Control no-store, aunque es una lectura pública. Devuelve las tiendas registradas dentro del radio, de la más cercana a la más lejana.
+         * @description La ubicación aproximada del usuario (lat, lng) se usa solo para calcular la cercanía: no se guarda, no se registra en los logs ni aparece en la respuesta (RF-005 RN5, EC-08). Por eso la respuesta lleva Cache-Control no-store, aunque es una lectura pública. Devuelve las tiendas registradas dentro del radio, de la más cercana a la más lejana, cada una con cuántos precios vigentes tiene (priceCount, B#131).
          */
         get: operations["listNearbyEstablishments"];
         put?: never;
@@ -366,7 +366,7 @@ export interface paths {
         put?: never;
         /**
          * Crear cuenta de reportante con consentimiento de datos (RF-001, Ley 1581)
-         * @description La cuenta nueva siempre es reportante y no inicia sesión. Si el correo ya tiene cuenta, responde 201 igual y no cambia nada, para no revelar qué correos están registrados (EC-08). El correo se guarda sin espacios y en minúsculas.
+         * @description La cuenta nueva siempre es reportante y no inicia sesión. Si el correo ya tiene cuenta, responde 201 igual y no cambia nada, para no revelar qué correos están registrados (EC-08). El correo se guarda sin espacios y en minúsculas. El nombre visible (#133) se guarda sin espacios sobrantes y solo lo devuelve GET /auth/session de la propia cuenta; ninguna otra respuesta lo incluye (EC-08).
          */
         post: operations["register"];
         delete?: never;
@@ -736,6 +736,25 @@ export interface components {
             /** @description Metros desde el punto consultado; viene en GET /establishments/nearby y en la comparación cuando se envió la ubicación (#106). */
             distanceM?: number;
         };
+        /** @description Una tienda de las listas GET /establishments y GET /establishments/nearby: los campos de Establishment más cuántos precios vigentes tiene (B#131). La comparación y los precios de una tienda siguen usando Establishment. Va sin allOf porque las respuestas no admiten campos de más. */
+        EstablishmentWithPrices: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            type: "barrio" | "minimercado" | "supermercado" | "descuento";
+            /** @description Opcional; muchas tiendas no tienen dirección formal. */
+            address?: string;
+            /** @description Latitud de la tienda (nunca la del usuario */
+            lat: number;
+            /** @description Longitud de la tienda. */
+            lng: number;
+            municipality: components["schemas"]["Municipality"];
+            /** @description Metros desde el punto consultado; solo en GET /establishments/nearby. */
+            distanceM?: number;
+            /** @description Cuántas presentaciones tienen hoy un precio en la tienda, con el mismo criterio que GET /establishments/{establishmentId}/prices con onlyCurrent=true: no cuentan los desactualizados ni los que están en revisión; los por confirmar sí cuentan. */
+            priceCount: number;
+        };
         /**
          * @description Municipio del Quindío (#106). Las tiendas de la semilla son de Armenia.
          * @enum {string}
@@ -829,6 +848,32 @@ export interface components {
                  * @description Boletín de donde salió el dato.
                  */
                 url: string;
+            };
+            /** @description Cuánto menos cuesta el precio más bajo que el más alto, por precio por unidad, entre los resultados que pueden ser el más barato (los mismos de isCheapest: ni desactualizados ni en revisión): (más caro − más barato) / más caro × 100, con los valores exactos y redondeado al entero con la mitad hacia arriba (B#128, EC-06). Solo sale con dos tiendas o más. */
+            savingsPercent?: number;
+        };
+        /** @description Un precio vigente de la canasta básica de hoy, con la tienda donde está (B#128). */
+        FeaturedPrice: {
+            /** Format: uuid */
+            presentationId: string;
+            /**
+             * @description Producto y presentación, como label del historial.
+             * @example Arroz Diana · 500 g
+             */
+            label: string;
+            priceCop: number;
+            /** @description Redondeado al peso entero con la mitad hacia arriba (RF-004). */
+            unitPrice: {
+                valueCop: number;
+                /** @enum {string} */
+                per: "100g" | "100ml" | "und";
+            };
+            establishment: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** @description Metros desde la ubicación consultada; solo si se envió la ubicación. */
+                distanceM?: number;
             };
         };
         ReportCreate: {
@@ -1188,8 +1233,17 @@ export interface operations {
     };
     listFeaturedProducts: {
         parameters: {
-            query: {
-                municipality: components["schemas"]["Municipality"];
+            query?: {
+                /** @description Obligatorio si no se envían lat y lng. Con la ubicación, el radio solo mira ese municipio. */
+                municipality?: components["schemas"]["Municipality"];
+                /** @description Obligatoria (con lng) si no se envía municipality. */
+                lat?: number;
+                /** @description Obligatoria (con lat) si no se envía municipality. */
+                lng?: number;
+                /** @description Radio en kilómetros alrededor de la ubicación, con los mismos límites que la comparación (ADR-019). Sin ubicación no se usa. */
+                radiusKm?: number;
+                /** @description Código de la lista cerrada de categorías (GET /v1/categories). Solo los productos de esa categoría; un código que no existe responde la lista vacía. */
+                category?: string;
                 /** @description Los mismos valores del parámetro común Limit, con 5 por defecto. */
                 limit?: number;
             };
@@ -1202,22 +1256,27 @@ export interface operations {
             /** @description Los productos de la canasta, en el orden declarado */
             200: {
                 headers: {
+                    /** @description public, max-age=60 sin ubicación; no-store con ubicación. */
                     "Cache-Control"?: string;
                     ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        /** @description Criterio declarado al usuario (EC-06). */
+                        /** @description Criterio y área declarados al usuario (EC-06). municipality sale si se filtró por municipio; radiusKm, si se envió la ubicación; category, si se filtró por categoría. */
                         criteria: {
-                            municipality: components["schemas"]["Municipality"];
+                            municipality?: components["schemas"]["Municipality"];
+                            radiusKm?: number;
+                            category?: string;
                             /**
                              * @description Más tiendas con precio vigente primero.
                              * @enum {string}
                              */
                             sort: "store_count";
                         };
-                        /** @description Vacío si ninguna tienda del municipio tiene precios vigentes. */
+                        /** @description Tiendas del área (municipio o radio) con al menos un precio vigente, de cualquier categoría. Para «Precios de 7 tiendas a menos de 1,5 km». */
+                        storesWithPrices: number;
+                        /** @description Vacío si ninguna tienda del área tiene precios vigentes. */
                         items: {
                             /** Format: uuid */
                             productId: string;
@@ -1225,30 +1284,14 @@ export interface operations {
                             /** @description Opcional */
                             brand?: string;
                             category: components["schemas"]["Category"];
-                            /** @description Tiendas del municipio con al menos un precio vigente del producto. */
+                            /** @description Tiendas del área con al menos un precio vigente del producto. */
                             storeCount: number;
-                            /** @description El precio vigente más bajo por unidad del producto en el municipio. */
-                            cheapest: {
-                                /** Format: uuid */
-                                presentationId: string;
-                                /**
-                                 * @description Producto y presentación, como label del historial.
-                                 * @example Arroz Diana · 500 g
-                                 */
-                                label: string;
-                                priceCop: number;
-                                /** @description Redondeado al peso entero con la mitad hacia arriba (RF-004). */
-                                unitPrice: {
-                                    valueCop: number;
-                                    /** @enum {string} */
-                                    per: "100g" | "100ml" | "und";
-                                };
-                                establishment: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    name: string;
-                                };
-                            };
+                            /** @description El precio vigente más bajo por unidad del producto en el área. */
+                            cheapest: components["schemas"]["FeaturedPrice"];
+                            /** @description El precio vigente más alto por unidad del producto en el área. Sale junto con savingsPercent, solo cuando hay dos tiendas o más. */
+                            priciest?: components["schemas"]["FeaturedPrice"];
+                            /** @description Cuánto menos cuesta el más barato que el más caro, por precio por unidad: (más caro − más barato) / más caro × 100, con los valores exactos y redondeado al entero con la mitad hacia arriba (B#128, EC-06). Solo con dos tiendas o más. */
+                            savingsPercent?: number;
                         }[];
                     };
                 };
@@ -1279,7 +1322,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        items: components["schemas"]["Establishment"][];
+                        items: components["schemas"]["EstablishmentWithPrices"][];
                     };
                 };
             };
@@ -1309,7 +1352,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        items: components["schemas"]["Establishment"][];
+                        items: components["schemas"]["EstablishmentWithPrices"][];
                     };
                 };
             };
@@ -1787,6 +1830,8 @@ export interface operations {
                 "application/json": {
                     /** Format: email */
                     email: string;
+                    /** @description Nombre con el que la app saluda («Hola, Sara»). De 2 a 40 caracteres después de quitar los espacios sobrantes; solo letras (con tildes y ñ), espacios, apóstrofo y guion. Sin números, correos ni símbolos: responde 400 VALIDATION_ERROR. */
+                    displayName: string;
                     password: string;
                     /**
                      * @description Versión vigente de la política de datos (provisional hasta tener el texto).
@@ -1903,6 +1948,8 @@ export interface operations {
                     "application/json": {
                         /** @enum {string} */
                         role: "reportante" | "comercio" | "moderador";
+                        /** @description El nombre visible de la propia cuenta (#133). No viene en las cuentas creadas antes de que se pidiera. Es la única respuesta que lo incluye (EC-08). */
+                        displayName?: string;
                         /** @description Va en la cabecera X-CSRF-Token de las rutas con sesión que modifican datos. El frontend lo guarda en memoria. */
                         csrfToken: string;
                         /**

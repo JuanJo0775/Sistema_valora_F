@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
@@ -8,28 +8,40 @@ import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, MUNICIPALITIES } from './criteria';
 import { Offer } from './Offer';
-import { useWhere, WhereChooser } from './WhereChooser';
+import { useWhere } from './WhereChooser';
+import { WhereChip } from './WhereChip';
 import { WholesaleReference } from './WholesaleReference';
 import './comparison.css';
 
 type Product = components['schemas']['Product'];
-type Comparison = components['schemas']['Comparison'];
+export type Comparison = components['schemas']['Comparison'];
 type Sort = Comparison['criteria']['sort'];
+
+// Prototipo: control segmentado. Los nombres dicen qué se ve primero.
 const SORT_OPTIONS: { value: Sort; label: string }[] = [
-  { value: 'unit_price', label: 'Precio por unidad' },
-  { value: 'recent', label: 'Más recientes' },
-  { value: 'distance', label: 'Distancia' },
+  { value: 'unit_price', label: 'Más barato' },
+  { value: 'distance', label: 'Más cerca' },
+  { value: 'recent', label: 'Más reciente' },
 ];
 
-// P7 (neutralidad, EC-06): el orden lo decide el backend con el criterio declarado; la pantalla
-// no reordena ni destaca a nadie más que a lo que el backend marca.
-export function ComparePrices() {
-  const { productId = '' } = useParams();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [productError, setProductError] = useState<unknown>(null);
+// Los que el backend pone al final: no compiten en el orden (RF-010, RF-012).
+export const competes = (offer: Comparison['results'][number]) =>
+  offer.freshness !== 'desactualizado' && offer.reliability !== 'en_revision';
+
+// #65 (P7, EC-06): todas las tiendas con precio del producto, dentro de su detalle. El orden lo
+// decide el backend con el criterio declarado; la pantalla no reordena ni destaca a nadie más que
+// a lo que el backend marca. Cada comparación nueva se avisa con onComparison (el panel del
+// detalle muestra el más barato).
+export function AllStores({
+  product,
+  onComparison,
+}: {
+  product: Product;
+  onComparison?: (comparison: Comparison) => void;
+}) {
   const [sort, setSort] = useState<Sort>('unit_price');
-  // Por defecto Armenia, sin pedir permisos; con la ubicación, las tiendas cercanas (EC-08: la
-  // ubicación solo va en la consulta y no se guarda).
+  // Por defecto el último municipio, sin pedir permisos; con la ubicación, las tiendas cercanas
+  // (EC-08: la ubicación solo va en la consulta y no se guarda).
   const where = useWhere();
   const { point } = where;
   const [onlyCurrent, setOnlyCurrent] = useState(false);
@@ -38,28 +50,26 @@ export function ComparePrices() {
     { key: string; comparison: Comparison } | { key: string; error: unknown } | null
   >(null);
   const [attempt, setAttempt] = useState(0);
+  const productId = product.id;
+  // El último onComparison, sin volver a pedir la comparación cada vez que cambia.
+  const notify = useRef(onComparison);
+  useEffect(() => {
+    notify.current = onComparison;
+  }, [onComparison]);
   const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${where.key}`;
 
   useEffect(() => {
-    call(api.GET('/products/{productId}', { params: { path: { productId } } }))
-      .then(setProduct)
-      .catch((error: unknown) => {
-        setProductError(error);
-      });
-  }, [productId, attempt]);
-
-  useEffect(() => {
+    if (!where.ready) return;
     let current = true;
     call(
       api.GET('/products/{productId}/comparison', {
-        params: {
-          path: { productId },
-          query: { ...where.query, sort, onlyCurrent },
-        },
+        params: { path: { productId }, query: { ...where.query, sort, onlyCurrent } },
       }),
     )
       .then((comparison) => {
-        if (current) setOutcome({ key, comparison });
+        if (!current) return;
+        setOutcome({ key, comparison });
+        notify.current?.(comparison);
       })
       .catch((error: unknown) => {
         if (current) setOutcome({ key, error });
@@ -67,26 +77,32 @@ export function ComparePrices() {
     return () => {
       current = false;
     };
-  }, [productId, sort, where.query, onlyCurrent, key]);
+  }, [where.ready, productId, sort, where.query, onlyCurrent, key]);
 
-  const retry = () => {
-    setProductError(null);
-    setAttempt((current) => current + 1);
-  };
-  if (productError !== null) return <ErrorState error={productError} onRetry={retry} />;
-  if (!product) return <Loading />;
   const result = outcome?.key === key ? outcome : null;
   const sizeOf = (presentationId: string) => {
     const presentation = product.presentations.find(({ id }) => id === presentationId);
     return presentation ? formatPresentation(presentation) : '';
   };
   return (
-    <section className="compare">
-      <h1>{product.name}</h1>
-      <fieldset role="radiogroup" className="choices">
-        <legend>Ordenar por</legend>
+    <section className="all-stores" aria-labelledby="todas-las-tiendas">
+      <div className="all-stores-head">
+        <h2 id="todas-las-tiendas" className="eyebrow">
+          Todas las tiendas
+        </h2>
+        <WhereChip
+          where={where}
+          backLabel="Comparar por municipio"
+          onLeaveLocation={() => {
+            // Sin ubicación no hay distancia: el backend responde 400 a sort=distance.
+            if (sort === 'distance') setSort('unit_price');
+          }}
+        />
+      </div>
+      <fieldset role="radiogroup" className="segmented">
+        <legend className="sr-only">Ordenar por</legend>
         {SORT_OPTIONS.map((option) => (
-          <label key={option.value} className="choice">
+          <label key={option.value} className="segment">
             <input
               type="radio"
               name="sort"
@@ -102,14 +118,22 @@ export function ComparePrices() {
           </label>
         ))}
       </fieldset>
-      <WhereChooser
-        where={where}
-        backLabel="Comparar por municipio"
-        onLeaveLocation={() => {
-          // Sin ubicación no hay distancia: el backend responde 400 a sort=distance.
-          if (sort === 'distance') setSort('unit_price');
-        }}
-      />
+      {!result && <Loading />}
+      {result && 'error' in result && (
+        <ErrorState
+          error={result.error}
+          onRetry={() => {
+            setAttempt((current) => current + 1);
+          }}
+        />
+      )}
+      {result && 'comparison' in result && (
+        <Results
+          comparison={result.comparison}
+          sizeOf={sizeOf}
+          register={`/registrar?producto=${productId}`}
+        />
+      )}
       <label className="check">
         <input
           type="checkbox"
@@ -120,21 +144,9 @@ export function ComparePrices() {
         />
         Solo precios vigentes
       </label>
-      {!result && <Loading />}
-      {result && 'error' in result && <ErrorState error={result.error} onRetry={retry} />}
-      {result && 'comparison' in result && (
-        <Results
-          comparison={result.comparison}
-          sizeOf={sizeOf}
-          register={`/registrar?producto=${productId}`}
-        />
-      )}
     </section>
   );
 }
-
-const competes = (offer: Comparison['results'][number]) =>
-  offer.freshness !== 'desactualizado' && offer.reliability !== 'en_revision';
 
 function Results({
   comparison,
@@ -169,17 +181,23 @@ function Results({
   const others = results.filter((offer) => !competes(offer));
   return (
     <>
-      <p className="muted">{describeCriteria(criteria)}</p>
-      <ul className="offers">
-        {competing.map((offer) => (
-          <Offer key={offer.reportId} offer={offer} size={sizeOf(offer.presentationId)} />
+      <p className="muted">
+        <span>{describeCriteria(criteria)}</span>. Ningún comercio paga por aparecer primero.
+      </p>
+      <ol className="offer-list">
+        {competing.map((offer, index) => (
+          <Offer
+            key={offer.reportId}
+            offer={offer}
+            size={sizeOf(offer.presentationId)}
+            rank={index + 1}
+          />
         ))}
-      </ul>
-      {/* El backend los pone al final y no compiten en el orden (RF-010, RF-012). */}
+      </ol>
       {others.length > 0 && (
         <>
-          <h2>Precios viejos o en revisión</h2>
-          <ul className="offers">
+          <h3>Precios viejos o en revisión</h3>
+          <ul className="offer-list">
             {others.map((offer) => (
               <Offer key={offer.reportId} offer={offer} size={sizeOf(offer.presentationId)} />
             ))}

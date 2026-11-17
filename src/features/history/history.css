@@ -70,9 +70,18 @@
 .history-summary {
   display: grid;
   gap: 6px;
+  padding: 16px 18px;
+  border-radius: var(--r-l);
+  background: var(--bg-2);
 }
 
+/* Prototipo: «ÚLTIMOS 30 DÍAS» en versalitas, como los demás rótulos del panel. */
 .history-summary h2 {
   margin: 0;
-  font-size: 1rem;
+  color: var(--ink-3);
+  font-family: var(--f-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }

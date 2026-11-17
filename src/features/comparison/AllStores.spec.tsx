@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { stubLocation, stubNoGeolocation } from '../../test/location';
-import { ComparePrices } from './ComparePrices';
+import type { components } from '../../shared/api/schema';
+import { AllStores } from './AllStores';
 
 const rice = {
   id: '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d',
@@ -62,14 +63,17 @@ const lastAsked = (api: ReturnType<typeof stubApi>) =>
 
 const renderCompare = () =>
   render(
-    <MemoryRouter initialEntries={[`/productos/${rice.id}/comparar`]}>
-      <Routes>
-        <Route path="/productos/:productId/comparar" element={<ComparePrices />} />
-      </Routes>
+    <MemoryRouter>
+      <AllStores product={rice as components['schemas']['Product']} />
     </MemoryRouter>,
   );
 
-describe('comparar precios', () => {
+// El chip «dónde buscar» abre la elección del municipio, la ubicación y el radio.
+const openWhere = async () => {
+  fireEvent.click(await screen.findByRole('button', { name: /^Dónde buscar/ }));
+};
+
+describe('todas las tiendas, en el detalle del producto', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -83,8 +87,8 @@ describe('comparar precios', () => {
     const [row] = await screen.findAllByRole('listitem');
     const item = within(row as HTMLElement);
     expect(item.getByRole('heading', { name: 'Tienda Don Pepe' })).toBeInTheDocument();
-    expect(row).toHaveTextContent('500 g · $2.000');
-    expect(row).toHaveTextContent('$400 por 100 g');
+    expect(row).toHaveTextContent('$2.000');
+    expect(row).toHaveTextContent('500 g · $400 por 100 g');
   });
 
   it('cada precio dice su vigencia, su confiabilidad, su fuente y si es el más barato', async () => {
@@ -131,19 +135,54 @@ describe('comparar precios', () => {
     expect(await screen.findByText(text)).toBeInTheDocument();
   });
 
+  it('el chip dice dónde se busca y abre la elección del municipio o la ubicación', async () => {
+    stubCompare(comparison([result()]));
+    renderCompare();
+    const chip = await screen.findByRole('button', { name: 'Dónde buscar: Armenia' });
+    expect(chip).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('combobox', { name: 'Municipio' })).not.toBeInTheDocument();
+
+    fireEvent.click(chip);
+
+    expect(chip).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('combobox', { name: 'Municipio' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Usar mi ubicación' })).toBeInTheDocument();
+  });
+
+  it('dice que ningún comercio paga por aparecer primero y numera las tiendas en orden', async () => {
+    stubCompare(
+      comparison([
+        result({ isCheapest: true }),
+        result({
+          reportId: '8f7e6d5c-4b3a-4291-8a0f-7e6d5c4b3a29',
+          establishment: store('6e3d2c1b-0a9f-4b8c-9d7e-6f5a4b3c2d1e', 'Minimercado La 14'),
+        }),
+      ]),
+    );
+
+    renderCompare();
+
+    expect(
+      await screen.findByText(/Ningún comercio paga por aparecer primero\./),
+    ).toBeInTheDocument();
+    const [first, second] = screen.getAllByRole('listitem');
+    expect(first).toHaveTextContent(/^1/);
+    expect(second).toHaveTextContent(/^2/);
+  });
+
   it('ordenar por los más recientes vuelve a pedir la comparación con ese criterio', async () => {
     const api = stubCompare([comparison([result()]), comparison([result()], { sort: 'recent' })]);
     renderCompare();
     await screen.findByText('Ordenado por precio por unidad · en Armenia');
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Más recientes' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Más reciente' }));
 
     expect(
       await screen.findByText('Ordenado por los más recientes · en Armenia'),
     ).toBeInTheDocument();
     const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/comparison'));
     expect(asked.at(-1)?.searchParams.get('sort')).toBe('recent');
-    expect(screen.getByRole('radio', { name: 'Distancia' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'Más cerca' })).toBeDisabled();
   });
 
   it('«Usar mi ubicación» compara cerca de ti, dice la distancia y permite ordenar por ella', async () => {
@@ -164,13 +203,14 @@ describe('comparar precios', () => {
     stubLocation();
     renderCompare();
 
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
 
     expect(
       await screen.findByText('Ordenado por precio por unidad · a menos de 2 km de ti'),
     ).toBeInTheDocument();
     expect(screen.getByRole('listitem')).toHaveTextContent('350 m');
-    expect(screen.getByRole('radio', { name: 'Distancia' })).toBeEnabled();
+    expect(screen.getByRole('radio', { name: 'Más cerca' })).toBeEnabled();
     const asked = lastAsked(api);
     expect(asked?.searchParams.get('lat')).toBe('4.53');
     expect(asked?.searchParams.has('municipality')).toBe(false);
@@ -181,6 +221,7 @@ describe('comparar precios', () => {
     stubNoGeolocation();
     renderCompare();
 
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -288,6 +329,7 @@ describe('comparar precios', () => {
       comparison([result()], { municipality: 'calarca' }),
     ]);
     renderCompare();
+    await openWhere();
     const where = await screen.findByRole('combobox', { name: 'Municipio' });
     expect(within(where).getAllByRole('option')).toHaveLength(12);
 
@@ -308,6 +350,7 @@ describe('comparar precios', () => {
     ]);
     stubLocation();
     renderCompare();
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
     const radius = await screen.findByRole('combobox', { name: 'Radio' });
     expect(radius).toHaveValue('2');
@@ -329,6 +372,7 @@ describe('comparar precios', () => {
     ]);
     stubLocation();
     renderCompare();
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
     await screen.findByRole('combobox', { name: 'Radio' });
     expect(screen.queryByRole('combobox', { name: 'Municipio' })).not.toBeInTheDocument();
@@ -344,8 +388,9 @@ describe('comparar precios', () => {
     const api = stubCompare(comparison([result()]));
     stubLocation();
     renderCompare();
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
-    fireEvent.click(await screen.findByRole('radio', { name: 'Distancia' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Más cerca' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Comparar por municipio' }));
 
@@ -357,12 +402,14 @@ describe('comparar precios', () => {
   it('recuerda el municipio elegido para la próxima vez', async () => {
     stubCompare(comparison([result()]));
     const first = renderCompare();
+    await openWhere();
     fireEvent.change(await screen.findByRole('combobox', { name: 'Municipio' }), {
       target: { value: 'calarca' },
     });
     first.unmount();
 
     renderCompare();
+    await openWhere();
 
     expect(await screen.findByRole('combobox', { name: 'Municipio' })).toHaveValue('calarca');
   });

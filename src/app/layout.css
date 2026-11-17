@@ -167,8 +167,20 @@
     background: var(--bg-2);
   }
 
+  /* Prototipo: en escritorio el contador se lee junto al nombre, «Canasta · 5». */
   .badge {
     position: static;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    background: none;
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .badge::before {
+    content: '· ';
   }
 
   /* En escritorio «Registrar precio» se lee completo: botón naranja con texto, al final. */
@@ -198,4 +210,38 @@
   .home-search {
     display: none;
   }
+}
+
+/* #66: el Inicio del prototipo, con la canasta a la izquierda y el panel a la derecha. */
+.home-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.home-main h1 {
+  margin: 0;
+}
+
+.report-invite {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  border-radius: var(--r-l);
+  background: var(--bg-2);
+}
+
+.report-invite h2,
+.report-invite p {
+  margin: 0;
+}
+
+.report-invite h2 {
+  font-size: 1.1rem;
+}
+
+.report-invite .btn {
+  width: 100%;
+  border: 1px solid var(--line-2);
+  background: var(--bg);
 }

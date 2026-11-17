@@ -18,7 +18,8 @@ const renderSignUp = (path = '/crear-cuenta?volver=/yo') =>
     </SessionProvider>,
   );
 
-const fill = ({ password = 'una clave larga', accept = true } = {}) => {
+const fill = ({ name = 'Ana María', password = 'una clave larga', accept = true } = {}) => {
+  fireEvent.change(screen.getByLabelText('Tu nombre'), { target: { value: name } });
   fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@correo.co' } });
   fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: password } });
   if (accept)
@@ -44,13 +45,37 @@ describe('crear cuenta', () => {
 
     fill();
 
-    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hola' })).toBeInTheDocument();
     const register = api.calls.find(({ path }) => path === '/v1/auth/register');
     expect(JSON.parse(register?.body ?? '{}')).toEqual({
       email: 'ana@correo.co',
+      displayName: 'Ana María',
       password: 'una clave larga',
       acceptedPolicyVersion: '2026-11',
     });
+  });
+
+  // B#133: el nombre visible solo se ve en tu propia sesión (EC-08).
+  it.each(['A', 'Ana2', 'ana@correo.co'])(
+    'con un nombre que no vale («%s») no crea la cuenta y dice por qué',
+    (name) => {
+      const api = stubSignUp({ status: 201 });
+      renderSignUp();
+
+      fill({ name });
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.',
+      );
+      expect(api.calls.some(({ path }) => path === '/v1/auth/register')).toBe(false);
+    },
+  );
+
+  it('dice que el nombre solo lo ves tú', () => {
+    stubSignUp({ status: 201 });
+    renderSignUp();
+
+    expect(screen.getByText('Solo tú lo ves. Nunca se publica.')).toBeInTheDocument();
   });
 
   it('sin aceptar la política no crea la cuenta y dice por qué', () => {

@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router';
 import logoDark from '../assets/logo-oscuro.png';
 import logoLight from '../assets/logo-claro.png';
 import { useBasket } from '../features/basket/basketContext';
+import { BasketToast } from '../features/basket/BasketToast';
 import { PendingBanner } from '../pwa/PendingBanner';
 import { UpdateBanner } from '../pwa/UpdateBanner';
 import { OfflineBanner } from '../shared/ui/OfflineBanner';
@@ -58,6 +59,7 @@ export function Layout() {
       <main className="page">
         <Outlet />
       </main>
+      <BasketToast />
     </div>
   );
 }

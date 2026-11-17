@@ -51,7 +51,7 @@ describe('inicio', () => {
 
     render(<App />);
     expect(
-      await screen.findByRole('heading', { name: 'Canasta básica de hoy' }),
+      await screen.findByRole('region', { name: 'Canasta básica de hoy' }),
     ).toBeInTheDocument();
     fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
       target: { value: 'arroz' },
@@ -59,9 +59,29 @@ describe('inicio', () => {
     fireEvent.submit(screen.getByRole('search', { name: 'Buscar producto' }));
 
     expect(await screen.findByRole('link', { name: /Arroz blanco/ })).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Canasta básica de hoy' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Canasta básica de hoy' })).not.toBeInTheDocument();
+  });
+
+  it('la dirección vieja de comparar lleva al detalle del producto, donde están todas las tiendas', async () => {
+    stubApi({ [`GET /v1/products/${rice.id}`]: { status: 200, body: rice } });
+    window.history.pushState({}, '', `/productos/${rice.id}/comparar`);
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/productos/${rice.id}`);
+  });
+
+  it('el inicio invita a registrar un precio visto en la tienda', async () => {
+    stubApi({});
+
+    render(<App />);
+
+    const invite = await screen.findByRole('region', { name: '¿Viste un precio en la tienda?' });
+    expect(within(invite).getByRole('link', { name: 'Registrar precio' })).toHaveAttribute(
+      'href',
+      '/registrar',
+    );
   });
 
   it('la navegación principal lleva a cada sección y marca en la que está', () => {
@@ -89,7 +109,7 @@ describe('inicio', () => {
 
     render(<App />);
 
-    expect(await screen.findByText('Entraste como reportante.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hola' })).toBeInTheDocument();
   });
 
   it('desde Yo, «Iniciar sesión» lleva al formulario para entrar', async () => {
@@ -150,7 +170,7 @@ describe('inicio', () => {
     expect(await screen.findByRole('heading', { name: '¿Qué precio viste?' })).toBeInTheDocument();
   });
 
-  it('desde el detalle, «Comparar precios» abre la comparación en Armenia', async () => {
+  it('el detalle muestra la comparación del producto en Armenia', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
       [`GET /v1/products/${rice.id}/comparison`]: {
@@ -165,8 +185,6 @@ describe('inicio', () => {
     });
     window.history.pushState({}, '', `/productos/${rice.id}`);
     render(<App />);
-
-    fireEvent.click(await screen.findByRole('link', { name: 'Comparar precios' }));
 
     expect(
       await screen.findByRole('heading', {
@@ -275,18 +293,36 @@ describe('inicio', () => {
     localStorage.clear();
   });
 
-  it('desde el detalle, «Historial» abre los precios de los últimos 30 días', async () => {
+  it('desde la gráfica del detalle, «Ver el historial» abre los últimos 30 días', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
       [`GET /v1/products/${rice.id}/history`]: {
         status: 200,
-        body: { from: '2026-10-18', to: '2026-11-16', presentations: [] },
+        body: {
+          from: '2026-10-18',
+          to: '2026-11-16',
+          presentations: [
+            {
+              presentationId: rice.presentations[0]?.id,
+              label: '500 g',
+              points: [
+                {
+                  date: '2026-11-16',
+                  minPriceCop: 2300,
+                  avgPriceCop: 2300,
+                  reports: 1,
+                  source: 'reportado',
+                },
+              ],
+            },
+          ],
+        },
       },
     });
     window.history.pushState({}, '', `/productos/${rice.id}`);
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('link', { name: 'Historial' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Ver el historial' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Historial de precios · Arroz blanco' }),
@@ -369,7 +405,7 @@ describe('inicio', () => {
     window.history.pushState({}, '', '/yo');
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('link', { name: 'Mis aportes' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Ver todos mis aportes' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Todavía no has registrado precios' }),
