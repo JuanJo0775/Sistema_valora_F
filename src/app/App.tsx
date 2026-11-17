@@ -21,6 +21,7 @@ import { StorePage } from '../features/stores/StorePage';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportInvite } from '../features/reports/ReportInvite';
 import { ReportPrice } from '../features/reports/ReportPrice';
+import { PrivacyPolicy } from '../features/legal/PrivacyPolicy';
 import { Layout } from './Layout';
 
 // Inicio del prototipo (#66): buscar lo que se va a comprar y, mientras no se busca, la canasta
@@ -114,6 +115,7 @@ export function App() {
                 <Route path="/yo" element={<Profile />} />
                 <Route path="/entrar" element={<SignIn />} />
                 <Route path="/crear-cuenta" element={<SignUp />} />
+                <Route path="/privacidad" element={<PrivacyPolicy />} />
               </Route>
             </Routes>
           </BrowserRouter>

@@ -38,7 +38,7 @@ const presentationOf = ({ label }: Item['cheapest']) => label.split(' · ').at(-
 // tiendas del municipio o de 1,5 km a la redonda, y el más bajo de cada uno. El orden, el precio
 // y el ahorro los decide el backend (B#120, B#128); el criterio se dice en pantalla (EC-06).
 export function TodayBasket() {
-  const where = useWhere(1.5);
+  const where = useWhere();
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [limit, setLimit] = useState(FEW);

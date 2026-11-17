@@ -4,11 +4,10 @@ import { api, ApiError, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
 import { safeReturn, withReturn } from './safeReturn';
+import { POLICY_VERSION } from '../legal/policy';
 import { useSession } from './session';
 import './auth.css';
 
-// Versión vigente de la política de datos (contrato: provisional hasta tener el texto).
-const POLICY_VERSION = '2026-11';
 const MIN_PASSWORD = 10;
 
 // B#133: letras (con tildes y ñ) y, entre palabras, un espacio, apóstrofo o guion.
@@ -120,6 +119,11 @@ export function SignUp() {
         value={password}
         onValue={setPassword}
       />
+      <p className="muted" id="aviso-privacidad">
+        Aviso de privacidad: usamos tu correo y tu nombre solo para tu cuenta y tus aportes. No
+        publicamos tus datos ni los usamos para publicidad. Puedes conocerlos, corregirlos, pedir su
+        supresión o revocar tu autorización cuando quieras.
+      </p>
       <label className="check">
         <input
           type="checkbox"
@@ -128,7 +132,13 @@ export function SignUp() {
             setAccepted(event.target.checked);
           }}
         />
-        Acepto la política de tratamiento de datos (versión {POLICY_VERSION}).
+        <span>
+          Acepto la{' '}
+          <Link to="/privacidad" target="_blank" rel="noopener">
+            política de tratamiento de datos
+          </Link>{' '}
+          (versión {POLICY_VERSION}).
+        </span>
       </label>
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Creando cuenta…' : 'Crear cuenta'}

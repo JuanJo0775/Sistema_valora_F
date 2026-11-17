@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { askLocation, type Point } from '../../shared/location';
 import { readStored, writeStored } from '../../shared/storage';
 import { SelectField } from '../../shared/ui/SelectField';
+import { RadiusChips } from './RadiusChips';
+import { readRadius, saveRadius } from './radius';
 import { type Municipality, MUNICIPALITY_OPTIONS } from './criteria';
 import { readMunicipality, saveMunicipality } from './lastMunicipality';
-
-const RADII = [0.5, 1, 1.5, 2, 3];
 
 // #73: el teléfono recuerda si se eligió «usar mi ubicación», nunca dónde está la persona (EC-08).
 // Al volver, se le pide otra vez la ubicación al navegador.
@@ -14,13 +14,13 @@ const USE_LOCATION = 'ubicacion';
 
 // #15 y ADR-019: dónde buscar. Por defecto el municipio elegido la última vez (sin pedir permisos,
 // EC-08); con la ubicación del momento, a la redonda con un radio. Las dos cosas no se mezclan.
-// La comparación usa 2 km por defecto; la canasta del Inicio, 1,5 km (B#128).
-export function useWhere(defaultRadiusKm = 2) {
+// El radio es el mismo en todas las pantallas y se recuerda (radius.ts).
+export function useWhere() {
   const [point, setPoint] = useState<Point | null>(null);
   // Mientras se pide la ubicación recordada, todavía no se sabe dónde buscar.
   const [locating, setLocating] = useState(() => readStored(MODE) === USE_LOCATION);
   const [municipality, setMunicipality] = useState<Municipality>(readMunicipality);
-  const [radiusKm, setRadiusKm] = useState(defaultRadiusKm);
+  const [radiusKm, setRadius] = useState(readRadius);
   const [problem, setProblem] = useState('');
   // Un objeto estable mientras no cambie dónde: se usa como dependencia de las consultas.
   const query = useMemo(
@@ -55,7 +55,10 @@ export function useWhere(defaultRadiusKm = 2) {
     municipality,
     radiusKm,
     problem,
-    setRadiusKm,
+    setRadiusKm: (km: number) => {
+      saveRadius(km);
+      setRadius(km);
+    },
     // Para la consulta: la ubicación con su radio, o el municipio.
     query,
     key: point ? `${String(point.lat)},${String(point.lng)}|${String(radiusKm)}` : municipality,
@@ -85,27 +88,14 @@ export function WhereChooser({
   where: Where;
   backLabel: string;
   onLeaveLocation?: () => void;
-  // El mapa pone su propio radio, con una barra debajo (#73).
+  // Falso si la pantalla ya muestra el radio por su cuenta.
   showRadius?: boolean;
 }) {
   return (
     <>
       {where.point ? (
         <>
-          {/* ADR-019: radio calibrable de 0,5 a 3 km; 2 km por defecto. */}
-          {showRadius && (
-            <SelectField
-              label="Radio"
-              value={String(where.radiusKm)}
-              options={RADII.map((km) => ({
-                value: String(km),
-                label: `${String(km).replace('.', ',')} km`,
-              }))}
-              onChange={(km) => {
-                where.setRadiusKm(Number(km));
-              }}
-            />
-          )}
+          {showRadius && <RadiusChips radiusKm={where.radiusKm} onChange={where.setRadiusKm} />}
           <button
             type="button"
             className="btn ghost"
