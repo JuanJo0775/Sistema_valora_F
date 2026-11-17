@@ -15,3 +15,9 @@ export async function seriousViolations(node: Element = document.body): Promise<
         `${id}: ${help} → ${nodes.map(({ target }) => target.join(' ')).join(' | ')}`,
     );
 }
+
+// Las fallas de una regla de axe en particular, de cualquier gravedad.
+export async function violationsOf(rule: string, node: Element = document.body): Promise<string[]> {
+  const { violations } = await axe.run(node, { runOnly: [rule], resultTypes: ['violations'] });
+  return violations.flatMap(({ nodes }) => nodes.map(({ target }) => target.join(' ')));
+}

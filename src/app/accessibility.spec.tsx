@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { seriousViolations } from '../test/axe';
+import { seriousViolations, violationsOf } from '../test/axe';
 import { type FakeReply, NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
 import { App } from './App';
 
@@ -101,6 +101,8 @@ describe('accesibilidad de los flujos críticos (axe, WCAG 2.2 AA)', () => {
     await screen.findByRole('heading', { name: 'Arroz blanco' });
 
     expect(await seriousViolations()).toEqual([]);
+    // Los títulos van en orden (h1, luego h2): así se navega por títulos con lector de pantalla.
+    expect(await violationsOf('heading-order')).toEqual([]);
   });
 
   it('el detalle del producto, con todas las tiendas', async () => {
