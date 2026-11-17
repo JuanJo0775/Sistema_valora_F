@@ -8,6 +8,7 @@ import { PendingReports } from '../pwa/PendingReports';
 import { ReportQueueProvider } from '../pwa/ReportQueueProvider';
 import { BasketPage } from '../features/basket/BasketPage';
 import { BasketProvider } from '../features/basket/BasketProvider';
+import { BasketSummary } from '../features/basket/BasketSummary';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { TodayBasket } from '../features/comparison/TodayBasket';
 import { MyReports } from '../features/contributions/MyReports';
@@ -18,22 +19,33 @@ import { ProposeStore } from '../features/proposals/ProposeStore';
 import { MapPage } from '../features/stores/MapPage';
 import { StorePage } from '../features/stores/StorePage';
 import { ProductSearch } from '../features/catalog/ProductSearch';
+import { ReportInvite } from '../features/reports/ReportInvite';
 import { ReportPrice } from '../features/reports/ReportPrice';
 import { Layout } from './Layout';
 
-// Inicio del prototipo de MC-E4: buscar lo que se va a comprar y, mientras no se busca, la
-// canasta básica de hoy (#61). Con una búsqueda, solo sus resultados: una idea por pantalla.
+// Inicio del prototipo (#66): buscar lo que se va a comprar y, mientras no se busca, la canasta
+// básica de hoy con el panel de «Tu canasta» y la invitación a registrar. Con una búsqueda, solo
+// sus resultados: una idea por pantalla.
 function Home() {
   const [params] = useSearchParams();
-  return (
+  const search = (
     <>
       <h1>¿Qué vas a comprar hoy?</h1>
-      <p className="muted">
-        Precios de tiendas de barrio, minimercados y supermercados cerca de ti.
-      </p>
       <ProductSearch formClassName="search home-search" />
-      {!params.get('q') && <TodayBasket />}
     </>
+  );
+  if (params.get('q')) return search;
+  return (
+    <div className="with-side home">
+      <div className="home-main">
+        {search}
+        <TodayBasket />
+      </div>
+      <aside className="side" aria-label="Tu canasta y registrar">
+        <BasketSummary />
+        <ReportInvite />
+      </aside>
+    </div>
   );
 }
 
