@@ -84,7 +84,7 @@ describe('mapa de tiendas', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
     expect(
       await screen.findByText(
-        '1 tienda registrada en Valora a menos de 2,0 km. Tu ubicación no se guarda.',
+        '1 tienda registrada en Valora a menos de 1,5 km. Tu ubicación no se guarda.',
       ),
     ).toBeInTheDocument();
   });
@@ -219,29 +219,27 @@ describe('mapa de tiendas', () => {
     expect(
       (await screen.findByRole('heading', { name: 'Tienda Don Pepe' })).closest('li'),
     ).toHaveTextContent('350 m');
-    // Prototipo: el radio se cambia con una barra deslizable debajo del mapa, de 0,5 a 3 km.
-    expect(screen.queryByRole('combobox', { name: 'Radio' })).not.toBeInTheDocument();
-    const radius = screen.getByRole('slider', { name: 'Radio' });
-    expect(radius).toHaveAttribute('min', '0.5');
-    expect(radius).toHaveAttribute('max', '3');
-    expect(screen.getByText('2,0 km')).toBeInTheDocument();
+    // El radio es el mismo en toda la app: chips de 0,5 a 3 km, 1,5 km por defecto.
+    expect(screen.getByRole('radio', { name: '1,5 km' })).toBeChecked();
 
-    fireEvent.change(radius, { target: { value: '1.5' } });
+    fireEvent.click(screen.getByRole('radio', { name: '1 km' }));
 
-    expect(screen.getByText('1,5 km')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '1 km' })).toBeChecked();
     await vi.waitFor(() => {
       const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/nearby')).at(-1);
-      expect(asked?.searchParams.get('radiusKm')).toBe('1.5');
+      expect(asked?.searchParams.get('radiusKm')).toBe('1');
     });
+    // Se recuerda en el dispositivo para las demás pantallas.
+    expect(localStorage.getItem('valora:radio')).toBe('1');
   });
 
-  it('sin la ubicación no hay barra del radio', async () => {
+  it('sin la ubicación no hay chips del radio', async () => {
     stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
 
     renderMap();
 
     await screen.findByText('Mapa con: Ara');
-    expect(screen.queryByRole('slider', { name: 'Radio' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Radio de búsqueda' })).not.toBeInTheDocument();
   });
 
   it('si la última vez usó su ubicación, la vuelve a pedir y muestra las cercanas, sin guardar dónde está', async () => {
