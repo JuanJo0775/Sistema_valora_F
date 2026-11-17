@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -48,19 +48,6 @@ describe('pestaña Yo', () => {
     expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
   });
 
-  it('ordena la pantalla en Tu actividad, Ajustes y Cuenta', async () => {
-    stubApi({
-      'GET /v1/auth/session': sessionAs('reportante'),
-      'GET /v1/me/reports': { status: 200, body: { items: [] } },
-    });
-
-    renderProfile();
-
-    const titles = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent);
-    expect(titles).toEqual(['Tu actividad', 'Ajustes', 'Cuenta']);
-    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
-  });
-
   it('saluda por el nombre cuando la cuenta lo tiene', async () => {
     stubApi({
       'GET /v1/auth/session': {
@@ -73,76 +60,6 @@ describe('pestaña Yo', () => {
     renderProfile();
 
     expect(await screen.findByRole('heading', { name: 'Hola, Sara' })).toBeInTheDocument();
-  });
-
-  it('un reportante ve sus últimos 3 aportes con su estado y puede ver todos', async () => {
-    const mine = (productName: string, status: string, priceCop: number) => ({
-      reportId: crypto.randomUUID(),
-      productName,
-      establishmentName: 'Tienda Doña Rosa',
-      priceCop,
-      priceType: 'normal',
-      observedAt: new Date().toISOString(),
-      status,
-    });
-    stubApi({
-      'GET /v1/auth/session': sessionAs('reportante'),
-      'GET /v1/me/reports': {
-        status: 200,
-        body: {
-          items: [
-            mine('Leche entera', 'normal', 4200),
-            mine('Panela', 'en_revision', 2500),
-            mine('Huevos AA', 'normal', 16200),
-            mine('Arroz', 'normal', 3900),
-          ],
-        },
-      },
-    });
-
-    renderProfile();
-
-    const list = await screen.findByRole('list', { name: 'Mis aportes' });
-    const rows = within(list).getAllByRole('listitem');
-    expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent('Leche entera · $4.200');
-    expect(rows[0]).toHaveTextContent('Tienda Doña Rosa · Hoy');
-    expect(rows[0]).toHaveTextContent('Vigente');
-    expect(rows[1]).toHaveTextContent('En revisión');
-    expect(screen.getByRole('link', { name: 'Ver todos mis aportes' })).toHaveAttribute(
-      'href',
-      '/mis-aportes',
-    );
-  });
-
-  it('el modo prueba de usabilidad se enciende en Ajustes y queda recordado', async () => {
-    stubApi({
-      'GET /v1/auth/session': sessionAs('reportante'),
-      'GET /v1/me/reports': { status: 200, body: { items: [] } },
-    });
-    renderProfile();
-    const mode = await screen.findByRole('switch', { name: 'Modo prueba de usabilidad' });
-    expect(mode).toHaveAttribute('aria-checked', 'false');
-
-    fireEvent.click(mode);
-
-    expect(mode).toHaveAttribute('aria-checked', 'true');
-    expect(localStorage.getItem('valora:modo-prueba')).toBe('1');
-    fireEvent.click(mode);
-    expect(localStorage.getItem('valora:modo-prueba')).toBeNull();
-  });
-
-  it('dice que el nombre y la ubicación nunca se publican', async () => {
-    stubApi({
-      'GET /v1/auth/session': sessionAs('reportante'),
-      'GET /v1/me/reports': { status: 200, body: { items: [] } },
-    });
-
-    renderProfile();
-
-    expect(
-      await screen.findByText('Tu nombre y tu ubicación nunca se publican'),
-    ).toBeInTheDocument();
   });
 
   it('con la cuenta suspendida dice hasta cuándo y qué puede hacer', async () => {
@@ -217,13 +134,50 @@ describe('pestaña Yo', () => {
   });
 
   it.each([
-    ['reportante', 'Ver todos mis aportes', '/mis-aportes'],
+    ['reportante', 'Mis aportes', '/mis-aportes'],
     ['moderador', 'Moderación', '/moderacion'],
-  ])('un %s encuentra en Yo su sección «%s»', async (role, name, href) => {
+  ])('un %s encuentra en Yo su fila «%s»', async (role, name, href) => {
     stubApi({ 'GET /v1/auth/session': { status: 200, body: { role, csrfToken: 'token-1' } } });
 
     renderProfile();
 
-    expect(await screen.findByRole('link', { name })).toHaveAttribute('href', href);
+    expect(await screen.findByRole('link', { name: new RegExp(name) })).toHaveAttribute(
+      'href',
+      href,
+    );
+  });
+
+  it('con sesión agrupa filas navegables: actividad, preferencias, privacidad y cuenta', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+
+    renderProfile();
+
+    const titles = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent);
+    expect(titles).toEqual(['Mi actividad', 'Preferencias', 'Privacidad', 'Cuenta']);
+    expect(screen.getByRole('link', { name: /Ajustes/ })).toHaveAttribute('href', '/yo/ajustes');
+    expect(screen.getByRole('link', { name: /Política de datos y cookies/ })).toHaveAttribute(
+      'href',
+      '/privacidad',
+    );
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
+    // El resumen es corto: los ajustes viven en su subpantalla.
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+  });
+
+  it('sin sesión deja Ajustes y la política de datos, que no piden cuenta', async () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+
+    renderProfile();
+
+    expect(await screen.findByRole('link', { name: /Ajustes/ })).toHaveAttribute(
+      'href',
+      '/yo/ajustes',
+    );
+    expect(screen.getByRole('link', { name: /Política de datos y cookies/ })).toHaveAttribute(
+      'href',
+      '/privacidad',
+    );
+    expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument();
   });
 });
