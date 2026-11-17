@@ -172,6 +172,22 @@ describe('mapa de tiendas', () => {
     expect(await cardOf('Granero Nuevo')).toHaveTextContent('Sin precios');
   });
 
+  it('con 50 tiendas lo dice una sola vez, arriba, e invita a usar la ubicación', async () => {
+    const fifty = Array.from({ length: 50 }, (_, index) =>
+      shop(crypto.randomUUID(), `Tienda ${String(index + 1)}`),
+    );
+    stubApi({ 'GET /v1/establishments': { status: 200, body: { items: fifty } } });
+
+    renderMap();
+
+    expect(
+      await screen.findByText(
+        'Se muestran 50 tiendas de Armenia. Usa tu ubicación para ver las más cercanas.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/50 tiendas/)).toHaveLength(1);
+  });
+
   it('se elige otro municipio y muestra sus tiendas', async () => {
     const api = stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [pepe] } } });
     renderMap();
