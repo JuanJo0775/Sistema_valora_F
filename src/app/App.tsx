@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Route, Routes, useSearchParams } from 'react-router';
 import { Profile } from '../features/auth/Profile';
 import { RequireRole } from '../features/auth/RequireRole';
 import { SessionProvider } from '../features/auth/SessionProvider';
@@ -10,6 +10,7 @@ import { BasketPage } from '../features/basket/BasketPage';
 import { BasketProvider } from '../features/basket/BasketProvider';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { ComparePrices } from '../features/comparison/ComparePrices';
+import { TodayBasket } from '../features/comparison/TodayBasket';
 import { MyReports } from '../features/contributions/MyReports';
 import { ModerationPanel } from '../features/moderation/ModerationPanel';
 import { PriceHistory } from '../features/history/PriceHistory';
@@ -21,8 +22,10 @@ import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportPrice } from '../features/reports/ReportPrice';
 import { Layout } from './Layout';
 
-// Inicio del prototipo de MC-E4: una sola idea, buscar lo que se va a comprar.
+// Inicio del prototipo de MC-E4: buscar lo que se va a comprar y, mientras no se busca, la
+// canasta básica de hoy (#61). Con una búsqueda, solo sus resultados: una idea por pantalla.
 function Home() {
+  const [params] = useSearchParams();
   return (
     <>
       <h1>¿Qué vas a comprar hoy?</h1>
@@ -30,6 +33,7 @@ function Home() {
         Precios de tiendas de barrio, minimercados y supermercados cerca de ti.
       </p>
       <ProductSearch formClassName="search home-search" />
+      {!params.get('q') && <TodayBasket />}
     </>
   );
 }
