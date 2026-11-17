@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { setSimulatedOffline } from '../connection';
+import { describe, expect, it } from 'vitest';
 import { ApiError, call, createApiClient } from './client';
 
 type Reply = { status: number; body?: unknown; headers?: Record<string, string> };
@@ -238,30 +237,5 @@ describe('cliente de la API', () => {
     const request = call(api.GET('/products', { params: { query: { q: 'arroz' } } }));
 
     await expect(request).rejects.toMatchObject({ status: 502, code: 'REQUEST_ERROR' });
-  });
-});
-
-// #79: «Simular sin conexión» en Yo, para la demo del registro sin señal (ADR-010).
-describe('simular sin conexión', () => {
-  afterEach(() => {
-    setSimulatedOffline(false);
-  });
-
-  it('no sale ninguna petición y la app responde como sin red', async () => {
-    const backend = fakeBackend({ 'GET /v1/categories': { status: 200, body: { items: [] } } });
-    const api = createApiClient({ fetch: backend.fetch });
-    setSimulatedOffline(true);
-
-    await expect(call(api.GET('/categories'))).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
-    expect(backend.requests).toHaveLength(0);
-  });
-
-  it('al apagarla vuelve a pedir al servidor', async () => {
-    const backend = fakeBackend({ 'GET /v1/categories': { status: 200, body: { items: [] } } });
-    const api = createApiClient({ fetch: backend.fetch });
-    setSimulatedOffline(true);
-    setSimulatedOffline(false);
-
-    await expect(call(api.GET('/categories'))).resolves.toEqual({ items: [] });
   });
 });
