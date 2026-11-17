@@ -4,7 +4,8 @@ import { formatDistance } from '../../shared/location';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import { StoreMap } from '../stores/StoreMap';
 import { STORE_TYPES } from '../stores/storeTypes';
-import { ALREADY_DECIDED, CatalogDecision, explainWith } from './CatalogDecision';
+import { ALREADY_DECIDED, CatalogDecision } from './CatalogDecision';
+import { explainWith } from './explain';
 import { PendingList } from './PendingList';
 
 type Proposal =

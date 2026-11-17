@@ -1,7 +1,7 @@
 import { type SyntheticEvent, useState } from 'react';
 import { api, ApiError, call } from '../../shared/api';
 import { Field } from '../auth/Field';
-import { explainWith } from './CatalogDecision';
+import { explainWith } from './explain';
 import './moderation.css';
 
 type Role = 'reportante' | 'moderador';

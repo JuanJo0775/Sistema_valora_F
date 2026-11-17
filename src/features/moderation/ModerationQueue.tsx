@@ -3,7 +3,7 @@ import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { formatCop } from '../../shared/money';
 import { SelectField } from '../../shared/ui/SelectField';
-import { explainWith } from './CatalogDecision';
+import { explainWith } from './explain';
 import { DecisionForm } from './DecisionForm';
 import { PendingList } from './PendingList';
 
