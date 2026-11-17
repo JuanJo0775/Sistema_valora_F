@@ -48,6 +48,20 @@ describe('pestaña Yo', () => {
     expect(screen.queryByRole('link', { name: 'Iniciar sesión' })).not.toBeInTheDocument();
   });
 
+  it('saluda por el nombre cuando la cuenta lo tiene', async () => {
+    stubApi({
+      'GET /v1/auth/session': {
+        status: 200,
+        body: { role: 'reportante', csrfToken: 'token-1', displayName: 'Sara' },
+      },
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
+    });
+
+    renderProfile();
+
+    expect(await screen.findByRole('heading', { name: 'Hola, Sara' })).toBeInTheDocument();
+  });
+
   it('un reportante ve sus últimos 3 aportes con su estado y puede ver todos', async () => {
     const mine = (productName: string, status: string, priceCop: number) => ({
       reportId: crypto.randomUUID(),

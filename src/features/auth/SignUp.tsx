@@ -11,8 +11,23 @@ import './auth.css';
 const POLICY_VERSION = '2026-11';
 const MIN_PASSWORD = 10;
 
+// B#133: letras (con tildes y ñ) y, entre palabras, un espacio, apóstrofo o guion.
+const NAME = /^\p{L}+(?:[ '-]\p{L}+)*$/u;
+
 // Lo mismo que exige el contrato, dicho antes de enviar: el servidor vuelve a validarlo.
-function problemOf({ password, accepted }: { password: string; accepted: boolean }) {
+function problemOf({
+  name,
+  password,
+  accepted,
+}: {
+  name: string;
+  password: string;
+  accepted: boolean;
+}) {
+  const trimmed = name.trim();
+  if (trimmed.length < 2 || trimmed.length > 40 || !NAME.test(trimmed)) {
+    return 'Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.';
+  }
   if (password.length < MIN_PASSWORD) {
     return `La contraseña debe tener al menos ${String(MIN_PASSWORD)} caracteres.`;
   }
@@ -26,6 +41,7 @@ export function SignUp() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { signIn } = useSession();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accepted, setAccepted] = useState(false);
@@ -37,7 +53,7 @@ export function SignUp() {
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    const found = problemOf({ password, accepted });
+    const found = problemOf({ name, password, accepted });
     if (found) {
       setProblem(found);
       return;
@@ -48,7 +64,12 @@ export function SignUp() {
     setSending(true);
     call(
       api.POST('/auth/register', {
-        body: { email, password, acceptedPolicyVersion: POLICY_VERSION },
+        body: {
+          email,
+          displayName: name.trim(),
+          password,
+          acceptedPolicyVersion: POLICY_VERSION,
+        },
       }),
     )
       .then(() => signIn({ email, password }))
@@ -79,6 +100,17 @@ export function SignUp() {
           <Link to={withReturn('/entrar', volver)}>Iniciar sesión</Link>
         </p>
       )}
+      <Field
+        label="Tu nombre"
+        autoComplete="given-name"
+        maxLength={40}
+        value={name}
+        onValue={setName}
+        aria-describedby="nombre-privado"
+      />
+      <p id="nombre-privado" className="muted">
+        Solo tú lo ves. Nunca se publica.
+      </p>
       <Field label="Correo" type="email" autoComplete="email" value={email} onValue={setEmail} />
       <Field
         label="Contraseña"
