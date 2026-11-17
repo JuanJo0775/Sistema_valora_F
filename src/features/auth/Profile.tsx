@@ -67,6 +67,7 @@ export function Profile() {
               <span className="settings-text">
                 <strong>Privacidad</strong>
                 <span className="muted">Tu nombre y tu ubicación nunca se publican</span>
+                <Link to="/privacidad">Política de datos y cookies</Link>
               </span>
             </li>
           </ul>
