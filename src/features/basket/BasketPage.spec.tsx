@@ -180,7 +180,7 @@ describe('mi canasta', () => {
     });
     renderBasket({ ...rice, bought: true }, milk);
 
-    expect(await within(await where()).findByText('Compra todo en Ara')).toBeInTheDocument();
+    expect(await within(await where()).findByText('Ara')).toHaveClass('cheapest-store-name');
     expect(api.requested.map(({ pathname }) => pathname)).toEqual([
       `/v1/products/${MILK}/comparison`,
     ]);

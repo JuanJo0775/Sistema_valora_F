@@ -1,13 +1,18 @@
 import { formatCop } from '../../shared/money';
 import { Loading } from '../../shared/ui/Loading';
 import { MUNICIPALITIES } from '../comparison/criteria';
-import type { BasketItem } from './basketContext';
-import { useStoreTotals } from './useStoreTotals';
+import type { Municipality } from '../comparison/criteria';
+import type { StoreTotals } from './useStoreTotals';
 
-// #31: «Todo en una tienda»: la tienda del municipio elegido con todo lo que falta comprar, al
-// menor total. Las cuentas las hace useStoreTotals.
-export function CheapestStore({ items }: { items: BasketItem[] }) {
-  const { municipality, totals } = useStoreTotals(items);
+// #31 y #78 (prototipo): «Todo en una tienda», la tienda del municipio elegido con todo lo que
+// falta comprar, al menor total. Las cuentas las hace useStoreTotals en la página de la canasta.
+export function CheapestStore({
+  municipality,
+  totals,
+}: {
+  municipality: Municipality;
+  totals: StoreTotals;
+}) {
   if (totals.status === 'empty') return null;
   const ready = totals.status === 'ready' ? totals : null;
   const best = ready?.best;
@@ -15,20 +20,25 @@ export function CheapestStore({ items }: { items: BasketItem[] }) {
 
   return (
     <aside className="side cheapest-store" aria-label="Dónde te sale más barata">
-      <h2>{`Dónde te sale más barata en ${MUNICIPALITIES[municipality]}`}</h2>
+      <h2>
+        {best ? 'Compra todo en' : `Dónde te sale más barata en ${MUNICIPALITIES[municipality]}`}
+      </h2>
       {totals.status === 'loading' && <Loading text="Buscando precios…" />}
       {totals.status === 'failed' && (
         <p className="muted">No pudimos calcular dónde te sale más barata.</p>
       )}
       {ready && best && (
         <>
-          <p>
-            <strong>{`Compra todo en ${best.store.name}`}</strong>
+          <p className="cheapest-store-name">{best.store.name}</p>
+          <p className="cheapest-store-total">
+            <span className="unit">{formatCop(best.totalCop)}</span>
+            {priciest && priciest.totalCop > best.totalCop && (
+              <span className="pill ok">{`Ahorras ${formatCop(priciest.totalCop - best.totalCop)}`}</span>
+            )}
           </p>
-          <p className="unit">{formatCop(best.totalCop)}</p>
           {priciest && priciest.totalCop > best.totalCop && (
             <p className="muted">
-              {`Ahorras ${formatCop(priciest.totalCop - best.totalCop)} frente a ${priciest.store.name} (${formatCop(priciest.totalCop)})`}
+              {`Comparado con la tienda más cara: ${priciest.store.name}, ${formatCop(priciest.totalCop)}.`}
             </p>
           )}
         </>
