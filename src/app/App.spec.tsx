@@ -51,7 +51,7 @@ describe('inicio', () => {
 
     render(<App />);
     expect(
-      await screen.findByRole('heading', { name: 'Canasta básica de hoy' }),
+      await screen.findByRole('region', { name: 'Canasta básica de hoy' }),
     ).toBeInTheDocument();
     fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
       target: { value: 'arroz' },
@@ -59,9 +59,7 @@ describe('inicio', () => {
     fireEvent.submit(screen.getByRole('search', { name: 'Buscar producto' }));
 
     expect(await screen.findByRole('link', { name: /Arroz blanco/ })).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Canasta básica de hoy' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Canasta básica de hoy' })).not.toBeInTheDocument();
   });
 
   it('la dirección vieja de comparar lleva al detalle del producto, donde están todas las tiendas', async () => {
