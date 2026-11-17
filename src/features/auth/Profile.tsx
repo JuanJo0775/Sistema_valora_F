@@ -1,21 +1,61 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { type Role, useSession } from './session';
-import { isUsabilityMode, setUsabilityMode } from '../../shared/usabilityMode';
-import { RecentReports } from '../contributions/RecentReports';
-import { SettingSwitch } from './SettingSwitch';
 import { SuspendedNotice } from './SuspendedNotice';
-import { ThemeChoice } from './ThemeChoice';
 import './auth.css';
 
 // La sección privada de cada rol. La del comercio llega en el Corte 3.
-const SECTION_OF: Partial<Record<Role, { to: string; label: string }>> = {
-  reportante: { to: '/mis-aportes', label: 'Mis aportes' },
-  moderador: { to: '/moderacion', label: 'Moderación' },
+const SECTION_OF: Partial<Record<Role, { to: string; label: string; text: string }>> = {
+  reportante: {
+    to: '/mis-aportes',
+    label: 'Mis aportes',
+    text: 'Los precios que registraste y su estado',
+  },
+  moderador: { to: '/moderacion', label: 'Moderación', text: 'Revisa los reportes pendientes' },
 };
+
+// Fila navegable de «Yo»: un enlace con flecha y una línea que dice a dónde lleva.
+function NavRow({ to, label, text }: { to: string; label: string; text: string }) {
+  return (
+    <li>
+      <Link to={to} className="nav-row">
+        <span className="settings-text">
+          <strong>{label}</strong>
+          <span className="muted">{text}</span>
+        </span>
+        <span className="nav-arrow" aria-hidden="true">
+          ›
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+// Un grupo de filas con su encabezado.
+function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <section className="profile-block" aria-labelledby={id}>
+      <h2 id={id} className="eyebrow">
+        {title}
+      </h2>
+      <ul className="nav-list profile-card">{children}</ul>
+    </section>
+  );
+}
+
+const SETTINGS_ROW = (
+  <NavRow to="/yo/ajustes" label="Ajustes" text="Tema, municipio, radio y pruebas" />
+);
+const PRIVACY_ROW = (
+  <NavRow
+    to="/privacidad"
+    label="Política de datos y cookies"
+    text="Tu nombre y tu ubicación nunca se publican"
+  />
+);
 
 const ROLE_LABEL: Record<Role, string> = {
   reportante: 'Reportante',
@@ -26,82 +66,77 @@ const ROLE_LABEL: Record<Role, string> = {
 export function Profile() {
   const { session, signOut, reload } = useSession();
   const [error, setError] = useState<unknown>(null);
-  const [testing, setTesting] = useState(isUsabilityMode);
   if (session.status === 'loading') return <Loading />;
   if (session.status === 'unknown') return <ErrorState error={session.error} onRetry={reload} />;
   if (session.status === 'active') {
     const section = SECTION_OF[session.role];
     return (
       <section className="profile">
-        <div>
-          <h1>{session.displayName ? `Hola, ${session.displayName}` : 'Hola'}</h1>
-          <p className="muted">{ROLE_LABEL[session.role]}</p>
-        </div>
+        <header className="profile-head">
+          <span className="profile-avatar" aria-hidden="true">
+            {(session.displayName?.trim().charAt(0) || 'V').toUpperCase()}
+          </span>
+          <div className="profile-who">
+            <h1>{session.displayName ? `Hola, ${session.displayName}` : 'Hola'}</h1>
+            <p className="pill mute">{ROLE_LABEL[session.role]}</p>
+          </div>
+        </header>
         {session.suspendedUntil && <SuspendedNotice until={session.suspendedUntil} />}
         {error !== null && <ErrorState error={error} />}
-        {session.role === 'reportante' && <RecentReports />}
-        {section && session.role !== 'reportante' && (
-          <Link to={section.to} className="btn">
-            {section.label}
-          </Link>
+        {section && (
+          <Group id="actividad" title="Mi actividad">
+            <NavRow to={section.to} label={section.label} text={section.text} />
+          </Group>
         )}
-        <section className="settings" aria-labelledby="ajustes">
-          <h2 id="ajustes" className="eyebrow">
-            Ajustes
-          </h2>
-          <ul className="settings-list">
-            <li>
-              <ThemeChoice />
-            </li>
-            {/* #28: solo para la prueba de usabilidad; se quita al cerrar la #28. */}
-            <SettingSwitch
-              title="Modo prueba de usabilidad"
-              description="Muestra el cronómetro al registrar (EC-01)"
-              on={testing}
-              onChange={(on) => {
-                setUsabilityMode(on);
-                setTesting(on);
+        <Group id="preferencias" title="Preferencias">
+          {SETTINGS_ROW}
+        </Group>
+        <Group id="privacidad" title="Privacidad">
+          {PRIVACY_ROW}
+        </Group>
+        <Group id="cuenta" title="Cuenta">
+          <li>
+            <button
+              type="button"
+              className="nav-row"
+              onClick={() => {
+                setError(null);
+                signOut().catch((failure: unknown) => {
+                  setError(failure);
+                });
               }}
-            />
-            <li>
+            >
               <span className="settings-text">
-                <strong>Privacidad</strong>
-                <span className="muted">Tu nombre y tu ubicación nunca se publican</span>
-                <Link to="/privacidad">Política de datos y cookies</Link>
+                <strong>Cerrar sesión</strong>
               </span>
-            </li>
-          </ul>
-        </section>
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            setError(null);
-            signOut().catch((failure: unknown) => {
-              setError(failure);
-            });
-          }}
-        >
-          Cerrar sesión
-        </button>
+            </button>
+          </li>
+        </Group>
       </section>
     );
   }
   return (
-    <EmptyState
-      title="Tu cuenta"
-      text="Con una cuenta puedes registrar precios y ver tus aportes. Para comparar no la necesitas."
-      action={
-        <div className="actions">
-          <Link to="/entrar" className="btn">
-            Iniciar sesión
-          </Link>
-          <Link to="/crear-cuenta" className="btn ghost">
-            Crear cuenta
-          </Link>
-          <ThemeChoice />
-        </div>
-      }
-    />
+    <section className="profile">
+      <EmptyState
+        title="Tu cuenta"
+        text="Con una cuenta puedes registrar precios y ver tus aportes. Para comparar no la necesitas."
+        action={
+          <div className="actions profile-guest">
+            <Link to="/entrar" className="btn">
+              Iniciar sesión
+            </Link>
+            <Link to="/crear-cuenta" className="btn ghost">
+              Crear cuenta
+            </Link>
+          </div>
+        }
+      />
+      <Group id="preferencias" title="Preferencias">
+        {SETTINGS_ROW}
+      </Group>
+      <Group id="privacidad" title="Privacidad">
+        {PRIVACY_ROW}
+      </Group>
+    </section>
   );
 }

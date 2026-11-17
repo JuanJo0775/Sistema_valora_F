@@ -423,7 +423,7 @@ describe('inicio', () => {
     window.history.pushState({}, '', '/yo');
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('link', { name: 'Ver todos mis aportes' }));
+    fireEvent.click(await screen.findByRole('link', { name: /Mis aportes/ }));
 
     expect(
       await screen.findByRole('heading', { name: 'Todavía no has registrado precios' }),
@@ -462,7 +462,7 @@ describe('inicio', () => {
     window.history.pushState({}, '', '/yo');
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('link', { name: 'Moderación' }));
+    fireEvent.click(await screen.findByRole('link', { name: /Moderación/ }));
 
     expect(
       await screen.findByRole('heading', { name: 'No hay precios en revisión' }),

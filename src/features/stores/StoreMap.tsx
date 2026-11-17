@@ -52,7 +52,9 @@ export function StoreMap({
 
   useEffect(() => {
     if (!element.current) return;
-    const created = L.map(element.current, { scrollWheelZoom: false }).setView(ARMENIA, 14);
+    // La rueda del ratón hace zoom. En el celular no hay rueda: un dedo sigue desplazando la página y
+    // dos dedos hacen zoom en el mapa.
+    const created = L.map(element.current, { scrollWheelZoom: true }).setView(ARMENIA, 14);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
