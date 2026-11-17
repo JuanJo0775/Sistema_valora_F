@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Frontend de Valora: PWA para consumidor, reportante y moderador",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "packageManager": "pnpm@10.18.3",
   "engines": {

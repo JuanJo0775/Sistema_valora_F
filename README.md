@@ -253,3 +253,7 @@ Cada carpeta aparece cuando tiene su primer archivo (YAGNI). La organización pr
 ## Fuera del MVP
 
 Aplicación nativa Android/iOS, consulta de precios sin conexión, venta, carrito, pagos, pedidos, domicilios y alertas de bajada de precio. Las alertas permanecen opcionales y futuras.
+
+## Licencia
+
+Uso académico y no comercial; no se permite reproducirlo ni redistribuirlo sin autorización de los titulares (el equipo del proyecto y JuanJo0775). El texto completo está en [LICENSE](LICENSE). No es una licencia de código abierto.
