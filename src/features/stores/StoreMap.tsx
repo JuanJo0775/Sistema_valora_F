@@ -113,8 +113,9 @@ export function StoreMap({
         pin.setAttribute('tabindex', '0');
         pin.setAttribute('role', 'button');
         pin.setAttribute('aria-label', store.name);
-        pin.addEventListener('keydown', (event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') return;
+        pin.addEventListener('keydown', (event: Event) => {
+          const { key } = event as KeyboardEvent;
+          if (key !== 'Enter' && key !== ' ') return;
           event.preventDefault();
           marker.openPopup();
           route.focus();
@@ -123,7 +124,7 @@ export function StoreMap({
       popup.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
         marker.closePopup();
-        marker.getElement()?.focus();
+        (marker.getElement() as SVGElement | undefined)?.focus();
       });
       marker.addTo(layer);
     }

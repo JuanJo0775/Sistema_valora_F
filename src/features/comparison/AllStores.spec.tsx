@@ -156,12 +156,11 @@ describe('todas las tiendas, en el detalle del producto', () => {
 
     renderCompare();
 
-    const [row] = await screen.findAllByRole('listitem');
+    const [found] = await screen.findAllByRole('listitem');
+    const row = found as HTMLElement;
     expect(row).not.toHaveTextContent('Hoy');
     expect(row.querySelector('.pill.ok')).toBeNull();
-    expect(within(row as HTMLElement).getByText(/^Dato inicial · \d{1,2} [a-z]{3}$/)).toHaveClass(
-      'mute',
-    );
+    expect(within(row).getByText(/^Dato inicial · \d{1,2} [a-z]{3}$/)).toHaveClass('mute');
   });
 
   it('un dato inicial por confirmar conserva su advertencia de vigencia', async () => {
