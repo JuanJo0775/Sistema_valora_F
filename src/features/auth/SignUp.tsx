@@ -87,7 +87,7 @@ export function SignUp() {
 
   return (
     <form className="form" onSubmit={submit}>
-      <BackLink fallback="/yo" label="Yo" />
+      <BackLink fallback="/yo" />
       <h1>Crear cuenta</h1>
       {problem && (
         <p role="alert" className="banner warn">

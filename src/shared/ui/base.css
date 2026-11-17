@@ -158,6 +158,25 @@ button {
   font-weight: 400;
 }
 
+/* Autocompletado del navegador (gestor de contraseñas de Chrome): pinta el campo de azul grisáceo y
+   la letra de blanco, que en el tema claro casi no se lee. Se devuelven los colores de la app (por
+   tema) con una sombra interior, que es lo que Chrome sí deja cambiar, y el texto con
+   -webkit-text-fill-color. El fondo no se anima para que no parpadee el color del navegador. */
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus,
+.field input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  box-shadow: 0 0 0 1000px var(--bg) inset;
+  transition: background-color 600000s 0s;
+}
+
+.field input:autofill {
+  color: var(--ink);
+  box-shadow: 0 0 0 1000px var(--bg) inset;
+}
+
 .check {
   display: flex;
   align-items: flex-start;
@@ -236,9 +255,16 @@ button {
     align-items: start;
   }
 
+  /* La columna fija nunca debe ser más alta que la pantalla: si lo es (ventana baja, muchas tarjetas),
+     se desplaza por dentro y todo se puede alcanzar; antes la parte de abajo quedaba cortada y sin
+     scroll. 88 px es el alto de la barra superior más su aire; 16 px, el aire de abajo. */
   .side {
     position: sticky;
     top: 88px;
+    max-height: calc(100dvh - 88px - 16px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
   }
 }
 

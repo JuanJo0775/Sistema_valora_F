@@ -16,10 +16,10 @@ describe('ajustes', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('tiene el enlace para volver a Yo y tres bloques con título', () => {
+  it('tiene el enlace «Volver» y tres bloques con título', () => {
     renderSettings();
 
-    expect(screen.getByRole('link', { name: /Yo/ })).toHaveAttribute('href', '/yo');
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
     expect(screen.getByRole('heading', { level: 1, name: 'Ajustes' })).toBeInTheDocument();
     const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(titles).toEqual(['Apariencia', 'Búsqueda', 'Pruebas del equipo']);
