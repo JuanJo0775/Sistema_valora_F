@@ -4,7 +4,7 @@ import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { Loading } from '../../shared/ui/Loading';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import { formatPresentation } from './presentation';
 import { ProductThumb } from './ProductThumb';
 import { SearchSuggest } from './SearchSuggest';
@@ -77,7 +77,7 @@ export function ProductSearch({
         submitLabel="Buscar"
       />
       {hint && <p className="muted">{hint}</p>}
-      {query && !result && <Loading text="Buscando…" />}
+      {query && !result && <SkeletonList kind="row" text="Buscando…" />}
       {result && 'error' in result && (
         <ErrorState
           error={result.error}

@@ -263,10 +263,3 @@
   display: grid;
   gap: 4px;
 }
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  min-height: var(--touch);
-}

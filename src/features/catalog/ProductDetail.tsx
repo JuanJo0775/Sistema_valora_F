@@ -4,7 +4,7 @@ import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { Loading } from '../../shared/ui/Loading';
+import { SkeletonDetail } from '../../shared/ui/Skeleton';
 import { formatPresentation } from './presentation';
 import { useSession } from '../auth/session';
 import { AddToBasket } from '../basket/AddToBasket';
@@ -15,6 +15,7 @@ import { HistorySummary } from '../history/HistorySummary';
 import { ChangeProductPhoto } from '../moderation/ChangeProductPhoto';
 import { ProductImage } from './ProductImage';
 import './catalog.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 type Product = components['schemas']['Product'];
 
@@ -75,7 +76,7 @@ export function ProductDetail() {
       />
     );
   }
-  if (!result) return <Loading />;
+  if (!result) return <SkeletonDetail />;
   const product =
     uploaded?.productId === productId
       ? { ...result.product, image: uploaded.image }
@@ -84,6 +85,7 @@ export function ProductDetail() {
   return (
     <div className="with-side">
       <article className="detail">
+        <BackLink fallback="/" />
         <header className="detail-head">
           <div className="detail-photo">
             <ProductImage name={product.name} image={product.image} />

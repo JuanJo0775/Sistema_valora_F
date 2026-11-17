@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { Loading } from '../../shared/ui/Loading';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import './moderation.css';
 
 type Outcome<T> = { key: string; items: T[] } | { key: string; error: unknown };
@@ -71,7 +71,7 @@ export function PendingList<T extends { id: string }>({
           {decided}
         </p>
       )}
-      {!result && <Loading />}
+      {!result && <SkeletonList kind="row" />}
       {result?.items.length === 0 && <EmptyState title={empty} />}
       <ul className="offers">
         {result?.items.map((item) => (

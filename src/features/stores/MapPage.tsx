@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { Loading } from '../../shared/ui/Loading';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import { useWhere, WhereChooser } from '../comparison/WhereChooser';
 import { useBasket } from '../basket/basketContext';
@@ -96,7 +96,7 @@ export function MapPage() {
         <Link to="/proponer/tienda" className="btn ghost suggest-store">
           Sugerir una tienda que no aparece
         </Link>
-        {!result && <Loading text="Buscando tiendas…" />}
+        {!result && <SkeletonList kind="row" text="Buscando tiendas…" />}
         {result && 'error' in result && (
           <ErrorState
             error={result.error}

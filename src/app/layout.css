@@ -9,6 +9,8 @@
 .top {
   display: flex;
   align-items: center;
+  /* Celular: el logo centrado en la barra superior; en escritorio vuelve a la izquierda. */
+  justify-content: center;
   gap: 16px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
@@ -157,6 +159,7 @@
 
 @media (width >= 960px) {
   .top {
+    justify-content: flex-start;
     position: sticky;
     top: 0;
     z-index: 10;

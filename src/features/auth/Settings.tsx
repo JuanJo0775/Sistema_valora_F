@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { RadiusChips } from '../comparison/RadiusChips';
 import { type Municipality, MUNICIPALITY_OPTIONS } from '../comparison/criteria';
 import { readMunicipality, saveMunicipality } from '../comparison/lastMunicipality';
 import { readRadius, saveRadius } from '../comparison/radius';
+import { BackLink } from '../../shared/ui/BackLink';
 import { SelectField } from '../../shared/ui/SelectField';
 import { isUsabilityMode, setUsabilityMode } from '../../shared/usabilityMode';
 import { SettingSwitch } from './SettingSwitch';
@@ -18,9 +18,7 @@ export function Settings() {
   return (
     <section className="profile">
       <div className="profile-top">
-        <Link to="/yo" className="back-link">
-          ‹ Yo
-        </Link>
+        <BackLink fallback="/yo" label="Yo" />
         <h1>Ajustes</h1>
       </div>
       <section className="profile-block" aria-labelledby="apariencia">

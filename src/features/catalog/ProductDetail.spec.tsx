@@ -154,6 +154,8 @@ describe('detalle del producto', () => {
     renderDetail(rice.id);
 
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(document.querySelector('.skeleton-photo')).toBeInTheDocument();
   });
 
   it('el encabezado dice la categoría, las presentaciones y en cuántas tiendas hay precio', async () => {

@@ -6,11 +6,12 @@ import { dayInColombia } from '../../shared/days';
 import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
-import { Loading } from '../../shared/ui/Loading';
+import { SkeletonList } from '../../shared/ui/Skeleton';
 import { useSession } from '../auth/session';
 import { SuspendedNotice } from '../auth/SuspendedNotice';
 import { AppealForm } from './AppealForm';
 import './contributions.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 export type MyReport =
   paths['/me/reports']['get']['responses'][200]['content']['application/json']['items'][number];
@@ -72,7 +73,7 @@ export function MyReports() {
       />
     );
   }
-  if (!reports) return <Loading />;
+  if (!reports) return <SkeletonList kind="row" />;
   if (reports.length === 0) {
     return (
       <EmptyState
@@ -87,6 +88,7 @@ export function MyReports() {
   }
   return (
     <section className="contributions">
+      <BackLink fallback="/yo" />
       <h1>Mis aportes</h1>
       {/* #71 del backend: suspendida, la cuenta solo ve el estado de sus aportes y apela. */}
       {suspendedUntil && <SuspendedNotice until={suspendedUntil} />}

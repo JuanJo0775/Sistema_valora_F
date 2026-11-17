@@ -13,6 +13,7 @@ import { MUNICIPALITIES } from '../comparison/criteria';
 import { StoreMap } from './StoreMap';
 import { STORE_TYPES } from './storeTypes';
 import './stores.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 type StorePrices =
   paths['/establishments/{establishmentId}/prices']['get']['responses'][200]['content']['application/json'];
@@ -75,6 +76,7 @@ export function StorePage() {
   return (
     <div className="with-side">
       <section className="stores">
+        <BackLink fallback="/mapa" />
         <h1>{store.name}</h1>
         <p className="muted">
           {[STORE_TYPES[store.type], store.address, MUNICIPALITIES[store.municipality]]
