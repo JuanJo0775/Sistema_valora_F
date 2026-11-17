@@ -6,6 +6,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { formatPresentation } from './presentation';
+import { ProductThumb } from './ProductThumb';
 import { SearchSuggest } from './SearchSuggest';
 import './catalog.css';
 
@@ -105,12 +106,15 @@ export function ProductSearch({
           {result.products.map((product) => (
             <li key={product.id}>
               <Link to={linkTo(product.id)} className="result">
-                <strong>{product.name}</strong>
-                <span className="muted">
-                  {[product.brand, product.category.name].filter(Boolean).join(' · ')}
-                </span>
-                <span className="muted">
-                  {product.presentations.map(formatPresentation).join(', ')}
+                <ProductThumb image={product.image} size="row" />
+                <span className="result-text">
+                  <strong>{product.name}</strong>
+                  <span className="muted">
+                    {[product.brand, product.category.name].filter(Boolean).join(' · ')}
+                  </span>
+                  <span className="muted">
+                    {product.presentations.map(formatPresentation).join(', ')}
+                  </span>
                 </span>
               </Link>
             </li>

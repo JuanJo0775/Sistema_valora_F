@@ -45,6 +45,31 @@ describe('buscar productos', () => {
     expect(link).toHaveTextContent('500 g');
   });
 
+  it('cada resultado muestra su miniatura, decorativa; sin foto, la ilustración', async () => {
+    const withPhoto = {
+      ...rice,
+      image: {
+        url: 'https://images.openfoodfacts.org/arroz.jpg',
+        source: 'open_food_facts',
+        attribution: 'Open Food Facts, licencia ODbL',
+      },
+    };
+    const plain = { ...rice, id: '1b2c3d4e-0000-4000-8000-000000000001', name: 'Harina' };
+    stubApi({ 'GET /v1/products': { status: 200, body: { items: [withPhoto, plain] } } });
+    renderSearch();
+
+    search('a');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Buscar producto' }), {
+      target: { value: 'arroz' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+
+    const first = await screen.findByRole('link', { name: /Arroz blanco/ });
+    expect(first.querySelector('img')).toHaveAttribute('alt', '');
+    expect(screen.queryByRole('img', { name: /Arroz blanco/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Harina/ }).querySelector('svg')).toBeInTheDocument();
+  });
+
   it('si se escriben solo los números del código de barras, busca por código', async () => {
     const api = stubApi({ 'GET /v1/products': { status: 200, body: { items: [rice] } } });
     renderSearch();

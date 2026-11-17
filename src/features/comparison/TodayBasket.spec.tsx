@@ -70,6 +70,31 @@ describe('canasta básica de hoy, en el Inicio', () => {
     localStorage.clear();
   });
 
+  it('la tarjeta con foto la muestra decorativa; sin foto, la ilustración', async () => {
+    renderBasket({
+      'GET /v1/featured-products': basket([
+        featured('Arroz Diana', {
+          image: {
+            url: 'https://images.openfoodfacts.org/arroz.jpg',
+            source: 'open_food_facts',
+            attribution: 'Open Food Facts, licencia ODbL',
+          },
+        }),
+        featured('Leche'),
+      ]),
+    });
+
+    const rice = await card('Arroz Diana');
+    const img = document.querySelector('li img');
+    expect(img).toHaveAttribute('src', 'https://images.openfoodfacts.org/arroz.jpg');
+    // El nombre ya está en texto: el alt vacío no lo duplica.
+    expect(img).toHaveAttribute('alt', '');
+    expect(rice.queryByRole('img', { name: /Arroz Diana/ })).not.toBeInTheDocument();
+    const milk = (await screen.findByRole('heading', { name: 'Leche' })).closest('li');
+    expect(milk?.querySelector('img')).toBeNull();
+    expect(milk?.querySelector('svg')).toBeInTheDocument();
+  });
+
   it('cada tarjeta dice desde cuánto, en qué tienda, la presentación y el ahorro', async () => {
     renderBasket({
       'GET /v1/featured-products': basket([
