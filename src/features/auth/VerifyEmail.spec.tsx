@@ -122,6 +122,15 @@ describe('aviso de correo sin verificar', () => {
     expect(await screen.findByText(/Prueba de nuevo en una hora/)).toBeInTheDocument();
   });
 
+  it('no aparece si el servidor no exige verificar (REQUIRE_VERIFIED_EMAIL=false)', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante', undefined, false, false) });
+    renderBanner();
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Enviarme otro enlace' })).not.toBeInTheDocument();
+  });
+
   it('no aparece con el correo verificado ni sin sesión', async () => {
     stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
     const { unmount } = renderBanner();

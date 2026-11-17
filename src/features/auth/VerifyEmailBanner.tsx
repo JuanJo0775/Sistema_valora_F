@@ -9,7 +9,9 @@ type Sending = 'idle' | 'sending' | 'sent' | 'limit' | 'error';
 export function VerifyEmailBanner() {
   const { session } = useSession();
   const [state, setState] = useState<Sending>('idle');
-  if (session.status !== 'active' || session.emailVerified) return null;
+  if (session.status !== 'active' || session.emailVerified || !session.emailVerificationRequired) {
+    return null;
+  }
 
   const resend = () => {
     setState('sending');

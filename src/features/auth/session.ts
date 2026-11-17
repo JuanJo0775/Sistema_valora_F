@@ -18,6 +18,8 @@ export type Session =
       displayName?: string | undefined;
       // ADR-029: sin el correo verificado no se pueden registrar precios.
       emailVerified: boolean;
+      // ADR-029: si el servidor exige el correo verificado; con false no se muestra el aviso.
+      emailVerificationRequired: boolean;
     };
 
 export interface SessionState {

@@ -60,9 +60,10 @@ export const sessionAs = (
   role: string,
   suspendedUntil?: string,
   emailVerified = true,
+  emailVerificationRequired = true,
 ): FakeReply => ({
   status: 200,
-  body: { role, csrfToken: 'token-1', suspendedUntil, emailVerified },
+  body: { role, csrfToken: 'token-1', suspendedUntil, emailVerified, emailVerificationRequired },
 });
 
 // Una API que todavía no responde (para ver «Cargando…»), salvo las rutas indicadas.

@@ -2004,6 +2004,8 @@ export interface operations {
                         role: "reportante" | "comercio" | "moderador";
                         /** @description ADR-029: si la cuenta ya verificó su correo. Sin verificar puede iniciar sesión y consultar, pero POST /reports responde 403 EMAIL_NOT_VERIFIED. Solo la propia sesión lo dice; ninguna respuesta pública lo incluye (EC-08). Las cuentas anteriores a ADR-029 empiezan en false. */
                         emailVerified: boolean;
+                        /** @description ADR-029: si el servidor exige el correo verificado para registrar precios (REQUIRE_VERIFIED_EMAIL). Con false la app no muestra el aviso de verificación. */
+                        emailVerificationRequired: boolean;
                         /** @description El nombre visible de la propia cuenta (#133). No viene en las cuentas creadas antes de que se pidiera. Es la única respuesta que lo incluye (EC-08). */
                         displayName?: string;
                         /** @description Va en la cabecera X-CSRF-Token de las rutas con sesión que modifican datos. El frontend lo guarda en memoria. */
