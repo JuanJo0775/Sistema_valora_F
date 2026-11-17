@@ -15,6 +15,7 @@ import { HistorySummary } from '../history/HistorySummary';
 import { ChangeProductPhoto } from '../moderation/ChangeProductPhoto';
 import { ProductImage } from './ProductImage';
 import './catalog.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 type Product = components['schemas']['Product'];
 
@@ -84,6 +85,7 @@ export function ProductDetail() {
   return (
     <div className="with-side">
       <article className="detail">
+        <BackLink fallback="/" />
         <header className="detail-head">
           <div className="detail-photo">
             <ProductImage name={product.name} image={product.image} />

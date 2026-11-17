@@ -10,6 +10,7 @@ import { SelectField } from '../../shared/ui/SelectField';
 import { shortDay } from '../../shared/days';
 import { HistoryChart } from './HistoryChart';
 import './history.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 export type History =
   paths['/products/{productId}/history']['get']['responses'][200]['content']['application/json'];
@@ -56,6 +57,7 @@ export function PriceHistory() {
     history.presentations[0];
   return (
     <section className="history">
+      <BackLink fallback={`/productos/${productId}`} />
       <h1>{`Historial de precios · ${product.name}`}</h1>
       <p className="muted">{`Últimos 30 días: del ${shortDay(history.from)} al ${shortDay(history.to)}.`}</p>
       {!series ? (
