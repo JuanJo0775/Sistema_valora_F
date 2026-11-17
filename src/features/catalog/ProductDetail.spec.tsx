@@ -157,23 +157,53 @@ describe('detalle del producto', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
   });
 
-  it('desde el detalle se puede comparar precios, ver el historial y registrar un precio', async () => {
-    stubApi({ [`GET /v1/products/${rice.id}`]: { status: 200, body: rice } });
+  it('el encabezado dice la categoría, las presentaciones y en cuántas tiendas hay precio', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([
+        offer('Ara', 2000, true),
+        offer('D1', 2100),
+      ]),
+    });
 
     renderDetail(rice.id);
 
-    expect(await screen.findByRole('link', { name: 'Comparar precios' })).toHaveAttribute(
-      'href',
-      `/productos/${rice.id}/comparar`,
-    );
-    expect(screen.getByRole('link', { name: 'Historial' })).toHaveAttribute(
-      'href',
-      `/productos/${rice.id}/historial`,
-    );
-    expect(screen.getByRole('link', { name: 'Registrar un precio' })).toHaveAttribute(
-      'href',
-      `/registrar?producto=${rice.id}`,
-    );
+    expect(await screen.findByText('500 g, 1 kg · 2 tiendas en Armenia')).toBeInTheDocument();
+    expect(screen.getByText('Granos y abarrotes')).toHaveClass('eyebrow');
+  });
+
+  it('el panel lleva el más barato, registrar un precio de este producto y la canasta', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([
+        offer('D1', 2100),
+        offer('Ara', 2000, true),
+      ]),
+    });
+
+    renderDetail(rice.id);
+
+    const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
+    const cheapest = await within(side).findByRole('region', { name: 'Más barato en Armenia' });
+    expect(cheapest).toHaveTextContent('$2.000');
+    expect(cheapest).toHaveTextContent('Ara');
+    expect(cheapest).toHaveTextContent('$400 por 100 g');
+    expect(
+      within(side).getByRole('link', { name: 'Registrar un precio de Arroz blanco' }),
+    ).toHaveAttribute('href', `/registrar?producto=${rice.id}`);
+    expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
+  });
+
+  it('sin precios el panel no muestra el más barato', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([]),
+    });
+
+    renderDetail(rice.id);
+
+    await screen.findByRole('heading', { name: /Todavía nadie ha reportado/ });
+    expect(screen.queryByRole('region', { name: /Más barato/ })).not.toBeInTheDocument();
   });
 
   it('muestra la foto del producto, o la ilustración si no tiene', async () => {
@@ -208,10 +238,10 @@ describe('detalle del producto', () => {
     renderDetail(rice.id);
 
     const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
-    expect(within(side).getByRole('link', { name: 'Comparar precios' })).toBeInTheDocument();
-    expect(within(side).getByRole('link', { name: 'Registrar un precio' })).toBeInTheDocument();
-    expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
     expect(within(side).queryByRole('heading', { name: 'Arroz blanco' })).not.toBeInTheDocument();
+    expect(
+      within(side).queryByRole('region', { name: 'Todas las tiendas' }),
+    ).not.toBeInTheDocument();
   });
 
   it('el panel muestra la gráfica de los últimos 30 días y lleva al historial', async () => {

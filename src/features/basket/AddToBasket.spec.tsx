@@ -66,4 +66,14 @@ describe('agregar a la canasta', () => {
 
     expect(screen.getByText('500 g × 1')).toBeInTheDocument();
   });
+
+  it('si ya está en la canasta, «Quitar de mi canasta» lo saca', () => {
+    renderAdd({ ...rice, presentations: rice.presentations.slice(0, 1) });
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar a la canasta' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar de mi canasta' }));
+
+    expect(screen.queryByText('500 g × 1')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
+  });
 });
