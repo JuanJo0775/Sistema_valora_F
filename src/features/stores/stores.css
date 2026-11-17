@@ -177,3 +177,12 @@
 .store-card-head .pill {
   flex: none;
 }
+
+/* Con el dedo, los botones de zoom del mapa (Leaflet los hace de 30 px) miden 44 px. */
+@media (pointer: coarse) {
+  .leaflet-container.leaflet-touch .leaflet-bar a {
+    width: var(--touch);
+    height: var(--touch);
+    line-height: var(--touch);
+  }
+}
