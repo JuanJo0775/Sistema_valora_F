@@ -40,6 +40,30 @@ describe('inicio', () => {
     expect(window.location.pathname).toBe(`/productos/${rice.id}`);
   });
 
+  it('el inicio muestra la canasta básica de hoy y la esconde mientras se busca', async () => {
+    stubApi({
+      'GET /v1/featured-products': {
+        status: 200,
+        body: { criteria: { municipality: 'armenia', sort: 'store_count' }, items: [] },
+      },
+      'GET /v1/products': { status: 200, body: { items: [rice] } },
+    });
+
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', { name: 'Canasta básica de hoy' }),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar producto' }), {
+      target: { value: 'arroz' },
+    });
+    fireEvent.submit(screen.getByRole('search', { name: 'Buscar producto' }));
+
+    expect(await screen.findByRole('link', { name: /Arroz blanco/ })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Canasta básica de hoy' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('la navegación principal lleva a cada sección y marca en la que está', () => {
     vi.stubGlobal(
       'fetch',
