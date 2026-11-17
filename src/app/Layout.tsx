@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router';
-import logoDark from '../assets/logo-oscuro.png';
-import logoLight from '../assets/logo-claro.png';
+import logoDark from '../assets/logo-horizontal-oscuro.png';
+import logoLight from '../assets/logo-horizontal-claro.png';
 import { useBasket } from '../features/basket/basketContext';
 import { VerifyEmailBanner } from '../features/auth/VerifyEmailBanner';
 import { BasketToast } from '../features/basket/BasketToast';
@@ -31,10 +31,16 @@ export function Layout() {
           con logo, buscador, secciones y «Registrar precio». */}
       <header className="top">
         <NavLink to="/" className="logo-link">
-          <picture>
-            <source srcSet={logoDark} media="(prefers-color-scheme: dark)" />
-            <img src={logoLight} alt="Valora, inicio" width="96" height="26" />
-          </picture>
+          {/* Dos imágenes y CSS según el tema real (layout.css): <picture> con prefers-color-scheme
+              ignoraría la elección manual. La oculta lleva alt vacío para que se lea una sola vez. */}
+          <img
+            className="logo-img logo-light"
+            src={logoLight}
+            alt="Valora, inicio"
+            width="144"
+            height="48"
+          />
+          <img className="logo-img logo-dark" src={logoDark} alt="" width="154" height="48" />
         </NavLink>
         <HeaderSearch />
         <nav className="tabbar" aria-label="Principal">
