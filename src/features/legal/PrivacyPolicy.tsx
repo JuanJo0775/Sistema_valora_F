@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { POLICY_EFFECTIVE, POLICY_VERSION } from './policy';
 import './legal.css';
+import { BackLink } from '../../shared/ui/BackLink';
 
 // Política de tratamiento de datos personales y aviso de cookies. Cubre lo que exige el artículo 13 del
 // Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015): responsable, tratamiento y finalidad,
@@ -9,6 +10,7 @@ import './legal.css';
 export function PrivacyPolicy() {
   return (
     <article className="legal">
+      <BackLink fallback="/yo" />
       <h1>Política de tratamiento de datos y cookies</h1>
       <p className="muted">
         Versión {POLICY_VERSION} · vigente desde el {POLICY_EFFECTIVE}

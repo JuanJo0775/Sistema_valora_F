@@ -5,6 +5,7 @@ const PATHS = {
   plus: 'M12 5v14M5 12h14',
   basket: 'M4 9h16l-1.5 10a1 1 0 0 1-1 .9h-11a1 1 0 0 1-1-.9zM8 9l4-5 4 5',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 8a7 7 0 0 1 14 0',
+  back: 'M15 5l-7 7 7 7',
 } as const;
 
 export type IconName = keyof typeof PATHS;
