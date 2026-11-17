@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router';
 import logoDark from '../assets/logo-oscuro.png';
 import logoLight from '../assets/logo-claro.png';
 import { useBasket } from '../features/basket/basketContext';
+import { VerifyEmailBanner } from '../features/auth/VerifyEmailBanner';
 import { BasketToast } from '../features/basket/BasketToast';
 import { PendingBanner } from '../pwa/PendingBanner';
 import { UpdateBanner } from '../pwa/UpdateBanner';
@@ -57,6 +58,7 @@ export function Layout() {
       <OfflineBanner />
       <PendingBanner />
       <UpdateBanner />
+      <VerifyEmailBanner />
       <main className="page">
         <Outlet />
       </main>

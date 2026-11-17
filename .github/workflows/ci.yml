@@ -74,6 +74,9 @@ jobs:
       MEDIA_DIR: media
       MEDIA_PUBLIC_URL: http://localhost:3000/media
       TRUST_PROXY: 0
+      # ADR-029: las pruebas crean cuentas por la API y reportan sin abrir un correo; la verificación
+      # tiene sus propias pruebas en el backend y en la PWA.
+      REQUIRE_VERIFIED_EMAIL: false
       API_PROXY_TARGET: http://localhost:3000
       E2E_MODERATOR_EMAIL: moderacion-e2e@valora.test
       E2E_MODERATOR_PASSWORD: e2e-${{ github.run_id }}-${{ github.run_attempt }}-clave

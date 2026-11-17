@@ -4,6 +4,7 @@ import { RequireRole } from '../features/auth/RequireRole';
 import { SessionProvider } from '../features/auth/SessionProvider';
 import { SignIn } from '../features/auth/SignIn';
 import { SignUp } from '../features/auth/SignUp';
+import { VerifyEmail } from '../features/auth/VerifyEmail';
 import { PendingReports } from '../pwa/PendingReports';
 import { ReportQueueProvider } from '../pwa/ReportQueueProvider';
 import { BasketPage } from '../features/basket/BasketPage';
@@ -116,6 +117,7 @@ export function App() {
                 <Route path="/entrar" element={<SignIn />} />
                 <Route path="/crear-cuenta" element={<SignUp />} />
                 <Route path="/privacidad" element={<PrivacyPolicy />} />
+                <Route path="/verificar-correo" element={<VerifyEmail />} />
               </Route>
             </Routes>
           </BrowserRouter>
