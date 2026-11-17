@@ -1,3 +1,4 @@
+import L from 'leaflet';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -24,6 +25,16 @@ const renderMap = () =>
 
 // Leaflet de verdad sobre jsdom: no descarga teselas, pero dibuja los marcadores y sus ventanas.
 describe('mapa de Leaflet', () => {
+  // La rueda del ratón hace zoom. El gesto táctil no cambia: dos dedos hacen zoom y uno desplaza la página.
+  it('la rueda del ratón hace zoom sobre el mapa', () => {
+    const create = vi.spyOn(L, 'map');
+    renderMap();
+
+    const options = create.mock.calls[0]?.[1];
+    expect(options?.scrollWheelZoom).not.toBe(false);
+    create.mockRestore();
+  });
+
   it('dibuja un marcador por tienda, con la atribución de OpenStreetMap', () => {
     const { container } = renderMap();
 
