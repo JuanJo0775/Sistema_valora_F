@@ -3,6 +3,7 @@ import { loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { CATALOG_PRODUCT } from './src/pwa/catalogCache';
+import { MANIFEST } from './src/pwa/manifest';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -16,28 +17,7 @@ export default defineConfig(({ mode }) => {
         // Aviso de versión nueva (UpdateBanner): se actualiza cuando la persona lo pide.
         registerType: 'prompt',
         includeAssets: ['favicon-64.png', 'apple-touch-icon.png'],
-        manifest: {
-          name: 'Valora — precios de tu barrio',
-          short_name: 'Valora',
-          description:
-            'Compara precios de tiendas de barrio, minimercados y supermercados de Armenia y el Quindío.',
-          lang: 'es-CO',
-          start_url: '/',
-          display: 'standalone',
-          // Prototipo MC-E4: superficies blancas; el naranja solo para la acción principal.
-          background_color: '#FFFFFF',
-          theme_color: '#FFFFFF',
-          icons: [
-            { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-            { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-            {
-              src: 'icon-maskable-512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
-            },
-          ],
-        },
+        manifest: MANIFEST,
         workbox: {
           // Las fuentes y los íconos también, para que la app abra igual sin internet.
           globPatterns: ['**/*.{js,css,html,png,woff2}'],

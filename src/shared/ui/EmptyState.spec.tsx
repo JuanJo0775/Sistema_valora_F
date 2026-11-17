@@ -18,4 +18,12 @@ describe('estado vacío', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Solicitar producto' })).toBeInTheDocument();
   });
+
+  it('por defecto es un h2 y con level 1 es el h1 de la pantalla', () => {
+    const { rerender } = render(<EmptyState title="Sin nada" />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Sin nada' })).toBeInTheDocument();
+
+    rerender(<EmptyState title="Sin nada" level={1} />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Sin nada' })).toBeInTheDocument();
+  });
 });

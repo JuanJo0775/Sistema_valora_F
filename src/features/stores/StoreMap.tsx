@@ -24,6 +24,15 @@ const ARMENIA: L.LatLngExpression = [4.5339, -75.6811];
 
 // ADR-019: Leaflet sobre teselas de OpenStreetMap, con su atribución visible. El mapa es una ayuda
 // visual; la lista de tiendas de la pantalla es su equivalente accesible.
+// H-33: con «reducir movimiento» el mapa no anima el zoom, los marcadores ni los fundidos.
+function motionOptions() {
+  const reduce =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const animated = !reduce;
+  return { zoomAnimation: animated, fadeAnimation: animated, markerZoomAnimation: animated };
+}
+
 export function StoreMap({
   stores,
   label,
@@ -54,7 +63,10 @@ export function StoreMap({
     if (!element.current) return;
     // La rueda del ratón hace zoom. En el celular no hay rueda: un dedo sigue desplazando la página y
     // dos dedos hacen zoom en el mapa.
-    const created = L.map(element.current, { scrollWheelZoom: true }).setView(ARMENIA, 14);
+    const created = L.map(element.current, { scrollWheelZoom: true, ...motionOptions() }).setView(
+      ARMENIA,
+      14,
+    );
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',

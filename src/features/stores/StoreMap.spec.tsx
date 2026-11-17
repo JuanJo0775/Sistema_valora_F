@@ -35,6 +35,31 @@ describe('mapa de Leaflet', () => {
     create.mockRestore();
   });
 
+  // H-33: con «reducir movimiento» el mapa no anima el zoom ni los fundidos.
+  it.each([
+    [true, false],
+    [false, true],
+  ])('con reducir movimiento=%s, las animaciones del mapa quedan en %s', (reduce, animated) => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)' && reduce,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    const create = vi.spyOn(L, 'map');
+    renderMap();
+
+    const options = create.mock.calls[0]?.[1];
+    expect(options?.zoomAnimation).toBe(animated);
+    expect(options?.fadeAnimation).toBe(animated);
+    expect(options?.markerZoomAnimation).toBe(animated);
+    create.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
   it('dibuja un marcador por tienda, con la atribución de OpenStreetMap', () => {
     const { container } = renderMap();
 
