@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { humanizeError } from '../proposals/fieldLabels';
 import { ResendVerification } from '../auth/ResendVerification';
 
 // Las horas se leen en la hora de Colombia, sin importar la zona del teléfono.
@@ -65,5 +66,5 @@ export function ReportProblem({ error }: { error: unknown }) {
       </Notice>
     );
   }
-  return <ErrorState error={error} />;
+  return <ErrorState error={humanizeError(error)} />;
 }

@@ -105,3 +105,60 @@ describe('proponer un producto', () => {
     );
   });
 });
+
+describe('proponer un producto: mensajes y salidas', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('con 0 unidades o un código corto lo dice junto al campo, con su etiqueta, sin enviar', async () => {
+    const api = renderPropose();
+    await fill();
+    fireEvent.change(screen.getByLabelText('Unidades en el empaque'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Código de barras (opcional)'), {
+      target: { value: '123' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    expect(screen.getByLabelText('Unidades en el empaque')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Unidades en el empaque')).toHaveAccessibleDescription(
+      /un número entero desde 1/,
+    );
+    expect(screen.getByLabelText('Código de barras (opcional)')).toHaveAccessibleDescription(
+      /de 8 a 14 dígitos/,
+    );
+    expect(screen.getByLabelText('Unidades en el empaque')).toHaveFocus();
+    expect(api.calls.some(({ method }) => method === 'POST')).toBe(false);
+  });
+
+  it('un error del servidor con nombres internos sale con la etiqueta del campo', async () => {
+    renderPropose({
+      status: 400,
+      body: {
+        code: 'VALIDATION_ERROR',
+        message: 'packCount: debe ser un entero mayor o igual a 1',
+      },
+    });
+    await fill();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Unidades en el empaque: debe ser un entero mayor o igual a 1');
+    expect(alert).not.toHaveTextContent('packCount');
+  });
+
+  it('«Recibido» ofrece ver mis aportes y volver al inicio', async () => {
+    renderPropose();
+    await fill();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    expect(await screen.findByRole('link', { name: 'Ver mis aportes' })).toHaveAttribute(
+      'href',
+      '/mis-aportes',
+    );
+    expect(screen.getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
+  });
+});
