@@ -17,6 +17,7 @@ const renderProfile = () =>
 describe('pestaña Yo', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it('sin sesión invita a iniciar sesión o a crear una cuenta', async () => {
@@ -85,6 +86,23 @@ describe('pestaña Yo', () => {
       'href',
       '/mis-aportes',
     );
+  });
+
+  it('el modo prueba de usabilidad se enciende en Ajustes y queda recordado', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
+    });
+    renderProfile();
+    const mode = await screen.findByRole('switch', { name: 'Modo prueba de usabilidad' });
+    expect(mode).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(mode);
+
+    expect(mode).toHaveAttribute('aria-checked', 'true');
+    expect(localStorage.getItem('valora:modo-prueba')).toBe('1');
+    fireEvent.click(mode);
+    expect(localStorage.getItem('valora:modo-prueba')).toBeNull();
   });
 
   it('dice que el nombre y la ubicación nunca se publican', async () => {
