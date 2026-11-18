@@ -18,6 +18,8 @@ export interface Around {
   lat: number;
   lng: number;
   radiusKm: number;
+  // Mientras se arrastra la barra del radio el círculo se redimensiona, pero la vista no se mueve.
+  dragging?: boolean;
 }
 
 // Centro de Armenia: el mapa arranca en el municipio, no en la ubicación de la persona (ADR-019).
@@ -47,11 +49,14 @@ export function StoreMap({
   picked?: { lat: number; lng: number } | null;
   around?: Around | null;
 }) {
+  // Solo importa si hay círculo, no cuánto mide: arrastrar la barra no vuelve a dibujar las tiendas.
+  const hasAround = around !== null;
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const pins = useRef<L.LayerGroup | null>(null);
   const pickedLayer = useRef<L.LayerGroup | null>(null);
   const aroundLayer = useRef<L.LayerGroup | null>(null);
+  const circle = useRef<L.Circle | null>(null);
   // El último onPick, sin volver a crear el mapa cada vez que cambia.
   const pick = useRef(onPick);
   const navigate = useNavigate();
@@ -141,26 +146,39 @@ export function StoreMap({
       marker.addTo(layer);
     }
     // Con el radio, el mapa encuadra el círculo (abajo); sin él, las tiendas.
-    if (stores.length > 0 && !around) {
+    if (stores.length > 0 && !hasAround) {
       map.current.fitBounds(L.latLngBounds(stores.map(({ lat, lng }) => [lat, lng])), {
         padding: [24, 24],
         maxZoom: 16,
       });
     }
-  }, [stores, navigate, around]);
+  }, [stores, navigate, hasAround]);
 
+  // La persona y su círculo: se vuelven a dibujar solo si cambia dónde está.
+  const lat = around?.lat;
+  const lng = around?.lng;
   useEffect(() => {
     const layer = aroundLayer.current;
     if (!map.current || !layer) return;
     layer.clearLayers();
-    if (!around) return;
-    const circle = L.circle([around.lat, around.lng], {
-      radius: around.radiusKm * 1000,
+    circle.current = null;
+    if (lat === undefined || lng === undefined) return;
+    circle.current = L.circle([lat, lng], {
+      // El tamaño real lo pone el efecto de abajo.
+      radius: 1,
       className: 'radius-circle',
     }).addTo(layer);
-    L.circleMarker([around.lat, around.lng], { radius: 7, className: 'user-pin' }).addTo(layer);
-    map.current.fitBounds(circle.getBounds(), { padding: [16, 16] });
-  }, [around]);
+    L.circleMarker([lat, lng], { radius: 7, className: 'user-pin' }).addTo(layer);
+  }, [lat, lng]);
+
+  // El radio: el círculo se redimensiona en vivo; la vista se ajusta a él al soltar, no al arrastrar.
+  const radiusKm = around?.radiusKm;
+  const dragging = around?.dragging ?? false;
+  useEffect(() => {
+    if (!map.current || !circle.current || radiusKm === undefined) return;
+    circle.current.setRadius(radiusKm * 1000);
+    if (!dragging) map.current.fitBounds(circle.current.getBounds(), { padding: [16, 16] });
+  }, [lat, lng, radiusKm, dragging]);
 
   useEffect(() => {
     const layer = pickedLayer.current;

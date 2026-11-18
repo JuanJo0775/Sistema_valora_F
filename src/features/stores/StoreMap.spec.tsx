@@ -176,6 +176,38 @@ describe('mapa de Leaflet', () => {
     expect(container.querySelectorAll('path.radius-circle')).toHaveLength(1);
   });
 
+  // El círculo del radio se redimensiona en vivo, sin volver a dibujar ni mover la vista mientras se arrastra.
+  it('al cambiar el radio redimensiona el círculo y solo ajusta la vista al soltar', () => {
+    const resize = vi.spyOn(L.Circle.prototype, 'setRadius');
+    const fit = vi.spyOn(L.Map.prototype, 'fitBounds');
+    const draw = (radiusKm: number, dragging = false) => (
+      <MemoryRouter>
+        <StoreMap
+          stores={stores}
+          label="Mapa de las tiendas"
+          around={{ lat: 4.53, lng: -75.68, radiusKm, dragging }}
+        />
+      </MemoryRouter>
+    );
+    const { container, rerender } = render(draw(1.5));
+    expect(resize).toHaveBeenLastCalledWith(1500);
+    fit.mockClear();
+
+    rerender(draw(2, true));
+    rerender(draw(2.5, true));
+
+    expect(resize).toHaveBeenLastCalledWith(2500);
+    expect(fit).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('path.radius-circle')).toHaveLength(1);
+    expect(container.querySelectorAll('path.user-pin')).toHaveLength(1);
+
+    rerender(draw(2.5, false));
+
+    expect(fit).toHaveBeenCalledTimes(1);
+    resize.mockRestore();
+    fit.mockRestore();
+  });
+
   it('sin la ubicación no dibuja ni el punto ni el radio', () => {
     const { container } = renderMap();
 

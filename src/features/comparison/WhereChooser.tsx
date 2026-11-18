@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { askLocation, type Point } from '../../shared/location';
 import { readStored, writeStored } from '../../shared/storage';
 import { SelectField } from '../../shared/ui/SelectField';
-import { RadiusChips } from './RadiusChips';
+import { RadiusControl } from './RadiusControl';
 import { readRadius, saveRadius } from './radius';
 import { type Municipality, MUNICIPALITY_OPTIONS } from './criteria';
 import { readMunicipality, saveMunicipality } from './lastMunicipality';
@@ -84,18 +84,27 @@ export function WhereChooser({
   backLabel,
   onLeaveLocation,
   showRadius = true,
+  onPreviewRadius,
 }: {
   where: Where;
   backLabel: string;
   onLeaveLocation?: () => void;
   // Falso si la pantalla ya muestra el radio por su cuenta.
   showRadius?: boolean;
+  // El radio mientras se arrastra la barra (el mapa redibuja su círculo al instante).
+  onPreviewRadius?: (radiusKm: number | null) => void;
 }) {
   return (
     <>
       {where.point ? (
         <>
-          {showRadius && <RadiusChips radiusKm={where.radiusKm} onChange={where.setRadiusKm} />}
+          {showRadius && (
+            <RadiusControl
+              radiusKm={where.radiusKm}
+              onChange={where.setRadiusKm}
+              onPreview={onPreviewRadius}
+            />
+          )}
           <button
             type="button"
             className="btn ghost"

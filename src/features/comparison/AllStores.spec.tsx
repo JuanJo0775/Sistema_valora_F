@@ -509,6 +509,32 @@ describe('todas las tiendas, en el detalle del producto', () => {
     expect(asked?.searchParams.get('radiusKm')).toBe('0.5');
   });
 
+  it('con la barra del radio la comparación pide solo el valor final', async () => {
+    const api = stubCompare([
+      comparison([result()]),
+      comparison([result()], { municipality: undefined, radiusKm: 1.5 }),
+      comparison([result()], { municipality: undefined, radiusKm: 2.4 }),
+    ]);
+    stubLocation();
+    renderCompare();
+    await openWhere();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    const slider = await screen.findByRole('slider', { name: 'Radio' });
+    await screen.findByText('Ordenado por precio por unidad · a menos de 1,5 km de ti');
+    const before = api.requested.length;
+
+    fireEvent.change(slider, { target: { value: '2' } });
+    fireEvent.change(slider, { target: { value: '2.4' } });
+    expect(api.requested).toHaveLength(before);
+    fireEvent.pointerUp(slider);
+
+    expect(
+      await screen.findByText('Ordenado por precio por unidad · a menos de 2,4 km de ti'),
+    ).toBeInTheDocument();
+    expect(api.requested).toHaveLength(before + 1);
+    expect(lastAsked(api)?.searchParams.get('radiusKm')).toBe('2.4');
+  });
+
   it('con la ubicación no se elige municipio, y se puede volver a comparar por municipio', async () => {
     const api = stubCompare([
       comparison([result()]),
