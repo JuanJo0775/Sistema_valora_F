@@ -7,32 +7,106 @@
   z-index: 0;
 }
 
-/* #73 (prototipo): cada tipo de tienda con su color, el mismo en el mapa, la leyenda y la lista.
-   Se usan los tokens del tema, así cambian solos en modo oscuro. */
+/* Pines: la forma dice el tipo (círculo, cuadrado, hexágono, estrella) y el color lo refuerza. Las
+   teselas del mapa son claras en los dos temas, así que los pines llevan colores fijos oscuros con un
+   borde blanco y una sombra: se leen igual en tema claro y oscuro (3:1 o más contra el mapa). */
+.stores,
+.store-map,
+.map-legend {
+  --pin-barrio: #c2500c;
+  --pin-minimercado: #1d7a45;
+  --pin-supermercado: #2c5fb0;
+  --pin-descuento: #7b3a8c;
+}
+
 .type-barrio {
-  --type: var(--accent);
+  --pin: var(--pin-barrio);
 }
 
 .type-minimercado {
-  --type: var(--ok);
+  --pin: var(--pin-minimercado);
 }
 
 .type-supermercado {
-  --type: var(--info);
+  --pin: var(--pin-supermercado);
 }
 
 .type-descuento {
-  --type: var(--promo);
+  --pin: var(--pin-descuento);
+}
+
+.pin-badge {
+  display: inline-flex;
+}
+
+.pin-shape {
+  display: block;
+  overflow: visible;
+}
+
+.pin-shape path {
+  fill: var(--pin, #5e5850);
+  stroke: #fff;
+  stroke-width: 1.75;
+  stroke-linejoin: round;
 }
 
 .store-map .store-pin {
-  fill: var(--type, var(--chart-1));
-  fill-opacity: 0.95;
-  stroke: var(--bg);
-  stroke-width: 3;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 55%));
 }
 
-/* El radio: círculo naranja punteado y suave, con el punto azul de la persona en el centro. */
+.store-map .store-pin:hover .pin-shape {
+  transform: scale(1.12);
+}
+
+.store-map .store-pin:focus-visible {
+  outline: 3px solid #17140f;
+  outline-offset: 0;
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* Varias tiendas juntas: una burbuja blanca con el número; al tocarla el mapa se acerca. */
+.store-map .store-cluster {
+  display: grid;
+  place-items: center;
+}
+
+.store-map .store-cluster span,
+.legend-cluster {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 3px solid #17140f;
+  border-radius: 999px;
+  background: #fff;
+  color: #17140f;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
+}
+
+.store-map .store-cluster:focus-visible span {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.legend-cluster {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-width: 2px;
+  font-size: 0.7rem;
+  box-shadow: none;
+}
+
+/* El radio: círculo naranja punteado y suave. */
 .store-map .radius-circle {
   fill: var(--accent);
   fill-opacity: 0.08;
@@ -41,11 +115,66 @@
   stroke-dasharray: 6 6;
 }
 
+/* «Tú estás aquí»: punto negro con aro blanco y un halo que late. Ninguna tienda es un punto negro. */
 .store-map .user-pin {
-  fill: var(--info);
-  fill-opacity: 1;
-  stroke: var(--bg);
-  stroke-width: 3;
+  position: relative;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.you-dot {
+  display: block;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #17140f;
+  box-shadow: 0 0 0 1.5px #17140f;
+}
+
+.user-pin .you-halo {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgb(23 20 15 / 30%);
+  animation: you-pulse 2s ease-out infinite;
+}
+
+@keyframes you-pulse {
+  from {
+    transform: scale(0.45);
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-pin .you-halo {
+    animation: none;
+    transform: scale(0.75);
+    opacity: 0.6;
+  }
+}
+
+.legend-you {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+
+.legend-you .you-dot {
+  width: 18px;
+  height: 18px;
+  /* En el tema oscuro el aro blanco ya separa el punto del fondo. */
+  box-shadow: 0 0 0 1.5px #fff;
 }
 
 .map-legend {
@@ -63,14 +192,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--type, var(--ink-3));
 }
 
 .store-map .pin-link {
@@ -199,12 +320,6 @@
     height: var(--touch);
     line-height: var(--touch);
   }
-}
-
-/* H-32: el pin se alcanza con Tab; el foco se ve con un contorno. */
-.store-map .store-pin:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 /* H-10: «Cómo llegar» del globo es el primero y se toca en 44 px; «Ver precios» queda al lado. */
