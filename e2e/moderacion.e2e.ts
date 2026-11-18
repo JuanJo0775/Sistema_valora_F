@@ -29,6 +29,7 @@ interface Scene {
 
 // El backend deja 10 altas por IP cada 15 minutos y la CI usa el mismo IP para todos los E2E: las dos
 // cuentas (quien reporta y quien marca) se crean una vez y las usan los dos escenarios.
+const usedStores = new Set<string>();
 let reporter: APIRequestContext;
 let flagger: APIRequestContext;
 test.describe.configure({ mode: 'serial' });
@@ -55,9 +56,12 @@ const shownReport = async (page: Page, productId: string, reportId: string) =>
 // quien marca usan su propia sesión (sin la pantalla).
 async function flaggedPrice(page: Page): Promise<Scene> {
   const [product] = await someProducts(page.request, 1);
-  const [store] = await someStores(page.request, 1);
+  // Quien reporta no puede repetir presentación y tienda (409 DUPLICATE_REPORT): cada escenario
+  // usa una tienda que el otro no haya usado.
+  const store = (await someStores(page.request, 8)).find(({ id }) => !usedStores.has(id));
   const presentationId = product?.presentations[0]?.id;
   if (!product || !store || !presentationId) throw new Error('Sin datos de la semilla');
+  usedStores.add(store.id);
   // Dentro del rango de la regla de plausibilidad: si no, el reporte nacería «En revisión».
   const price = await plausiblePrice(page.request, product.id, presentationId);
 
