@@ -1,0 +1,122 @@
+import { describe, expect, it } from 'vitest';
+import { directionsTo } from '../../shared/directions';
+import { planDraft } from '../../test/planFixtures';
+import { planToText } from './planText';
+import { toSavedPlan, type PlanDraft, type SavedPlan } from './savedPlan';
+
+// 17-nov-2026 a las 21:30 en Colombia (UTC-5): el día en UTC ya sería el 18.
+const NOW = new Date('2026-11-18T02:30:00Z');
+
+const draft = (): PlanDraft => planDraft();
+
+const plan = (): SavedPlan => toSavedPlan(draft(), NOW);
+
+const DELIVERY_NOTE =
+  'Valora no hace pedidos ni domicilios. La tarifa es la que tú escribiste; confírmala con la tienda.';
+
+describe('planToText', () => {
+  it('incluye por tienda nombre, dirección y enlace Cómo llegar', () => {
+    const text = planToText(plan());
+    expect(text).toContain('D1 Calle 50');
+    expect(text).toContain('Cl. 50 # 14-20');
+    expect(text).toContain(directionsTo({ lat: 4.53, lng: -75.68 }));
+    expect(text).toContain(directionsTo({ lat: 4.54, lng: -75.69 }));
+    expect(text).toContain('Cómo llegar');
+  });
+
+  it('sin dirección omite la línea y no deja undefined', () => {
+    const text = planToText(plan());
+    expect(text).toContain('Tienda Don Pepe');
+    expect(text).not.toMatch(/undefined|null|NaN/);
+    const lines = text.split('\n');
+    const i = lines.findIndex((l) => l.includes('Tienda Don Pepe'));
+    expect(lines[i + 1]).toContain('Cómo llegar');
+  });
+
+  it('lista productos con cantidad, precio y fecha del precio, y subtotal', () => {
+    const text = planToText(plan());
+    expect(text).toContain('Arroz blanco');
+    expect(text).toContain('Diana · 500 g');
+    expect(text).toMatch(/2 x .*\$\s?2\.190/);
+    expect(text).toContain('16-nov');
+    expect(text).toContain('15-nov');
+    expect(text).toMatch(/Subtotal.*\$\s?4\.380/);
+    expect(text).toMatch(/Subtotal.*\$\s?9\.000/);
+  });
+
+  it('da la fecha de guardado en hora de Colombia', () => {
+    expect(planToText(plan())).toContain('Plan guardado el 17-nov');
+  });
+
+  it('rotula «extra» y «más» solo si la cifra es un extra', () => {
+    const base = plan();
+    const withTravel = (t: Partial<NonNullable<SavedPlan['summary']['travel']>>) =>
+      planToText({
+        ...base,
+        summary: {
+          ...base.summary,
+          travel: { ...(base.summary.travel as NonNullable<SavedPlan['summary']['travel']>), ...t },
+        },
+      });
+    expect(withTravel({ extra: true })).toMatch(/Traslado extra \(estimado\): 1,4 km más/);
+    const total = withTravel({ extra: false });
+    expect(total).toMatch(/Traslado \(estimado\): 1,4 km, 19 min/);
+    expect(total).not.toMatch(/extra|más/);
+    const less = withTravel({ extra: true, less: true });
+    expect(less).toMatch(/Traslado \(estimado\): 1,4 km menos que ir a una sola tienda/);
+    expect(less).not.toContain('extra');
+  });
+
+  it('muestra totales y marca traslado y domicilio como estimado', () => {
+    const text = planToText(plan());
+    expect(text).toMatch(/Total productos.*\$\s?13\.380/);
+    expect(text).toMatch(/Traslado extra \(estimado\)/);
+    expect(text).toContain('1,4 km');
+    expect(text).toContain('19 min');
+    expect(text).toMatch(/Domicilio \(estimado\).*\$\s?5\.000/);
+    expect(text).toContain(DELIVERY_NOTE);
+  });
+
+  it('el domicilio de la tienda se rotula estimado', () => {
+    expect(planToText(plan())).toMatch(/D1 Calle 50[\s\S]*Domicilio \(estimado\)/);
+  });
+
+  it('sin domicilio ni traslado no los menciona ni pone la nota', () => {
+    const d = draft();
+    d.stores = d.stores.map((s) => ({ ...s, delivery: null }));
+    d.summary = { ...d.summary, travel: null, deliveryCop: 0 };
+    const text = planToText(toSavedPlan(d, NOW));
+    expect(text).not.toContain('Domicilio');
+    expect(text).not.toContain('Traslado');
+    expect(text).not.toContain(DELIVERY_NOTE);
+  });
+
+  it('lista aparte los productos sin precio vigente', () => {
+    const text = planToText(plan());
+    expect(text).toMatch(/Sin precio vigente[\s\S]*Sal marina/);
+    const before = text.slice(0, text.indexOf('Sin precio vigente'));
+    expect(before).not.toContain('Sal marina');
+  });
+
+  it('termina con la línea de precios informativos', () => {
+    const text = planToText(plan()).trimEnd();
+    expect(text.split('\n').at(-1)).toBe('Precios informativos de Valora, no oficiales');
+  });
+
+  it('con traslado agrega los supuestos y sin él no', () => {
+    expect(planToText(plan())).toContain(
+      'Supuestos del traslado (estimado): línea recta × 1,3; 4,5 km/h a pie.',
+    );
+    const base = plan();
+    const none = planToText({ ...base, summary: { ...base.summary, travel: null } });
+    expect(none).not.toContain('Supuestos del traslado');
+  });
+
+  it('no contiene distanceM ni las coordenadas de la persona', () => {
+    const text = planToText(plan());
+    expect(text).not.toContain('distanceM');
+    expect(text).not.toContain('4.5339');
+    expect(text).not.toContain('-75.6811');
+    expect(text).not.toContain('812');
+  });
+});
