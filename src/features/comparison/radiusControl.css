@@ -148,3 +148,14 @@
     transition: none;
   }
 }
+
+.radius-help,
+.radius-note {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+}
+
+.radius-note {
+  color: var(--ink-3);
+}

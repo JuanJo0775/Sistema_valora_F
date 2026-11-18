@@ -54,3 +54,22 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+/* EC-03: confirmación en línea de un precio muy lejos de lo que ya se ve. */
+.price-doubt {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 2px solid var(--bad);
+  border-radius: var(--r-m);
+}
+
+.price-doubt h2,
+.price-doubt p {
+  margin: 0;
+}
+
+.price-doubt:focus-visible {
+  outline: 3px solid var(--bad);
+  outline-offset: 2px;
+}

@@ -5,6 +5,7 @@ import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 import { MUNICIPALITIES } from '../comparison/criteria';
+import { RadiusControl } from '../comparison/RadiusControl';
 import { useWhere, WhereChooser } from '../comparison/WhereChooser';
 import { useBasket } from '../basket/basketContext';
 import { useStoreTotals } from '../basket/useStoreTotals';
@@ -87,18 +88,35 @@ export function MapPage() {
       <section className="stores-main">
         <h1>{`Tiendas ${place}`}</h1>
         {subtitle && <p className="muted">{subtitle}</p>}
-        <WhereChooser where={where} backLabel="Ver por municipio" onPreviewRadius={setPreview} />
-        <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} around={around} />
-        <ul className="map-legend" aria-label="Colores del mapa">
-          {Object.entries(STORE_TYPES).map(([type, name]) => (
-            <li key={type}>
-              <span className={`dot type-${type}`} aria-hidden="true" />
-              {name}
-            </li>
-          ))}
-        </ul>
+        <WhereChooser where={where} backLabel="Ver por municipio" showRadius={false} />
+        <div className="map-panel">
+          <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} around={around} />
+          <ul className="map-legend" aria-label="Colores del mapa">
+            {Object.entries(STORE_TYPES).map(([type, name]) => (
+              <li key={type}>
+                <span className={`dot type-${type}`} aria-hidden="true" />
+                {name}
+              </li>
+            ))}
+          </ul>
+          {/* Siempre pegado al mapa. Sin ubicación el radio no se usa: moverlo la pide, sin guardarla;
+              si se niega, el valor queda recordado para cuando se active. */}
+          <RadiusControl
+            radiusKm={where.radiusKm}
+            onChange={(km) => {
+              where.setRadiusKm(km);
+              if (!where.point) where.locateMe();
+            }}
+            onPreview={setPreview}
+            title="Radio de búsqueda"
+            help="Hasta dónde buscar tiendas, de 0,5 a 3 km."
+            note={
+              where.point ? undefined : 'Usa tu ubicación para ver las tiendas dentro de este radio'
+            }
+          />
+        </div>
       </section>
-      <aside className="side store-list" aria-label="Lista de tiendas">
+      <aside className="side map-side" aria-label="Lista de tiendas">
         {/* #12: una tienda que nadie ha registrado se sugiere; la revisa un moderador. */}
         <Link to="/proponer/tienda" className="btn ghost suggest-store">
           Sugerir una tienda que no aparece

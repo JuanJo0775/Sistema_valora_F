@@ -252,7 +252,7 @@ describe('mapa de tiendas', () => {
     stubLocation();
     renderMap();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
-    const slider = await screen.findByRole('slider', { name: 'Radio' });
+    const slider = await screen.findByRole('slider', { name: 'Radio de búsqueda' });
     await screen.findByText('Círculo de 1.5 km');
     const nearbyCalls = () => api.requested.filter(({ pathname }) => pathname.endsWith('/nearby'));
     const before = nearbyCalls().length;
@@ -288,20 +288,74 @@ describe('mapa de tiendas', () => {
     stubLocation();
     renderMap();
 
-    expect(await screen.findByRole('slider', { name: 'Radio' })).toHaveValue('2.3');
+    expect(await screen.findByRole('slider', { name: 'Radio de búsqueda' })).toHaveValue('2.3');
     await vi.waitFor(() => {
       expect(api.requested.at(-1)?.searchParams.get('radiusKm')).toBe('2.3');
     });
   });
 
-  it('sin la ubicación no hay chips del radio', async () => {
+  it('el control del radio está siempre en el mapa, una sola vez, aunque no haya ubicación', async () => {
     stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
 
     renderMap();
 
     await screen.findByText('Mapa con: Ara');
-    expect(screen.queryByRole('radiogroup', { name: 'Radio de búsqueda' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('slider', { name: 'Radio' })).not.toBeInTheDocument();
+    expect(screen.getByText('Radio de búsqueda')).toBeInTheDocument();
+    expect(screen.getAllByRole('slider')).toHaveLength(1);
+    expect(screen.getByRole('slider', { name: 'Radio de búsqueda' })).toHaveValue('1.5');
+    expect(screen.getAllByRole('radiogroup')).toHaveLength(1);
+    expect(screen.getByRole('radio', { name: '1,5 km' })).toBeChecked();
+    expect(
+      screen.getByText('Usa tu ubicación para ver las tiendas dentro de este radio'),
+    ).toBeInTheDocument();
+  });
+
+  it('con la ubicación activa el control sigue siendo uno solo y ya no avisa que falta la ubicación', async () => {
+    localStorage.setItem('valora:donde', 'ubicacion');
+    stubApi({ 'GET /v1/establishments/nearby': { status: 200, body: { items: [pepe] } } });
+    stubLocation();
+
+    renderMap();
+
+    await screen.findByText('Círculo de 1.5 km');
+    expect(screen.getAllByRole('slider')).toHaveLength(1);
+    expect(screen.getAllByRole('radio', { name: '1 km' })).toHaveLength(1);
+    expect(screen.queryByText(/Usa tu ubicación para ver las tiendas dentro/)).toBeNull();
+  });
+
+  it('sin ubicación, tocar un chip del radio la pide y, concedida, busca con ese radio', async () => {
+    const api = stubApi({
+      'GET /v1/establishments': { status: 200, body: { items: [ara] } },
+      'GET /v1/establishments/nearby': { status: 200, body: { items: [pepe] } },
+    });
+    stubLocation();
+    renderMap();
+    await screen.findByText('Mapa con: Ara');
+
+    fireEvent.click(screen.getByRole('radio', { name: '2 km' }));
+
+    expect(await screen.findByRole('heading', { name: 'Tiendas cerca de ti' })).toBeInTheDocument();
+    await vi.waitFor(() => {
+      const asked = api.requested.filter(({ pathname }) => pathname.endsWith('/nearby')).at(-1);
+      expect(asked?.searchParams.get('radiusKm')).toBe('2');
+    });
+    expect(screen.getByRole('radio', { name: '2 km' })).toBeChecked();
+  });
+
+  it('sin ubicación, mover la barra la pide al soltar; si la niega avisa y recuerda el valor', async () => {
+    stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
+    stubLocation('deny');
+    renderMap();
+    await screen.findByText('Mapa con: Ara');
+    const slider = screen.getByRole('slider', { name: 'Radio de búsqueda' });
+
+    fireEvent.change(slider, { target: { value: '2.4' } });
+    fireEvent.pointerUp(slider);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Activa la ubicación del navegador');
+    expect(localStorage.getItem('valora:radio')).toBe('2.4');
+    expect(screen.getByRole('slider', { name: 'Radio de búsqueda' })).toHaveValue('2.4');
+    expect(screen.getByRole('heading', { name: 'Tiendas en Armenia' })).toBeInTheDocument();
   });
 
   it('si la última vez usó su ubicación, la vuelve a pedir y muestra las cercanas, sin guardar dónde está', async () => {
