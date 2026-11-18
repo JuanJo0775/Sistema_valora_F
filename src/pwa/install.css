@@ -1,0 +1,47 @@
+/* Franja para instalar la app (Inicio) y su guía de pasos. Colores solo de los tokens: sirve en
+   claro y en oscuro. */
+.install-strip {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--bg-2);
+  color: var(--ink);
+}
+
+.install-strip p {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.install-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+  font-size: 14px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.install-steps strong {
+  color: var(--ink);
+}
+
+/* En «Yo» la guía se abre debajo de la fila, a todo el ancho. */
+.install-row {
+  flex-wrap: wrap;
+}
+
+.install-row > .nav-row {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.install-row > .install-steps {
+  flex: 1 1 100%;
+  padding: 0 16px 12px 38px;
+}

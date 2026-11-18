@@ -1,15 +1,31 @@
 import react from '@vitejs/plugin-react';
-import { loadEnv } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { CATALOG_PRODUCT, FEATURED_WITHOUT_LOCATION } from './src/pwa/catalogCache';
 import { MANIFEST } from './src/pwa/manifest';
+import { applySiteUrl, normalizeSiteUrl, robotsTxt, sitemapXml } from './src/site';
+
+// La dirección del sitio entra en index.html (Open Graph, canonical) y en robots.txt y sitemap.xml
+// desde un solo punto: src/site.ts, o la variable SITE_URL para cambiarla sin tocar código.
+function siteUrlPlugin(siteUrl: string): Plugin {
+  return {
+    name: 'valora-site-url',
+    transformIndexHtml: (html) => applySiteUrl(html, siteUrl),
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(siteUrl) });
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(siteUrl) });
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const siteUrl = normalizeSiteUrl(env['SITE_URL']);
   return {
     plugins: [
       react(),
+      siteUrlPlugin(siteUrl),
       // ADR-017: la app se instala en el celular. Solo se guardan en caché los archivos de la app;
       // las consultas a /v1 van a la red (la consulta requiere conexión, ADR-010). La única excepción
       // es el detalle de un producto ya abierto, para registrar sin señal (#26), y la canasta básica
