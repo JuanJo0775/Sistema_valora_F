@@ -73,13 +73,24 @@
   object-fit: contain;
 }
 
-.product-thumb svg {
+.product-thumb svg,
+.product-image.illustration svg {
   width: 62%;
   height: 62%;
-  fill: var(--bg-3);
-  stroke: var(--ink-3);
-  stroke-width: 2;
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2.5;
+  stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Ilustración por categoría (CategoryArt): el cuerpo se rellena suave, los detalles son solo trazo. */
+.art-body {
+  fill: var(--bg-3);
+}
+
+.art-line {
+  fill: none;
 }
 
 .detail {
@@ -105,6 +116,7 @@
 
 .product-image img,
 .product-image.illustration {
+  display: block;
   width: 100%;
   max-width: 240px;
   aspect-ratio: 1;
@@ -114,12 +126,9 @@
 }
 
 .product-image.illustration {
-  padding: 48px;
+  display: grid;
+  place-items: center;
   justify-self: center;
-  fill: var(--bg-3);
-  stroke: var(--ink-3);
-  stroke-width: 2;
-  stroke-linejoin: round;
 }
 
 .product-image figcaption {
@@ -142,10 +151,6 @@
 .detail-photo .product-image img,
 .detail-photo .product-image.illustration {
   max-width: 96px;
-}
-
-.detail-photo .product-image.illustration {
-  padding: 20px;
 }
 
 .detail-title {

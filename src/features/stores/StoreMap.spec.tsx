@@ -1,7 +1,8 @@
 import L from 'leaflet';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { clusterPoints } from './cluster';
 import { StoreMap } from './StoreMap';
 
 const stores = [
@@ -64,7 +65,7 @@ describe('mapa de Leaflet', () => {
     const { container } = renderMap();
 
     expect(screen.getByRole('region', { name: 'Mapa de las tiendas' })).toBeInTheDocument();
-    expect(container.querySelectorAll('path.store-pin')).toHaveLength(2);
+    expect(container.querySelectorAll('.store-pin')).toHaveLength(2);
     expect(screen.getByRole('link', { name: 'OpenStreetMap' })).toHaveAttribute(
       'href',
       'https://www.openstreetmap.org/copyright',
@@ -73,7 +74,7 @@ describe('mapa de Leaflet', () => {
 
   it('al tocar un marcador, «Ver precios» lleva a la página de la tienda', async () => {
     const { container } = renderMap();
-    const [first] = container.querySelectorAll('path.store-pin');
+    const [first] = container.querySelectorAll('.store-pin');
 
     fireEvent.click(first as Element);
     fireEvent.click(await screen.findByRole('button', { name: 'Ver precios' }));
@@ -85,7 +86,7 @@ describe('mapa de Leaflet', () => {
   it('cada pin recibe foco con Tab y se nombra con su tienda', () => {
     const { container } = renderMap();
 
-    const pins = container.querySelectorAll('path.store-pin');
+    const pins = container.querySelectorAll('.store-pin');
     expect([...pins].map((pin) => pin.getAttribute('tabindex'))).toEqual(['0', '0']);
     expect([...pins].map((pin) => pin.getAttribute('aria-label'))).toEqual(['Ara', 'D1']);
     expect(screen.getByRole('button', { name: 'Ara' })).toBeInTheDocument();
@@ -109,7 +110,7 @@ describe('mapa de Leaflet', () => {
   it('el globo de un pin ofrece «Cómo llegar» antes que «Ver precios»', async () => {
     const { container } = renderMap();
 
-    fireEvent.click(container.querySelector('path.store-pin') as Element);
+    fireEvent.click(container.querySelector('.store-pin') as Element);
 
     const directions = await screen.findByRole('link', { name: 'Cómo llegar a Ara' });
     const prices = screen.getByRole('button', { name: 'Ver precios' });
@@ -157,8 +158,8 @@ describe('mapa de Leaflet', () => {
   it('cada tienda lleva el color de su tipo', () => {
     const { container } = renderMap();
 
-    expect(container.querySelectorAll('path.store-pin.type-descuento')).toHaveLength(1);
-    expect(container.querySelectorAll('path.store-pin.type-barrio')).toHaveLength(1);
+    expect(container.querySelectorAll('.store-pin.type-descuento')).toHaveLength(1);
+    expect(container.querySelectorAll('.store-pin.type-barrio')).toHaveLength(1);
   });
 
   it('con la ubicación dibuja el punto de la persona y el círculo del radio', () => {
@@ -172,7 +173,7 @@ describe('mapa de Leaflet', () => {
       </MemoryRouter>,
     );
 
-    expect(container.querySelectorAll('path.user-pin')).toHaveLength(1);
+    expect(container.querySelectorAll('.user-pin')).toHaveLength(1);
     expect(container.querySelectorAll('path.radius-circle')).toHaveLength(1);
   });
 
@@ -199,7 +200,7 @@ describe('mapa de Leaflet', () => {
     expect(resize).toHaveBeenLastCalledWith(2500);
     expect(fit).not.toHaveBeenCalled();
     expect(container.querySelectorAll('path.radius-circle')).toHaveLength(1);
-    expect(container.querySelectorAll('path.user-pin')).toHaveLength(1);
+    expect(container.querySelectorAll('.user-pin')).toHaveLength(1);
 
     rerender(draw(2.5, false));
 
@@ -208,9 +209,126 @@ describe('mapa de Leaflet', () => {
     fit.mockRestore();
   });
 
+  it('«Tú estás aquí» es un punto propio con nombre accesible, distinto de los pines de tienda', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <StoreMap
+          stores={stores}
+          label="Mapa de las tiendas"
+          around={{ lat: 4.53, lng: -75.68, radiusKm: 2 }}
+        />
+      </MemoryRouter>,
+    );
+
+    const you = screen.getByRole('img', { name: 'Tú estás aquí' });
+    expect(you).toHaveClass('user-pin');
+    expect(you.querySelector('.you-halo')).not.toBeNull();
+    expect(you).not.toHaveClass('store-pin');
+    expect(container.querySelectorAll('.store-pin .you-dot')).toHaveLength(0);
+  });
+
+  it('cada tipo de tienda dibuja una forma distinta', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <StoreMap
+          label="Mapa"
+          stores={(['barrio', 'minimercado', 'supermercado', 'descuento'] as const).map(
+            (type, index) => ({ id: type, name: type, type, lat: 4.5 + index, lng: -75.68 }),
+          )}
+        />
+      </MemoryRouter>,
+    );
+
+    const shapes = [...container.querySelectorAll('.store-pin path')].map((path) =>
+      path.getAttribute('d'),
+    );
+    expect(new Set(shapes).size).toBe(4);
+  });
+
   it('sin la ubicación no dibuja ni el punto ni el radio', () => {
     const { container } = renderMap();
 
-    expect(container.querySelectorAll('path.user-pin, path.radius-circle')).toHaveLength(0);
+    expect(container.querySelectorAll('.user-pin, path.radius-circle')).toHaveLength(0);
+  });
+
+  describe('agrupación de pines', () => {
+    const near = [
+      { id: 'n1', name: 'Uno', type: 'barrio' as const, lat: 4.5339, lng: -75.6811 },
+      { id: 'n2', name: 'Dos', type: 'descuento' as const, lat: 4.53392, lng: -75.68112 },
+      { id: 'n3', name: 'Tres', type: 'barrio' as const, lat: 4.5339, lng: -75.68115 },
+    ];
+
+    it('tiendas muy juntas se agrupan con su contador y la lista de tiendas no cambia', () => {
+      const { container } = render(
+        <MemoryRouter>
+          <StoreMap stores={near} label="Mapa" />
+        </MemoryRouter>,
+      );
+
+      // A zoom 14 (o el que ajuste el mapa sin tamaño) tres tiendas a pocos metros van juntas.
+      const group = screen.getByRole('button', { name: /Grupo de 3 tiendas/ });
+      expect(group).toHaveTextContent('3');
+      expect(group).toHaveAttribute('tabindex', '0');
+      expect(container.querySelectorAll('.store-pin')).toHaveLength(0);
+    });
+
+    it('al tocar o dar Enter al grupo el mapa se acerca a sus tiendas', () => {
+      const fit = vi.spyOn(L.Map.prototype, 'fitBounds');
+      render(
+        <MemoryRouter>
+          <StoreMap stores={near} label="Mapa" />
+        </MemoryRouter>,
+      );
+      fit.mockClear();
+      const group = screen.getByRole('button', { name: /Grupo de 3 tiendas/ });
+
+      fireEvent.click(group);
+      expect(fit).toHaveBeenCalledTimes(1);
+      fireEvent.keyDown(group, { key: 'Enter' });
+      expect(fit).toHaveBeenCalledTimes(2);
+      fit.mockRestore();
+    });
+
+    it('al acercar tanto que ya no se tocan, vuelven a ser pines sueltos', () => {
+      const create = vi.spyOn(L, 'map');
+      const { container } = render(
+        <MemoryRouter>
+          <StoreMap stores={near} label="Mapa" />
+        </MemoryRouter>,
+      );
+      expect(container.querySelectorAll('.store-cluster')).toHaveLength(1);
+
+      const mapInstance = create.mock.results[0]?.value as L.Map;
+      act(() => {
+        mapInstance.setView([4.5339, -75.6811], 18, { animate: false });
+      });
+
+      expect(container.querySelectorAll('.store-cluster')).toHaveLength(0);
+      expect(container.querySelectorAll('.store-pin')).toHaveLength(3);
+      create.mockRestore();
+    });
+  });
+});
+
+describe('clusterPoints', () => {
+  const a = { lat: 4.5339, lng: -75.6811 };
+  const b = { lat: 4.5401, lng: -75.6702 };
+
+  it('junta lo que está a menos de la distancia en píxeles y deja solo lo lejano', () => {
+    expect(
+      clusterPoints([a, { ...a, lat: a.lat + 0.00005 }, b], 14, 44).map((g) => g.items.length),
+    ).toEqual([2, 1]);
+  });
+
+  it('al acercar el zoom los mismos puntos se separan', () => {
+    const close = { ...a, lat: a.lat + 0.0005 };
+    expect(clusterPoints([a, close], 13, 44)).toHaveLength(1);
+    expect(clusterPoints([a, close], 18, 44)).toHaveLength(2);
+  });
+
+  it('con distancia negativa nunca agrupa y el centro del grupo es el promedio', () => {
+    expect(clusterPoints([a, a], 10, -1)).toHaveLength(2);
+    const [group] = clusterPoints([a, b], 3, 44);
+    expect(group?.lat).toBeCloseTo((a.lat + b.lat) / 2);
   });
 });

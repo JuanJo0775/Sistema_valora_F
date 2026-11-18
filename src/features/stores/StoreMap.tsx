@@ -3,11 +3,13 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { directionsTo } from '../../shared/directions';
+import { clusterPoints } from './cluster';
+import { pinSvg } from './pinShapes';
 
 export interface MapStore {
   id: string;
   name: string;
-  // #73: el tipo da el color del marcador (barrio, minimercado, supermercado, descuento).
+  // #73: el tipo da la forma y el color del marcador (barrio, minimercado, supermercado, descuento).
   type?: string;
   lat: number;
   lng: number;
@@ -21,6 +23,10 @@ export interface Around {
   // Mientras se arrastra la barra del radio el círculo se redimensiona, pero la vista no se mueve.
   dragging?: boolean;
 }
+
+// Tamaño táctil del pin y distancia en pantalla a la que dos tiendas se juntan en un grupo.
+const PIN = 36;
+const CLUSTER_PX = 44;
 
 // Centro de Armenia: el mapa arranca en el municipio, no en la ubicación de la persona (ADR-019).
 const ARMENIA: L.LatLngExpression = [4.5339, -75.6811];
@@ -93,10 +99,10 @@ export function StoreMap({
 
   useEffect(() => {
     const layer = pins.current;
-    if (!map.current || !layer) return;
-    layer.clearLayers();
-    for (const store of stores) {
-      // Ventana del marcador: el nombre y un botón que navega dentro de la app (sin recargar).
+    const current = map.current;
+    if (!current || !layer) return;
+    // Ventana del marcador: el nombre y un botón que navega dentro de la app (sin recargar).
+    const popupFor = (store: MapStore, marker: () => L.Marker) => {
       const popup = document.createElement('div');
       const name = document.createElement('strong');
       name.textContent = store.name;
@@ -116,42 +122,102 @@ export function StoreMap({
         void navigate(`/tiendas/${store.id}`);
       });
       popup.append(name, document.createElement('br'), route, open);
-      const kind = store.type ? ` type-${store.type}` : '';
-      const marker = L.circleMarker([store.lat, store.lng], {
-        radius: 9,
-        className: `store-pin${kind}`,
-      }).bindPopup(popup);
-      // H-32: el pin es un trazo SVG; para el teclado se vuelve un botón con el nombre de la tienda.
-      // Enter o Espacio abren el globo y llevan el foco a su primer enlace; Escape lo cierra y
-      // devuelve el foco al pin. La lista de tiendas sigue siendo la alternativa completa.
+      popup.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        marker().closePopup();
+        marker().getElement()?.focus();
+      });
+      return { popup, route };
+    };
+    // H-32: el pin es un botón con el nombre de la tienda. Enter o Espacio abren su ventana
+    // (preventDefault evita que Leaflet lo vuelva a tomar como clic y la cierre) y llevan el foco a su
+    // primer enlace; Escape la cierra y devuelve el foco al pin. La lista sigue siendo la alternativa.
+    const onKeys = (marker: L.Marker, run: () => void) => {
       marker.on('add', () => {
-        const pin = marker.getElement();
-        if (!pin) return;
-        pin.setAttribute('tabindex', '0');
-        pin.setAttribute('role', 'button');
-        pin.setAttribute('aria-label', store.name);
-        pin.addEventListener('keydown', (event: Event) => {
+        marker.getElement()?.addEventListener('keydown', (event: Event) => {
           const { key } = event as KeyboardEvent;
           if (key !== 'Enter' && key !== ' ') return;
           event.preventDefault();
-          marker.openPopup();
-          route.focus();
+          run();
         });
       });
-      popup.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape') return;
-        marker.closePopup();
-        (marker.getElement() as SVGElement | undefined)?.focus();
-      });
-      marker.addTo(layer);
-    }
+    };
+    const draw = () => {
+      layer.clearLayers();
+      // Cerca se juntan en un grupo con su contador; muy cerca del suelo (zoom 17+) ya van sueltas.
+      const zoom = current.getZoom();
+      const groups = clusterPoints(
+        stores,
+        Number.isFinite(zoom) ? zoom : 14,
+        zoom >= 17 ? -1 : CLUSTER_PX,
+      );
+      for (const group of groups) {
+        const [only] = group.items;
+        if (group.items.length === 1 && only) {
+          const store = only;
+          const kind = store.type ? ` type-${store.type}` : '';
+          const marker: L.Marker = L.marker([store.lat, store.lng], {
+            icon: L.divIcon({
+              className: `store-pin${kind}`,
+              html: pinSvg(store.type),
+              iconSize: [PIN, PIN],
+              iconAnchor: [PIN / 2, PIN / 2],
+              popupAnchor: [0, -PIN / 2],
+            }),
+            title: store.name,
+            alt: store.name,
+          });
+          const { popup, route } = popupFor(store, () => marker);
+          marker.bindPopup(popup);
+          marker.on('add', () => {
+            marker.getElement()?.setAttribute('aria-label', store.name);
+          });
+          onKeys(marker, () => {
+            marker.openPopup();
+            route.focus();
+          });
+          marker.addTo(layer);
+          continue;
+        }
+        const count = group.items.length;
+        const label = `Grupo de ${String(count)} tiendas. Toca para acercar y verlas.`;
+        const zoomIn = () => {
+          current.fitBounds(L.latLngBounds(group.items.map(({ lat, lng }) => [lat, lng])), {
+            padding: [48, 48],
+            maxZoom: 18,
+          });
+        };
+        const marker = L.marker([group.lat, group.lng], {
+          icon: L.divIcon({
+            className: 'store-cluster',
+            html: `<span>${String(count)}</span>`,
+            iconSize: [PIN, PIN],
+            iconAnchor: [PIN / 2, PIN / 2],
+          }),
+          title: label,
+          alt: label,
+        });
+        marker.on('click', zoomIn);
+        marker.on('add', () => {
+          marker.getElement()?.setAttribute('aria-label', label);
+        });
+        onKeys(marker, zoomIn);
+        marker.addTo(layer);
+      }
+    };
+    draw();
+    // Al acercar o alejar los grupos se rehacen.
+    current.on('zoomend', draw);
     // Con el radio, el mapa encuadra el círculo (abajo); sin él, las tiendas.
     if (stores.length > 0 && !hasAround) {
-      map.current.fitBounds(L.latLngBounds(stores.map(({ lat, lng }) => [lat, lng])), {
+      current.fitBounds(L.latLngBounds(stores.map(({ lat, lng }) => [lat, lng])), {
         padding: [24, 24],
         maxZoom: 16,
       });
     }
+    return () => {
+      current.off('zoomend', draw);
+    };
   }, [stores, navigate, hasAround]);
 
   // La persona y su círculo: se vuelven a dibujar solo si cambia dónde está.
@@ -168,7 +234,24 @@ export function StoreMap({
       radius: 1,
       className: 'radius-circle',
     }).addTo(layer);
-    L.circleMarker([lat, lng], { radius: 7, className: 'user-pin' }).addTo(layer);
+    // «Tú estás aquí»: un punto con halo que late, de forma y color que ninguna tienda usa.
+    const you = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: 'user-pin',
+        html: '<span class="you-halo"></span><span class="you-dot"></span>',
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+      }),
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 1000,
+    });
+    you.on('add', () => {
+      const element = you.getElement();
+      element?.setAttribute('role', 'img');
+      element?.setAttribute('aria-label', 'Tú estás aquí');
+    });
+    you.addTo(layer);
   }, [lat, lng]);
 
   // El radio: el círculo se redimensiona en vivo; la vista se ajusta a él al soltar, no al arrastrar.
