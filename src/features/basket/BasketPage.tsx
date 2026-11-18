@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { type BasketItem, useBasket } from './basketContext';
-import { ProductImage } from '../catalog/ProductImage';
+import { ProductThumb } from '../catalog/ProductThumb';
 import { CheapestStore } from './CheapestStore';
 import { useStoreTotals } from './useStoreTotals';
 import './basket.css';
@@ -89,7 +89,7 @@ function BasketRow({
         tabIndex={-1}
         aria-hidden="true"
       >
-        <ProductImage name={item.productName} />
+        <ProductThumb image={item.image} size="row" category={item.categoryCode} />
       </Link>
       <Link to={`/productos/${item.productId}`} className="basket-name">
         <strong>{item.productName}</strong>
