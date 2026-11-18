@@ -5,6 +5,8 @@ import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { formatCop } from '../../shared/money';
+import { readMunicipality } from '../comparison/lastMunicipality';
 import { formatPresentation } from '../catalog/presentation';
 import { PresentationChoices } from '../catalog/PresentationChoices';
 import { ProductSearch } from '../catalog/ProductSearch';
@@ -13,6 +15,7 @@ import { secondsSince, Stopwatch } from './Stopwatch';
 import { useReportQueue } from '../../pwa/queueContext';
 import { readLastStore, saveLastStore } from './lastStore';
 import { readRecentProducts, saveRecentProduct } from './lastProducts';
+import { judgePrice, referenceFrom, suggestPrice } from './plausibility';
 import { parsePrice } from './price';
 import { ReportProblem } from './ReportProblem';
 import { type Store, StorePicker } from './StorePicker';
@@ -20,6 +23,7 @@ import '../auth/field.css';
 import './reports.css';
 
 type Product = components['schemas']['Product'];
+type Offer = components['schemas']['ComparisonItem'];
 
 // El campo datetime-local escribe la hora del teléfono sin zona: «2026-11-16T09:30».
 const toLocalInput = (date: Date) =>
@@ -98,6 +102,11 @@ function ReportForm({ productId }: { productId: string }) {
   const timeRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
+  // EC-03: lo que ya se ve para la presentación elegida. Si la consulta falla o tarda, sigue sin referencia.
+  const [offers, setOffers] = useState<Offer[]>([]);
+  // El precio atípico espera la confirmación de la persona antes de enviarse.
+  const [doubt, setDoubt] = useState<number | null>(null);
+  const doubtRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     call(api.GET('/products/{productId}', { params: { path: { productId } } }))
@@ -112,14 +121,45 @@ function ReportForm({ productId }: { productId: string }) {
       });
   }, [productId, loadAttempt]);
 
+  useEffect(() => {
+    let current = true;
+    // Solo el municipio recordado: la ubicación de la persona no se manda.
+    call(
+      api.GET('/products/{productId}/comparison', {
+        params: {
+          path: { productId },
+          query: { municipality: readMunicipality(), sort: 'unit_price', onlyCurrent: true },
+        },
+      }),
+    )
+      .then(({ results }) => {
+        if (current) setOffers(results);
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [productId]);
+
+  useEffect(() => {
+    if (doubt !== null) doubtRef.current?.focus();
+  }, [doubt]);
+
+  const reference = presentationId ? referenceFrom(offers, presentationId) : null;
+  const suggestion = doubt !== null && reference ? suggestPrice(doubt, reference) : null;
+  // Cierra la duda y devuelve a la persona al campo, con el valor escrito.
+  const fixPrice = () => {
+    setDoubt(null);
+    priceRef.current?.focus();
+  };
   const chosenSize = product?.presentations.find(({ id }) => id === presentationId);
   // Al corregir el campo que falló, su aviso se quita.
   const clear = (field: Field) => {
     setProblem((now) => (now?.field === field ? null : now));
   };
 
-  const submit = (event: SyntheticEvent) => {
-    event.preventDefault();
+  // «confirmed»: la persona ya dijo «Sí, ese es el precio» a un precio atípico.
+  const run = (confirmed: boolean) => {
     const observedAt = seenAt ? new Date(seenAt) : startedAt;
     const found = check({ presentationId, store, price, observedAt });
     if ('problem' in found) {
@@ -131,11 +171,37 @@ function ReportForm({ productId }: { productId: string }) {
     }
     setProblem(null);
     if (!store) return;
+    const plausibility = judgePrice(found.priceCop, reference);
+    if (plausibility === 'imposible') {
+      setDoubt(null);
+      setProblem({
+        field: 'price',
+        text: 'Revisa el precio: ¿le faltan ceros? Ningún producto cuesta menos de $100.',
+      });
+      priceRef.current?.focus();
+      return;
+    }
+    if (plausibility === 'atipico' && !confirmed) {
+      setDoubt(found.priceCop);
+      // Si el bloque ya estaba abierto, el efecto no cambia: el foco vuelve a él.
+      doubtRef.current?.focus();
+      return;
+    }
+    send(found.priceCop, observedAt, store);
+  };
+
+  const submit = (event: SyntheticEvent) => {
+    event.preventDefault();
+    run(false);
+  };
+
+  const send = (priceCop: number, observedAt: Date, chosenStore: Store) => {
+    setDoubt(null);
     setError(null);
     const report = {
       presentationId,
-      establishmentId: store.id,
-      priceCop: found.priceCop,
+      establishmentId: chosenStore.id,
+      priceCop,
       priceType: onSale ? ('oferta' as const) : ('normal' as const),
       observedAt: observedAt.toISOString(),
     };
@@ -152,7 +218,7 @@ function ReportForm({ productId }: { productId: string }) {
           product: [product?.name, chosenSize && formatPresentation(chosenSize)]
             .filter(Boolean)
             .join(' · '),
-          store: store.name,
+          store: chosenStore.name,
         },
       })
       .then((result) => {
@@ -161,7 +227,7 @@ function ReportForm({ productId }: { productId: string }) {
           setSending(false);
           return;
         }
-        saveLastStore(store);
+        saveLastStore(chosenStore);
         if (product) saveRecentProduct({ id: productId, name: product.name });
         setTookSeconds(secondsSince(startedAt));
         setDone(result.kind);
@@ -219,6 +285,7 @@ function ReportForm({ productId }: { productId: string }) {
         value={presentationId}
         onChange={(id) => {
           setPresentationId(id);
+          setDoubt(null);
           clear('presentation');
         }}
       />
@@ -245,6 +312,7 @@ function ReportForm({ productId }: { productId: string }) {
             aria-invalid={problem?.field === 'price' ? true : undefined}
             onChange={(event) => {
               setPrice(event.target.value);
+              setDoubt(null);
               clear('price');
             }}
           />
@@ -294,6 +362,53 @@ function ReportForm({ productId }: { productId: string }) {
         />
         Es oferta
       </label>
+      {doubt !== null && reference && (
+        <div
+          ref={doubtRef}
+          role="alertdialog"
+          aria-live="assertive"
+          aria-labelledby="duda-titulo"
+          aria-describedby="duda-texto"
+          tabIndex={-1}
+          className="price-doubt"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') fixPrice();
+          }}
+        >
+          <h2 id="duda-titulo">Revisa el precio</h2>
+          <p id="duda-texto">
+            {`Lo más barato que vemos para esta presentación es ${formatCop(reference.min)} y lo más caro ${formatCop(reference.max)}. Tu precio es ${formatCop(doubt)}. ¿Está bien?`}
+          </p>
+          {suggestion !== null && <p>{`¿Querías escribir ${formatCop(suggestion)}?`}</p>}
+          <p className="muted">Un moderador puede revisarlo antes de mostrarlo.</p>
+          <div className="actions">
+            {suggestion !== null && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setPrice(String(suggestion));
+                  fixPrice();
+                }}
+              >
+                {`Sí, escribir ${formatCop(suggestion)}`}
+              </button>
+            )}
+            <button type="button" className="btn ghost" onClick={fixPrice}>
+              Corregir el precio
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                run(true);
+              }}
+            >
+              Sí, ese es el precio
+            </button>
+          </div>
+        </div>
+      )}
       {error !== null && <ReportProblem error={error} />}
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Enviando…' : 'Enviar'}
