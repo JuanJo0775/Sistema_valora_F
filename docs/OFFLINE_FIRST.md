@@ -4,6 +4,8 @@
 
 La PWA mantiene una cola local persistente para **registrar precios** sin conexión. La consulta y comparación de precios requieren conectividad. No se promete una aplicación completamente offline.
 
+Un plan de compra guardado (propuesta ADR-030) se puede leer sin conexión: es un documento fechado que la persona guardó en su teléfono, no una consulta. Actualizarlo con precios de hoy sí requiere conexión.
+
 ## Tecnología (ADR-017)
 
 - **vite-plugin-pwa (Workbox):** genera el manifest, registra y actualiza el service worker y guarda en caché los archivos de la aplicación.
