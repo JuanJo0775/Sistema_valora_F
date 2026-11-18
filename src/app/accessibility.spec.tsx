@@ -153,6 +153,26 @@ describe('accesibilidad de los flujos críticos (axe, WCAG 2.2 AA)', () => {
     expect(await seriousViolations()).toEqual([]);
   });
 
+  it('el plan de compra, con su reparto en tiendas', async () => {
+    localStorage.setItem(
+      'valora:canasta',
+      JSON.stringify([
+        {
+          productId: RICE,
+          productName: 'Arroz blanco',
+          presentationId: PRESENTATION,
+          presentationLabel: '500 g',
+          quantity: 1,
+          bought: false,
+        },
+      ]),
+    );
+    visit('/canasta/plan');
+    await screen.findByRole('heading', { name: '1 tienda' });
+
+    expect(await seriousViolations()).toEqual([]);
+  });
+
   it('el mapa de tiendas', async () => {
     visit('/mapa');
     await screen.findByRole('heading', { name: 'Ara' });

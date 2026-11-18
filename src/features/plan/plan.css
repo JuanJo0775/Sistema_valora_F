@@ -1,0 +1,92 @@
+/* Pantalla del plan de compra: tokens y clases del resto de la app, sin colores propios. */
+.plan {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.plan h1,
+.plan h2,
+.plan h3,
+.plan p {
+  margin: 0;
+}
+
+.plan-where {
+  display: grid;
+  gap: 12px;
+}
+
+.plan-assumptions,
+.plan-option {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-m);
+}
+
+.plan-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.plan-total strong {
+  font-size: 1.5rem;
+}
+
+.plan-store {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.plan-lines {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-lines li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.plan-subtotal {
+  font-weight: 600;
+}
+
+.plan-switch {
+  align-items: center;
+}
+
+.plan-travel,
+.plan-net {
+  display: grid;
+  gap: 6px;
+}
+
+/* El resultado va con texto y con borde, no solo con color. */
+.plan-net {
+  padding: 10px 14px;
+  border: 2px solid var(--line-2);
+  border-radius: var(--r-m);
+}
+
+.plan-more > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch);
+  margin-bottom: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plan-more[open] > summary {
+  margin-bottom: 12px;
+}
