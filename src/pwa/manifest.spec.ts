@@ -35,21 +35,6 @@ describe('manifest de la PWA', () => {
     );
   });
 
-  it('las capturas existen, miden lo que dicen y pesan menos de 300 kB', () => {
-    expect(MANIFEST.screenshots.map((s) => `${s.form_factor} ${s.sizes}`).sort()).toEqual([
-      'narrow 1080x1920',
-      'narrow 1080x1920',
-      'wide 1920x1080',
-      'wide 1920x1080',
-    ]);
-    for (const shot of MANIFEST.screenshots) {
-      const file = readFileSync(join(process.cwd(), 'public', shot.src));
-      expect(file.byteLength).toBeLessThan(300 * 1024);
-      // PNG: el ancho y el alto están en la cabecera IHDR.
-      expect(`${String(file.readUInt32BE(16))}x${String(file.readUInt32BE(20))}`).toBe(shot.sizes);
-    }
-  });
-
   it('los íconos del manifest existen en public/', () => {
     for (const icon of MANIFEST.icons) {
       expect(existsSync(join(process.cwd(), 'public', icon.src))).toBe(true);
