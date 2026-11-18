@@ -3,14 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0D0D0E" media="(prefers-color-scheme: dark)" />
+    <title>Valora: compara precios de tu barrio</title>
     <meta
       name="description"
       content="Compara precios de tiendas de barrio, minimercados y supermercados de Armenia y el Quindío."
     />
-    <!-- Vista previa al compartir el enlace (WhatsApp, Telegram, redes): Open Graph. WhatsApp pide
-         direcciones absolutas y una imagen de 1200 x 630 de menos de 300 KB. -->
+    <link rel="canonical" href="__SITE_URL__/" />
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0D0D0E" media="(prefers-color-scheme: dark)" />
+
+    <!-- Donde dice la marca de dirección del sitio, el build pone la dirección real; esa dirección
+         se cambia en un solo lugar (src/site.ts o la variable SITE_URL). Ver docs/INSTALAR_Y_COMPARTIR.md. -->
+
+    <!-- Vista previa al compartir el enlace (WhatsApp, Telegram, Facebook, LinkedIn): Open Graph.
+         WhatsApp pide direcciones absolutas y una imagen de 1200 x 630 de menos de 300 KB. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Valora" />
     <meta property="og:locale" content="es_CO" />
@@ -19,22 +25,31 @@
       property="og:description"
       content="Precios de tiendas de barrio, minimercados y supermercados de Armenia y el Quindío, reportados por la gente."
     />
-    <meta property="og:url" content="https://sistema-valora-f.vercel.app/" />
-    <meta property="og:image" content="https://sistema-valora-f.vercel.app/og-image.png" />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:image" content="__SITE_URL__/og-image.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Logo de Valora: compara precios de tu barrio" />
+
+    <!-- X (Twitter) -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Valora: compara precios de tu barrio" />
     <meta
       name="twitter:description"
       content="Precios de tiendas de barrio, minimercados y supermercados de Armenia y el Quindío."
     />
-    <meta name="twitter:image" content="https://sistema-valora-f.vercel.app/og-image.png" />
+    <meta name="twitter:image" content="__SITE_URL__/og-image.png" />
+    <meta name="twitter:image:alt" content="Logo de Valora: compara precios de tu barrio" />
+
+    <!-- Instalar en el celular. iOS no lee todo el manifest: pide el ícono (180 x 180, sin
+         transparencia), el nombre y el modo de pantalla completa aquí. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Valora" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="icon" type="image/png" href="/favicon-64.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>Valora</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   </head>
   <body>
     <div id="root"></div>

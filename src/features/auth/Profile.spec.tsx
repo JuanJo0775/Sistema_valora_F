@@ -20,6 +20,14 @@ describe('pestaña Yo', () => {
     localStorage.clear();
   });
 
+  it('siempre ofrece la fila «Instalar la app», con o sin sesión', async () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+
+    renderProfile();
+
+    expect(await screen.findByRole('button', { name: /Instalar la app/ })).toBeInTheDocument();
+  });
+
   it('sin sesión invita a iniciar sesión o a crear una cuenta', async () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
 
