@@ -22,6 +22,8 @@ function screen<Name extends string>(load: () => Promise<Record<Name, ComponentT
 const Profile = screen(() => import('../features/auth/Profile'), 'Profile');
 const PendingReports = screen(() => import('../pwa/PendingReports'), 'PendingReports');
 const BasketPage = screen(() => import('../features/basket/BasketPage'), 'BasketPage');
+const PlanPage = screen(() => import('../features/plan/PlanPage'), 'PlanPage');
+const SavedPlanPage = screen(() => import('../features/plan/SavedPlanPage'), 'SavedPlanPage');
 const ReportPrice = screen(() => import('../features/reports/ReportPrice'), 'ReportPrice');
 const Settings = screen(() => import('../features/auth/Settings'), 'Settings');
 const SignIn = screen(() => import('../features/auth/SignIn'), 'SignIn');
@@ -131,6 +133,8 @@ export function App() {
                 />
                 <Route path="/pendientes" element={<PendingReports />} />
                 <Route path="/canasta" element={<BasketPage />} />
+                <Route path="/canasta/plan" element={<PlanPage />} />
+                <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
                 <Route path="/yo" element={<Profile />} />
                 <Route path="/yo/ajustes" element={<Settings />} />
                 <Route path="/entrar" element={<SignIn />} />
