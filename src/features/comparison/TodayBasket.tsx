@@ -199,7 +199,7 @@ function ProductCard({ item }: { item: Item }) {
     <li className="product-card">
       <Link to={`/productos/${item.productId}`} className="product-card-link">
         <div className="product-card-top">
-          <ProductThumb image={item.image} size="card" />
+          <ProductThumb image={item.image} size="card" category={item.category.code} />
           {item.savingsPercent !== undefined && (
             <span className="pill ok">{`Hasta −${String(item.savingsPercent)} % frente a la tienda más cara`}</span>
           )}
@@ -232,6 +232,8 @@ function ProductCard({ item }: { item: Item }) {
             {
               productId: item.productId,
               productName: item.name,
+              categoryCode: item.category.code,
+              image: item.image,
               presentationId: cheapest.presentationId,
               presentationLabel: presentation,
             },

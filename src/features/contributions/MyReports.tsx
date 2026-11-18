@@ -36,11 +36,6 @@ const MEANING: Record<MyReport['status'], string> = {
   apelacion_rechazada: 'Un moderador rechazó tu apelación.',
 };
 
-// «Arroz Diana · 500 g» → «Arroz Diana»: el contrato no trae el id del producto, así que el aporte
-// lleva a su búsqueda.
-const productSearch = (productName: string) =>
-  `/?${new URLSearchParams({ q: productName.split(' · ')[0] ?? productName }).toString()}`;
-
 // RF-006: mis aportes, el más reciente primero, por páginas (#76 del backend).
 export function MyReports() {
   const [reports, setReports] = useState<MyReport[] | null>(null);
@@ -111,7 +106,11 @@ export function MyReports() {
         {reports.map((report) => (
           <li key={report.reportId} className="offer">
             <h2>
-              <Link to={productSearch(report.productName)}>{report.productName}</Link>
+              {report.productId ? (
+                <Link to={`/productos/${report.productId}`}>{report.productName}</Link>
+              ) : (
+                report.productName
+              )}
             </h2>
             <p className="muted">
               {[

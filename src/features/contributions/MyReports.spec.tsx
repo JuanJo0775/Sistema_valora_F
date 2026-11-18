@@ -201,8 +201,8 @@ describe('mis aportes: producto y estado', () => {
   it('cada aporte lleva a su producto y explica su estado', async () => {
     stubApi({
       'GET /v1/me/reports': page([
-        report('Arroz Diana · 500 g', 'normal'),
-        report('Leche entera', 'en_revision'),
+        report('Arroz Diana · 500 g', 'normal', { productId: 'p-arroz' }),
+        report('Leche entera', 'en_revision', { productId: 'p-leche' }),
       ]),
     });
 
@@ -210,9 +210,22 @@ describe('mis aportes: producto y estado', () => {
 
     expect(await screen.findByRole('link', { name: 'Arroz Diana · 500 g' })).toHaveAttribute(
       'href',
-      '/?q=Arroz+Diana',
+      '/productos/p-arroz',
+    );
+    expect(screen.getByRole('link', { name: 'Leche entera' })).toHaveAttribute(
+      'href',
+      '/productos/p-leche',
     );
     expect(rowOf('Arroz Diana · 500 g').getByText('Ya cuenta en la comparación.')).toBeVisible();
     expect(rowOf('Leche entera').getByText('Un moderador lo está revisando.')).toBeVisible();
+  });
+
+  it('un aporte antiguo sin productId muestra el nombre sin enlace', async () => {
+    stubApi({ 'GET /v1/me/reports': page([report('Banano', 'normal')]) });
+
+    renderMine();
+
+    expect(await screen.findByRole('heading', { name: 'Banano' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Banano' })).not.toBeInTheDocument();
   });
 });

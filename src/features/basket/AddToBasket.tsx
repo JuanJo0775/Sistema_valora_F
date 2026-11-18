@@ -43,7 +43,14 @@ export function AddToBasket({
     }
     const presentationLabel = formatPresentation(presentation);
     // El aviso de abajo dice qué se agregó (#76).
-    add({ productId: product.id, productName: product.name, presentationId, presentationLabel });
+    add({
+      productId: product.id,
+      productName: product.name,
+      categoryCode: product.category.code,
+      image: product.image,
+      presentationId,
+      presentationLabel,
+    });
     setProblem('');
   };
 

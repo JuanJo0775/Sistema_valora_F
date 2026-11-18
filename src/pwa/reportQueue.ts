@@ -44,7 +44,11 @@ export interface ReportQueue {
   add: (report: NewReport) => Promise<void>;
   list: () => Promise<QueuedReport[]>;
   discard: (idempotencyKey: string) => Promise<void>;
-  sync: (send: (report: QueuedReport) => Promise<unknown>) => Promise<SyncOutcome>;
+  // confirm: ante un 409 DUPLICATE_REPORT en un reintento, dice si el servidor ya tiene ese reporte.
+  sync: (
+    send: (report: QueuedReport) => Promise<unknown>,
+    confirm?: (report: QueuedReport) => Promise<boolean>,
+  ) => Promise<SyncOutcome>;
 }
 
 export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
@@ -58,6 +62,7 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
   let running: Promise<SyncOutcome> | null = null;
   const syncOnce = async (
     send: (report: QueuedReport) => Promise<unknown>,
+    confirm?: (report: QueuedReport) => Promise<boolean>,
   ): Promise<SyncOutcome> => {
     // Un reporte por petición (no hay ruta de lotes), del más antiguo al más nuevo, siempre con su
     // misma clave: si el servidor ya lo tenía responde 200 y no lo duplica (EC-07).
@@ -68,6 +73,31 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
       try {
         await send(report);
       } catch (error) {
+        // 409 DUPLICATE_REPORT: puede ser el mismo reporte que ya se aplicó (p. ej. una clave que no
+        // llegó a guardarse). Antes de asustar, se mira si el servidor ya lo tiene; si lo tiene,
+        // cuenta como confirmado. Si no se puede saber (sin red, sin sesión), sigue pendiente.
+        if (error instanceof ApiError && error.code === 'DUPLICATE_REPORT' && confirm) {
+          let known = false;
+          try {
+            known = await confirm(report);
+          } catch (lookup) {
+            if (lookup instanceof ApiError && (lookup.status === 401 || lookup.status === 403)) {
+              return { needsSession: true, problem: plain(lookup) };
+            }
+            // Sin red o 5xx no se puede saber: sigue pendiente y se reintenta con la misma clave.
+            if (!(lookup instanceof ApiError) || lookup.status === 0 || lookup.status >= 500) {
+              return { needsSession: false };
+            }
+          }
+          if (known) {
+            await db.put('reports', {
+              ...report,
+              status: 'sincronizado',
+              syncedAt: new Date().toISOString(),
+            });
+            continue;
+          }
+        }
         // #9: 400, 409, 422 o 429 son finales. Reenviar el mismo reporte nunca pasa: su hora de
         // observación no cambia. Con el correo sin verificar (403) tampoco sirve reintentar hasta que la
         // persona verifique: no es un problema de red ni de sesión. Sale de la cola de envío y avisa por qué.
@@ -109,8 +139,8 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
     },
     list: () => db.getAll('reports'),
     discard: (idempotencyKey) => db.delete('reports', idempotencyKey),
-    sync: (send) => {
-      running ??= syncOnce(send).finally(() => {
+    sync: (send, confirm) => {
+      running ??= syncOnce(send, confirm).finally(() => {
         running = null;
       });
       return running;

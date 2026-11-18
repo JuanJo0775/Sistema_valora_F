@@ -3,6 +3,7 @@ import type { components } from '../../shared/api/schema';
 import { directionsTo } from '../../shared/directions';
 import { formatDistance } from '../../shared/location';
 import { formatCop } from '../../shared/money';
+import { PinShape } from './pinShapes';
 import { STORE_TYPES } from './storeTypes';
 
 // Las listas del mapa traen también cuántos precios vigentes tiene cada tienda (B#131).
@@ -19,7 +20,7 @@ export interface BasketHere {
 }
 
 // #73 (prototipo): una tienda en la lista del mapa, lo mismo que su marcador para quien no usa el
-// mapa. El punto lleva el color de su tipo, como el marcador y la leyenda.
+// mapa. La figura lleva la forma y el color de su tipo, como el marcador y la leyenda.
 export function StoreCard({ store, basket }: { store: Store; basket?: BasketHere }) {
   return (
     <li className="store-card">
@@ -30,7 +31,9 @@ export function StoreCard({ store, basket }: { store: Store; basket?: BasketHere
         )}
       </div>
       <p className="muted store-kind">
-        <span className={`dot type-${store.type}`} aria-hidden="true" />
+        <span className={`pin-badge type-${store.type}`} aria-hidden="true">
+          <PinShape type={store.type} />
+        </span>
         <span>{STORE_TYPES[store.type]}</span>
         {store.distanceM !== undefined && <span>{`· ${formatDistance(store.distanceM)}`}</span>}
       </p>
