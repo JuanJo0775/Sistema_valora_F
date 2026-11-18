@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OfflineBanner } from './OfflineBanner';
+import { OfflineMessage } from './OfflineMessage';
 
 const goOffline = () => {
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
@@ -21,7 +22,7 @@ describe('aviso sin conexión', () => {
     goOffline();
 
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Sin conexión. La consulta de precios necesita internet.',
+      'Sin conexión: te mostramos lo último que viste.',
     );
   });
 
@@ -35,5 +36,18 @@ describe('aviso sin conexión', () => {
     });
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('si la pantalla explica su propio estado, el aviso global se esconde (un solo mensaje)', () => {
+    render(
+      <>
+        <OfflineBanner />
+        <OfflineMessage>Sin conexión: esta pantalla necesita internet.</OfflineMessage>
+      </>,
+    );
+    goOffline();
+
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent('esta pantalla necesita internet');
   });
 });

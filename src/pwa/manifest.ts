@@ -1,4 +1,5 @@
 // Manifest de la PWA (ADR-017). Lo usa vite.config.ts; vive aquí para poder probarlo.
+const DARK = '#0D0D0E';
 const shortcutIcons = [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }];
 
 export const MANIFEST = {
@@ -12,9 +13,12 @@ export const MANIFEST = {
   categories: ['shopping', 'food', 'lifestyle'],
   start_url: '/',
   display: 'standalone' as const,
-  // Prototipo MC-E4: superficies blancas; el naranja solo para la acción principal.
-  background_color: '#FFFFFF',
-  theme_color: '#FFFFFF',
+  // H-25: el manifest admite un solo color de cada uno (no hay variante por tema), así que se elige
+  // el del tema oscuro, el de --bg en tokens.css: la app instalada abre sin el destello blanco de
+  // la pantalla de arranque. En el navegador, index.html trae dos «theme-color» con `media`
+  // (claro #FFFFFF y oscuro #0D0D0E) y esos mandan sobre el del manifest en cada tema.
+  background_color: DARK,
+  theme_color: DARK,
   icons: [
     { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
     { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },

@@ -8,6 +8,7 @@ import { emailProblem, useFocusFirstInvalid } from './formErrors';
 import { safeReturn, withReturn } from './safeReturn';
 import { POLICY_VERSION } from '../legal/policy';
 import { useSession } from './session';
+import { rememberVerifyReturn } from './verifyReturn';
 import './auth.css';
 
 const MIN_PASSWORD = 10;
@@ -76,6 +77,8 @@ export function SignUp() {
     setError(null);
     setExisting(false);
     setSending(true);
+    // El correo de verificación sale con el registro: se recuerda lo que se estaba haciendo (H-02).
+    rememberVerifyReturn(volver);
     call(
       api.POST('/auth/register', {
         body: {

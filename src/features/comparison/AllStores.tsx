@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { api, call } from '../../shared/api';
+import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { useOnline } from '../../shared/ui/offline';
+import { OfflineMessage } from '../../shared/ui/OfflineMessage';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, MUNICIPALITIES } from './criteria';
+import { ago, comparisonKey, readComparison, saveComparison } from './lastComparison';
 import { Offer } from './Offer';
 import { useWhere } from './WhereChooser';
 import { WhereChip } from './WhereChip';
@@ -55,8 +58,12 @@ export function AllStores({
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
   const [outcome, setOutcome] = useState<
-    { key: string; comparison: Comparison } | { key: string; error: unknown } | null
+    // savedAt: sin conexión, la última comparación vista (H-08), no una nueva.
+    | { key: string; comparison: Comparison; savedAt?: number }
+    | { key: string; error: unknown }
+    | null
   >(null);
+  const online = useOnline();
   const [attempt, setAttempt] = useState(0);
   const productId = product.id;
   // El último onComparison, sin volver a pedir la comparación cada vez que cambia.
@@ -67,6 +74,14 @@ export function AllStores({
     notifyFailed.current = onFailed;
   }, [onComparison, onFailed]);
   const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${where.key}`;
+  // Solo se guarda lo pedido por municipio, nunca con la ubicación (EC-08).
+  const savedKey = comparisonKey({
+    productId,
+    located: point !== null,
+    where: where.key,
+    sort,
+    onlyCurrent,
+  });
 
   useEffect(() => {
     if (!where.ready) return;
@@ -78,18 +93,40 @@ export function AllStores({
     )
       .then((comparison) => {
         if (!current) return;
+        saveComparison(savedKey, comparison);
         setOutcome({ key, comparison });
         notify.current?.(comparison);
       })
       .catch((error: unknown) => {
         if (!current) return;
+        // Sin red, lo último que se vio de este producto en este municipio.
+        const last =
+          error instanceof ApiError && error.status === 0 ? readComparison(savedKey) : null;
+        if (last) {
+          setOutcome({ key, comparison: last.comparison, savedAt: last.savedAt });
+          notify.current?.(last.comparison);
+          return;
+        }
         setOutcome({ key, error });
         notifyFailed.current?.();
       });
     return () => {
       current = false;
     };
-  }, [where.ready, productId, sort, where.query, onlyCurrent, key]);
+  }, [where.ready, productId, sort, where.query, onlyCurrent, key, savedKey]);
+
+  // Mostrando lo último que se vio: al volver la conexión se pide la comparación al día.
+  const showingSaved = outcome?.key === key && 'savedAt' in outcome;
+  useEffect(() => {
+    if (!showingSaved) return;
+    const refresh = () => {
+      setAttempt((current) => current + 1);
+    };
+    window.addEventListener('online', refresh, { once: true });
+    return () => {
+      window.removeEventListener('online', refresh);
+    };
+  }, [showingSaved]);
 
   const result = outcome?.key === key ? outcome : null;
   const sizeOf = (presentationId: string) => {
@@ -165,6 +202,15 @@ export function AllStores({
           }}
         />
       )}
+      {result && 'comparison' in result && result.savedAt !== undefined && (
+        <SavedNotice
+          savedAt={result.savedAt}
+          online={online}
+          onRetry={() => {
+            setAttempt((current) => current + 1);
+          }}
+        />
+      )}
       {result && 'comparison' in result && (
         <Results
           comparison={result.comparison}
@@ -173,6 +219,33 @@ export function AllStores({
         />
       )}
     </section>
+  );
+}
+
+// H-08: se muestra lo último que se vio. Sin red es el único mensaje de la pantalla; con red (el
+// servidor no contestó) se ofrece reintentar.
+function SavedNotice({
+  savedAt,
+  online,
+  onRetry,
+}: {
+  savedAt: number;
+  online: boolean;
+  onRetry: () => void;
+}) {
+  const when = `(${ago(savedAt)}). Los precios pueden haber cambiado.`;
+  if (!online) {
+    return (
+      <OfflineMessage>{`Sin conexión: te mostramos lo último que viste ${when}`}</OfflineMessage>
+    );
+  }
+  return (
+    <p role="status" className="banner warn">
+      {`No pudimos actualizar: te mostramos lo último que viste ${when} `}
+      <button type="button" className="link-button" onClick={onRetry}>
+        Reintentar
+      </button>
+    </p>
   );
 }
 
