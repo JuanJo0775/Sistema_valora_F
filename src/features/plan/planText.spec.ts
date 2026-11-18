@@ -160,6 +160,15 @@ describe('planToText', () => {
     expect(text.split('\n').at(-1)).toBe('Precios informativos de Valora, no oficiales');
   });
 
+  it('con traslado agrega los supuestos y sin él no', () => {
+    expect(planToText(plan())).toContain(
+      'Supuestos del traslado (estimado): línea recta × 1,3; 4,5 km/h a pie.',
+    );
+    const base = plan();
+    const none = planToText({ ...base, summary: { ...base.summary, travel: null } });
+    expect(none).not.toContain('Supuestos del traslado');
+  });
+
   it('no contiene distanceM ni las coordenadas de la persona', () => {
     const text = planToText(plan());
     expect(text).not.toContain('distanceM');

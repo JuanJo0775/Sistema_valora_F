@@ -12,6 +12,8 @@ import { useWhere, WhereChooser } from '../comparison/WhereChooser';
 import { AssumptionsForm } from './AssumptionsForm';
 import { readAssumptions, saveAssumptions } from './assumptions';
 import { type Delivery, PlanStoreSection } from './PlanStoreSection';
+import { SavePlanButton } from './SavePlanButton';
+import { SavedPlansList } from './SavedPlansList';
 import { bestSplits, type SplitOption } from './split';
 import {
   extraTravel,
@@ -62,6 +64,18 @@ export function PlanPage({
 }) {
   const { items } = useBasket();
   const where = useWhere();
+  // Para que «Mis planes» se actualice al guardar uno.
+  const [savedCount, setSavedCount] = useState(0);
+  const action =
+    renderAction ??
+    ((choice: PlanChoice) => (
+      <SavePlanButton
+        choice={choice}
+        onSaved={() => {
+          setSavedCount((n) => n + 1);
+        }}
+      />
+    ));
   const pending = items.filter(({ bought }) => !bought);
   return (
     <section className="plan">
@@ -87,13 +101,14 @@ export function PlanPage({
               pending={pending}
               area={where.query}
               origin={where.point}
-              renderAction={renderAction}
+              renderAction={action}
             />
           ) : (
             <Loading text="Buscando tu ubicación…" />
           )}
         </>
       )}
+      <SavedPlansList key={savedCount} />
     </section>
   );
 }

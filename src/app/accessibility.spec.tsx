@@ -173,6 +173,62 @@ describe('accesibilidad de los flujos críticos (axe, WCAG 2.2 AA)', () => {
     expect(await seriousViolations()).toEqual([]);
   });
 
+  it('un plan de compra guardado', async () => {
+    localStorage.setItem(
+      'valora:planes',
+      JSON.stringify({
+        v: 1,
+        plans: [
+          {
+            v: 1,
+            id: 'plan-1',
+            savedAt: new Date().toISOString(),
+            area: { kind: 'municipio', municipality: 'armenia' },
+            stores: [
+              {
+                id: STORE,
+                name: 'Ara',
+                type: 'descuento',
+                lat: 4.5339,
+                lng: -75.6811,
+                municipality: 'armenia',
+                delivery: null,
+              },
+            ],
+            lines: [
+              {
+                productId: RICE,
+                productName: 'Arroz blanco',
+                presentationId: PRESENTATION,
+                presentationLabel: '500 g',
+                quantity: 1,
+                storeId: STORE,
+                priceCop: 2000,
+                source: 'comunidad',
+                freshness: 'vigente',
+                observedAt: new Date().toISOString(),
+                bought: false,
+              },
+            ],
+            summary: {
+              stores: 1,
+              productsCop: 2000,
+              baselineCop: null,
+              travel: null,
+              deliveryCop: 0,
+              netCop: null,
+              missing: 0,
+            },
+          },
+        ],
+      }),
+    );
+    visit('/canasta/plan/plan-1');
+    await screen.findByRole('heading', { name: 'Ara' });
+
+    expect(await seriousViolations()).toEqual([]);
+  });
+
   it('el mapa de tiendas', async () => {
     visit('/mapa');
     await screen.findByRole('heading', { name: 'Ara' });

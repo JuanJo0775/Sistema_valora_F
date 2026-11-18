@@ -90,3 +90,30 @@
 .plan-more[open] > summary {
   margin-bottom: 12px;
 }
+
+.plan-save {
+  display: grid;
+  gap: 8px;
+}
+
+.saved-plans {
+  display: grid;
+  gap: 8px;
+}
+
+/* Al imprimir solo queda el plan: sin navegación ni botones, y cada tienda en una sola página. */
+@media print {
+  header,
+  nav,
+  button,
+  .btn,
+  .no-print,
+  .saved-plans {
+    display: none !important;
+  }
+
+  .plan-store,
+  .plan-travel {
+    break-inside: avoid;
+  }
+}

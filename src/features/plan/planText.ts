@@ -73,6 +73,12 @@ export function planToText(plan: SavedPlan): string {
         (t.costCop === null ? '' : `, ${cop(t.costCop)}`),
     );
   }
+  if (s.travel) {
+    const a = s.travel.assumptions;
+    out.push(
+      `Supuestos del traslado (estimado): línea recta × ${KM.format(a.detour)}; ${KM.format(a.kmh)} km/h a pie.`,
+    );
+  }
   const hasDelivery = plan.stores.some((st) => st.delivery !== null);
   if (hasDelivery) out.push(`Domicilio (estimado): ${cop(s.deliveryCop)}`);
   if (s.netCop !== null) out.push(`Ahorro neto (estimado): ${cop(s.netCop)}`);
