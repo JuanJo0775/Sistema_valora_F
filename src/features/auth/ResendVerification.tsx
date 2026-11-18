@@ -1,14 +1,20 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
+import { rememberVerifyReturn } from './verifyReturn';
 
 type Sending = 'idle' | 'sending' | 'sent' | 'limit' | 'error';
 
 // Pide otro enlace de verificación (el servidor limita a 3 por hora). Un solo botón de una línea y
 // el resultado en una frase anunciada a lectores de pantalla.
-export function ResendVerification() {
+// H-02: al pedirlo se recuerda lo que la persona estaba haciendo (`from`, o la pantalla donde está)
+// para ofrecerle seguir con eso cuando abra el enlace del correo.
+export function ResendVerification({ from }: { from?: string | null }) {
   const [state, setState] = useState<Sending>('idle');
+  const { pathname, search } = useLocation();
 
   const resend = () => {
+    rememberVerifyReturn(from ?? pathname + search);
     setState('sending');
     call(api.POST('/auth/resend-verification'))
       .then(() => {

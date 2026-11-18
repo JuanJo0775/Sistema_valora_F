@@ -90,7 +90,9 @@ describe('aviso de correo sin verificar', () => {
   const renderBanner = () =>
     render(
       <SessionProvider>
-        <VerifyEmailBanner />
+        <MemoryRouter>
+          <VerifyEmailBanner />
+        </MemoryRouter>
       </SessionProvider>,
     );
 
@@ -213,7 +215,9 @@ describe('aviso compacto de correo sin verificar', () => {
     stubApi({ 'GET /v1/auth/session': sessionAs('reportante', undefined, false) });
     const { unmount } = render(
       <SessionProvider>
-        <VerifyEmailBanner />
+        <MemoryRouter>
+          <VerifyEmailBanner />
+        </MemoryRouter>
       </SessionProvider>,
     );
 
@@ -223,11 +227,86 @@ describe('aviso compacto de correo sin verificar', () => {
 
     render(
       <SessionProvider>
-        <VerifyEmailBanner />
+        <MemoryRouter>
+          <VerifyEmailBanner />
+        </MemoryRouter>
       </SessionProvider>,
     );
     await vi.waitFor(() => {
       expect(screen.queryByText(/Verifica tu correo/)).not.toBeInTheDocument();
     });
+  });
+});
+
+// H-02: tras verificar, la persona sigue con lo que estaba haciendo.
+describe('verificar el correo sin perder lo que se estaba haciendo', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  const WHAT = '/registrar?producto=3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d';
+
+  it('al pedir el reenvío desde la pantalla de registrar recuerda a dónde volver', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante', undefined, false),
+      'POST /v1/auth/resend-verification': { status: 202 },
+    });
+    render(
+      <SessionProvider>
+        <MemoryRouter initialEntries={[WHAT]}>
+          <VerifyEmailBanner />
+        </MemoryRouter>
+      </SessionProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Enviarme otro enlace' }));
+    await screen.findByText(/revisa tu bandeja/);
+
+    expect(localStorage.getItem('valora:verificar-volver')).toBe(WHAT);
+  });
+
+  it('con sesión, ofrece «Seguir con registrar un precio» y lo lleva al producto', async () => {
+    localStorage.setItem('valora:verificar-volver', WHAT);
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'POST /v1/auth/verify-email': { status: 204 },
+    });
+
+    renderPage('/verificar-correo?token=abc');
+
+    expect(await screen.findByRole('link', { name: 'Seguir con registrar un precio' })).toHaveAttribute(
+      'href',
+      WHAT,
+    );
+    // Ya se usó: la próxima vez no se ofrece de nuevo.
+    expect(localStorage.getItem('valora:verificar-volver')).toBeNull();
+  });
+
+  it('sin sesión, entrar devuelve a lo que se estaba haciendo', async () => {
+    localStorage.setItem('valora:verificar-volver', WHAT);
+    stubApi({
+      'GET /v1/auth/session': NO_SESSION,
+      'POST /v1/auth/verify-email': { status: 204 },
+    });
+
+    renderPage('/verificar-correo?token=abc');
+
+    expect(
+      await screen.findByRole('link', { name: 'Iniciar sesión y seguir con registrar un precio' }),
+    ).toHaveAttribute('href', `/entrar?volver=${encodeURIComponent(WHAT)}`);
+  });
+
+  it('una dirección ?volver= que sale de la app no se sigue', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'POST /v1/auth/verify-email': { status: 204 },
+    });
+
+    renderPage('/verificar-correo?token=abc&volver=%2F%2Fotro.sitio');
+
+    expect(await screen.findByRole('link', { name: 'Registrar un precio' })).toHaveAttribute(
+      'href',
+      '/registrar',
+    );
+    expect(screen.queryByRole('link', { name: /Seguir con/ })).not.toBeInTheDocument();
   });
 });

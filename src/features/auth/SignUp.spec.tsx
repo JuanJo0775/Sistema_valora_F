@@ -55,6 +55,17 @@ describe('crear cuenta', () => {
     });
   });
 
+  // H-02: el correo de verificación sale con el registro; se recuerda qué se estaba haciendo.
+  it('al crear la cuenta recuerda a dónde volver tras verificar el correo', async () => {
+    stubSignUp({ status: 201 });
+    renderSignUp('/crear-cuenta?volver=%2Fregistrar%3Fproducto%3Dabc');
+
+    fill();
+    await vi.waitFor(() => {
+      expect(localStorage.getItem('valora:verificar-volver')).toBe('/registrar?producto=abc');
+    });
+  });
+
   // B#133: el nombre visible solo se ve en tu propia sesión (EC-08).
   it.each(['A', 'Ana2', 'ana@correo.co'])(
     'con un nombre que no vale («%s») no crea la cuenta y dice por qué',
