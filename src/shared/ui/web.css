@@ -66,7 +66,7 @@
 
   /* El mapa aprovecha la altura de la ventana. */
   .stores .store-map {
-    height: clamp(480px, calc(100dvh - 340px), 820px);
+    height: clamp(300px, calc(100dvh - 520px), 700px);
   }
 
   /* Listas largas: filas más compactas. */
@@ -81,12 +81,6 @@
   .offer-links a,
   .offer-links .link-button {
     min-height: 32px;
-  }
-
-  .store-list,
-  .side {
-    scrollbar-width: thin;
-    scrollbar-color: var(--line-2) transparent;
   }
 }
 

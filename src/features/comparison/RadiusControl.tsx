@@ -23,11 +23,19 @@ export function RadiusControl({
   radiusKm,
   onChange,
   onPreview,
+  title,
+  help,
+  note,
 }: {
   radiusKm: number;
   onChange: (radiusKm: number) => void;
   // El valor que se está arrastrando, o null cuando ya se eligió el definitivo.
   onPreview?: (radiusKm: number | null) => void;
+  // Un título y una línea de ayuda propios (en el mapa: «Radio de búsqueda»); por defecto, «Radio».
+  title?: string;
+  help?: string;
+  // Un aviso debajo (en el mapa, cuando todavía no hay ubicación).
+  note?: string;
 }) {
   const id = useId();
   const [draft, setDraft] = useState<number | null>(null);
@@ -64,12 +72,13 @@ export function RadiusControl({
     <div className="radius-control">
       <div className="radius-head">
         <label htmlFor={id} className="radius-label">
-          Radio
+          {title ?? 'Radio'}
         </label>
         <span className="radius-value" aria-hidden="true">
           {radiusLabel(shown)}
         </span>
       </div>
+      {help && <p className="radius-help">{help}</p>}
       <div className="radius-track">
         <div className="radius-ticks" aria-hidden="true">
           {RADII.map((km) => (
@@ -97,7 +106,11 @@ export function RadiusControl({
           onBlur={flush}
         />
       </div>
-      <fieldset role="radiogroup" className="category-chips" aria-label="Radio de búsqueda">
+      <fieldset
+        role="radiogroup"
+        className="category-chips"
+        aria-label={title ? `${title}: valores rápidos` : 'Radio de búsqueda'}
+      >
         {RADII.map((km) => (
           <label key={km} className="category-chip">
             <input
@@ -113,6 +126,7 @@ export function RadiusControl({
           </label>
         ))}
       </fieldset>
+      {note && <p className="radius-note">{note}</p>}
     </div>
   );
 }
