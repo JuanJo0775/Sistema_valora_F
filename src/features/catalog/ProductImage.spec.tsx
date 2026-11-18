@@ -37,18 +37,38 @@ describe('imagen del producto', () => {
     expect(screen.queryByText(/^Foto:/)).not.toBeInTheDocument();
   });
 
-  it('sin foto muestra una ilustración genérica', () => {
-    render(<ProductImage name="Arroz blanco" />);
+  it('la foto es perezosa', () => {
+    render(<ProductImage name="Arroz blanco" image={offPhoto} />);
 
-    expect(screen.getByRole('img', { name: 'Arroz blanco (sin foto)' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Arroz blanco' })).toHaveAttribute('loading', 'lazy');
   });
 
-  it('si la foto no carga muestra la ilustración genérica', () => {
-    render(<ProductImage name="Arroz blanco" image={offPhoto} />);
+  it('sin foto muestra la ilustración de su categoría, oculta a lectores', () => {
+    const { container } = render(<ProductImage name="Arroz blanco" category="grains-groceries" />);
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    const svg = container.querySelector('svg');
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
+    expect(svg).toHaveAttribute('data-category', 'grains-groceries');
+  });
+
+  it('con una categoría desconocida, o ninguna, usa la ilustración genérica', () => {
+    const { container, rerender } = render(<ProductImage name="Cosa" category="no-existe" />);
+    expect(container.querySelector('svg')).toHaveAttribute('data-category', 'generic');
+
+    rerender(<ProductImage name="Cosa" />);
+    expect(container.querySelector('svg')).toHaveAttribute('data-category', 'generic');
+  });
+
+  it('si la foto no carga muestra la ilustración de la categoría', () => {
+    const { container } = render(
+      <ProductImage name="Arroz blanco" image={offPhoto} category="beverages" />,
+    );
 
     fireEvent.error(screen.getByRole('img', { name: 'Arroz blanco' }));
 
-    expect(screen.getByRole('img', { name: 'Arroz blanco (sin foto)' })).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(container.querySelector('svg')).toHaveAttribute('data-category', 'beverages');
     expect(screen.queryByText(/^Foto:/)).not.toBeInTheDocument();
   });
 });
