@@ -28,7 +28,7 @@ describe('versión web: estilos', () => {
 
   it('el mapa de escritorio usa la altura de la ventana', () => {
     expect(block('@media (width >= 960px) {')).toMatch(
-      /\.stores \.store-map\s*\{\s*height:\s*clamp\(480px, calc\(100dvh - 340px\), 820px\)/,
+      /\.stores \.store-map\s*\{\s*height:\s*clamp\(300px, calc\(100dvh - 520px\), 700px\)/,
     );
   });
 

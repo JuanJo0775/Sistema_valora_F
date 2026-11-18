@@ -258,13 +258,47 @@ button {
   /* La columna fija nunca debe ser más alta que la pantalla: si lo es (ventana baja, muchas tarjetas),
      se desplaza por dentro y todo se puede alcanzar; antes la parte de abajo quedaba cortada y sin
      scroll. 88 px es el alto de la barra superior más su aire; 16 px, el aire de abajo. */
+  .with-side {
+    --side-h: calc(100dvh - 88px - 16px);
+  }
+
   .side {
     position: sticky;
     top: 88px;
-    max-height: calc(100dvh - 88px - 16px);
+    max-height: var(--side-h);
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-width: thin;
+  }
+
+  /* Una sola barra de desplazamiento, discreta y sin flechas de botones. Chrome y Safari: barra de
+     WebKit; Firefox, que no la tiene, usa la fina estándar. No se mezclan: con scrollbar-width Chrome
+     ignora la de WebKit y vuelve a pintar las flechas. */
+  .side::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .side::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .side::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .side::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: var(--line-2);
+    background-clip: padding-box;
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    .side {
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-2) transparent;
+    }
   }
 }
 

@@ -85,6 +85,7 @@
 }
 
 .stores-main {
+  align-content: start;
   display: grid;
   gap: 14px;
   min-width: 0;
@@ -95,23 +96,38 @@
   margin: 0;
 }
 
-/* #73: en escritorio, la lista de tiendas se desplaza sola al lado del mapa (prototipo). */
-@media (width >= 960px) {
-  .stores .store-map {
-    height: 560px;
-  }
+/* El mapa y su radio van juntos, en la misma columna: el radio queda pegado al mapa. */
+.map-panel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
 
-  .store-list {
-    max-height: calc(100dvh - 120px);
-    overflow-y: auto;
-    padding-right: 4px;
+.map-panel .radius-control {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+}
+
+/* En escritorio la lista de tiendas llena la columna derecha hasta el alto útil de la ventana y se
+   desplaza por dentro (el overflow y la barra son los de `.side`, en base.css). No se llama
+   `.store-list`: ese nombre ya lo usa el selector de tienda de los reportes. */
+@media (width >= 960px) {
+  .map-side {
+    height: var(--side-h);
   }
 }
 
+/* «Sugerir una tienda» queda fijo arriba de la lista; la sombra del color del fondo tapa las
+   tarjetas que pasan por debajo. */
 .suggest-store {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   width: 100%;
   border: 1px solid var(--field-line);
   background: var(--bg);
+  box-shadow: 0 8px 0 var(--bg);
 }
 
 .store-cards {
@@ -207,4 +223,29 @@
 
 .store-directions {
   justify-self: start;
+}
+
+/* En escritorio el radio va compacto bajo el mapa: título, ayuda y barra a la izquierda, los chips a
+   la derecha, para que mapa y radio quepan juntos en la ventana. */
+@media (width >= 960px) {
+  .map-panel .radius-control {
+    grid-template-columns: minmax(0, 1fr) 290px;
+    column-gap: 20px;
+    align-items: center;
+  }
+
+  .map-panel .radius-head,
+  .map-panel .radius-help,
+  .map-panel .radius-track {
+    grid-column: 1;
+  }
+
+  .map-panel .radius-control .category-chips {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
+
+  .map-panel .radius-note {
+    grid-column: 1 / -1;
+  }
 }
