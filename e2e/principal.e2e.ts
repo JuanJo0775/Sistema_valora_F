@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { newAccount, someProducts, someStores } from './support/api';
+import { newAccount, plausiblePrice, someProducts, someStores } from './support/api';
 import {
   chooseFirstPresentation,
   chooseStoreByName,
@@ -17,7 +17,10 @@ test('una persona crea su cuenta, registra un precio y lo ve en la comparación 
   const [product] = await someProducts(page.request, 1);
   const [store] = await someStores(page.request, 1);
   if (!product || !store) throw new Error('Sin datos de la semilla');
-  const price = 4000 + Math.floor(Math.random() * 900);
+  const presentationId = product.presentations[0]?.id;
+  if (!presentationId) throw new Error('Sin presentaciones en la semilla');
+  // Un precio verosímil frente a lo que ya hay (ADR-030): uno fijo podría quedar «En revisión».
+  const price = await plausiblePrice(page.request, product.id, presentationId);
 
   await page.goto('/crear-cuenta?volver=/yo');
   await page.getByLabel('Tu nombre').fill(account.displayName);
