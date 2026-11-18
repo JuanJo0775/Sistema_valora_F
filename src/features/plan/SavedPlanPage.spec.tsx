@@ -3,88 +3,13 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { seriousViolations } from '../../test/axe';
 import { directionsTo } from '../../shared/directions';
+import { planDraft } from '../../test/planFixtures';
 import { planToText } from './planText';
 import { SavedPlanPage } from './SavedPlanPage';
 import { readPlans, savePlan, toSavedPlan, type PlanDraft, type SavedPlan } from './savedPlan';
 
 const NOW = new Date('2026-11-18T02:30:00Z'); // 17-nov 21:30 en Colombia
-const draft = (): PlanDraft => ({
-  area: { kind: 'municipio', municipality: 'armenia' },
-  stores: [
-    {
-      id: 's1',
-      name: 'D1 Calle 50',
-      type: 'descuento',
-      address: 'Cl. 50 # 14-20',
-      lat: 4.53,
-      lng: -75.68,
-      municipality: 'armenia',
-      delivery: { feeCop: 5000 },
-    },
-    {
-      id: 's2',
-      name: 'Tienda Don Pepe',
-      type: 'barrio',
-      lat: 4.54,
-      lng: -75.69,
-      municipality: 'armenia',
-      delivery: null,
-    },
-  ],
-  lines: [
-    {
-      productId: 'p1',
-      productName: 'Arroz blanco',
-      presentationId: 'pr1',
-      presentationLabel: '500 g',
-      quantity: 2,
-      storeId: 's1',
-      priceCop: 2190,
-      source: 'siembra',
-      freshness: 'vigente',
-      observedAt: '2026-11-16T15:00:00Z',
-    },
-    {
-      productId: 'p2',
-      productName: 'Aceite',
-      presentationId: 'pr2',
-      presentationLabel: '1 L',
-      quantity: 1,
-      storeId: 's2',
-      priceCop: 9000,
-      source: 'comunidad',
-      freshness: 'vigente',
-      observedAt: '2026-11-15T15:00:00Z',
-    },
-    {
-      productId: 'p3',
-      productName: 'Sal marina',
-      presentationId: 'pr3',
-      presentationLabel: '500 g',
-      quantity: 1,
-      storeId: null,
-      priceCop: null,
-      source: 'comunidad',
-      freshness: 'vigente',
-      observedAt: null,
-    },
-  ],
-  summary: {
-    stores: 2,
-    productsCop: 13380,
-    baselineCop: 15000,
-    travel: {
-      extraKm: 1.4,
-      extra: true,
-      minutes: 19,
-      costCop: null,
-      assumptions: { detour: 1.3, kmh: 4.5, mode: 'none' },
-    },
-    deliveryCop: 5000,
-    netCop: -3380,
-    missing: 1,
-  },
-});
+const draft = (): PlanDraft => planDraft({ area: { kind: 'municipio', municipality: 'armenia' } });
 
 const stored = (now = new Date()): SavedPlan => {
   const plan = toSavedPlan(draft(), now);

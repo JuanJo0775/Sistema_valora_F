@@ -1,99 +1,37 @@
 import {
   fireEvent,
-  render,
   screen,
   within,
   type BoundFunctions,
   type queries,
 } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '../../test/fakeApi';
-import { BasketProvider } from '../basket/BasketProvider';
-import { PlanPage } from './PlanPage';
+import {
+  comparisonOf,
+  locateAt,
+  milk,
+  MILK,
+  near,
+  offer,
+  renderPlan,
+  rice,
+  RICE,
+  salt,
+  SALT,
+} from '../../test/planFixtures';
 import { readPlans, savePlan, toSavedPlan, type PlanDraft } from './savedPlan';
 
-const RICE = '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d';
-const MILK = '4a2d3b75-6d2f-4c9b-8e72-1b8c2f3d4e5f';
-const SALT = '5b3e4c86-7e30-4dac-9f83-2c9d3a4e5f60';
-
-const item = (productId: string, productName: string, presentationId: string, quantity = 1) => ({
-  productId,
-  productName,
-  presentationId,
-  presentationLabel: '1 und',
-  quantity,
-  bought: false,
-});
-const rice = item(RICE, 'Arroz blanco', 'arroz-500g', 2);
-const milk = item(MILK, 'Leche entera', 'leche-1l');
-const salt = item(SALT, 'Sal', 'sal-1kg');
-
-const shop = (id: string, name: string, lat: number, distanceM?: number) => ({
-  id,
-  name,
-  type: 'barrio',
-  address: `Calle ${name} 1`,
-  lat,
-  lng: -75.6811,
-  municipality: 'armenia',
-  ...(distanceM === undefined ? {} : { distanceM }),
-});
-const offer = (store: ReturnType<typeof shop>, presentationId: string, priceCop: number) => ({
-  establishment: store,
-  reportId: crypto.randomUUID(),
-  presentationId,
-  priceCop,
-  unitPrice: { valueCop: priceCop, per: 'und' },
-  source: 'comunidad',
-  freshness: 'vigente',
-  reliability: 'alta',
-  confirmations: 1,
-  isCheapest: false,
-  observedAt: new Date().toISOString(),
-});
-const comparisonOf = (productId: string, ...results: ReturnType<typeof offer>[]) => ({
-  [`GET /v1/products/${productId}/comparison`]: {
-    status: 200,
-    body: {
-      productId,
-      criteria: { sort: 'unit_price', municipality: 'armenia' },
-      results,
-      promotions: [],
-    },
-  },
-});
-
-const a = shop('a', 'Tienda A', 4.5339, 400);
-const b = shop('b', 'Tienda B', 4.5439, 1100);
+const { a, b } = near;
 const routes = () => ({
   ...comparisonOf(RICE, offer(a, 'arroz-500g', 2000), offer(b, 'arroz-500g', 2500)),
   ...comparisonOf(MILK, offer(a, 'leche-1l', 5000), offer(b, 'leche-1l', 3000)),
   ...comparisonOf(SALT),
 });
 
-const renderPlan = (...items: ReturnType<typeof item>[]) => {
-  localStorage.setItem('valora:canasta', JSON.stringify(items));
-  return render(
-    <BasketProvider>
-      <MemoryRouter>
-        <PlanPage />
-      </MemoryRouter>
-    </BasketProvider>,
-  );
-};
-
-// Ubicación de la persona, distinta de cualquier tienda para poder buscarla en lo guardado.
+// Ubicación distinta de cualquier tienda para poder buscarla en lo guardado.
 const locate = () => {
-  localStorage.setItem('valora:donde', 'ubicacion');
-  Object.defineProperty(navigator, 'geolocation', {
-    configurable: true,
-    value: {
-      getCurrentPosition: (ok: (p: unknown) => void) => {
-        ok({ coords: { latitude: 4.53017, longitude: -75.68023 } });
-      },
-    },
-  });
+  locateAt(4.53017, -75.68023);
 };
 
 const twoStores = async () => within(await screen.findByRole('region', { name: '2 tiendas' }));
