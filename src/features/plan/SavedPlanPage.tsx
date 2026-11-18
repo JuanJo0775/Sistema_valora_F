@@ -4,7 +4,7 @@ import { directionsTo } from '../../shared/directions';
 import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { isoDay, shortDay } from './planDates';
-import { planToText } from './planText';
+import { planToText, travelLabel, travelQualifier } from './planText';
 import { deletePlan, readPlans, toggleBought, type SavedPlan } from './savedPlan';
 import './plan.css';
 
@@ -51,7 +51,9 @@ export function SavedPlanPage() {
   }
 
   const text = planToText(plan);
-  const stale = now - new Date(plan.savedAt).getTime() > WEEK_MS;
+  // Una fecha inválida no se puede dar por vigente: cuenta como desactualizado.
+  const age = now - new Date(plan.savedAt).getTime();
+  const stale = Number.isNaN(age) || age > WEEK_MS;
   const unpriced = plan.lines.filter((l) => l.storeId === null || l.priceCop === null);
   const s = plan.summary;
   const hasDelivery = plan.stores.some((st) => st.delivery !== null);
@@ -179,7 +181,7 @@ export function SavedPlanPage() {
         </p>
         {s.travel && (
           <>
-            <p>{`Traslado (estimado): ${NUM.format(s.travel.extraKm)} km más, ${String(Math.round(s.travel.minutes))} min a pie${
+            <p>{`${travelLabel(s.travel)}: ${NUM.format(s.travel.extraKm)} km${travelQualifier(s.travel)}, ${String(Math.round(s.travel.minutes))} min a pie${
               s.travel.costCop === null ? '' : `, ${formatCop(s.travel.costCop)}`
             }`}</p>
             <p className="muted">{`Supuestos: línea recta × ${NUM.format(s.travel.assumptions.detour)}; ${NUM.format(s.travel.assumptions.kmh)} km/h a pie.`}</p>

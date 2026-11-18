@@ -29,6 +29,13 @@ function shortDate(iso: string | null): string | null {
   return `${part('day') ?? ''}-${part('month') ?? ''}`;
 }
 
+type SavedTravel = NonNullable<SavedPlan['summary']['travel']>;
+// Rótulo y calificativo del traslado guardado: «extra» solo si de verdad es un extra.
+export const travelLabel = (t: SavedTravel) =>
+  t.extra && t.less !== true ? 'Traslado extra (estimado)' : 'Traslado (estimado)';
+export const travelQualifier = (t: SavedTravel) =>
+  t.less === true ? ' menos que ir a una sola tienda' : t.extra ? ' más' : '';
+
 export const DELIVERY_NOTE =
   'Valora no hace pedidos ni domicilios. La tarifa es la que tú escribiste; confírmala con la tienda.';
 
@@ -69,7 +76,7 @@ export function planToText(plan: SavedPlan): string {
   if (s.travel) {
     const t = s.travel;
     out.push(
-      `Traslado (estimado): ${KM.format(t.extraKm)} km más, ${String(Math.round(t.minutes))} min a pie` +
+      `${travelLabel(t)}: ${KM.format(t.extraKm)} km${travelQualifier(t)}, ${String(Math.round(t.minutes))} min a pie` +
         (t.costCop === null ? '' : `, ${cop(t.costCop)}`),
     );
   }

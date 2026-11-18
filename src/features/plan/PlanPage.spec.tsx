@@ -120,7 +120,7 @@ describe('plan de compra', () => {
 
     expect(
       await screen.findByText(
-        'Ordenamos por productos que faltan, total, distancia y, al final, identificadores',
+        'Ordenamos por productos que faltan, total, suma de las distancias a las tiendas (si compartes tu ubicación) y, al final, identificadores',
       ),
     ).toBeInTheDocument();
   });

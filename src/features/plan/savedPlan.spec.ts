@@ -85,6 +85,7 @@ const draft = (): PlanDraft => ({
     baselineCop: 15000,
     travel: {
       extraKm: 1.4,
+      extra: true,
       minutes: 19,
       costCop: null,
       assumptions: { detour: 1.3, kmh: 4.5, mode: 'none' },
@@ -204,6 +205,81 @@ describe('migrate', () => {
     expect(migrate(null)).toEqual([]);
     expect(migrate(undefined)).toEqual([]);
     expect(migrate(7)).toEqual([]);
+  });
+});
+
+const BACKUP = 'valora:planes-respaldo';
+const UNREADABLE: [string, string][] = [
+  ['de versión 2', JSON.stringify({ v: 2, plans: [make('futuro')] })],
+  ['JSON roto', '{no es json'],
+  ['de forma inválida', JSON.stringify({ v: 1, plans: 'nada' })],
+];
+
+describe('no pisar lo que no se pudo leer (§3.4)', () => {
+  it.each(UNREADABLE)('savePlan con un valor %s lo respalda antes de escribir', (_n, raw) => {
+    localStorage.setItem(KEY, raw);
+    expect(savePlan(make('nuevo'))).toBe('saved');
+    expect(localStorage.getItem(BACKUP)).toBe(raw);
+    expect(readPlans().map((p) => p.id)).toEqual(['nuevo']);
+  });
+
+  it('con un valor v1 legible no crea respaldo', () => {
+    savePlan(make('a'));
+    savePlan(make('b'));
+    toggleBought('a', 'pr1');
+    deletePlan('b');
+    expect(localStorage.getItem(BACKUP)).toBeNull();
+  });
+
+  it('si ya hay respaldo no lo pisa', () => {
+    localStorage.setItem(BACKUP, 'primero');
+    localStorage.setItem(KEY, '{roto');
+    savePlan(make('nuevo'));
+    expect(localStorage.getItem(BACKUP)).toBe('primero');
+  });
+
+  it('si no puede respaldar, no escribe', () => {
+    const raw = JSON.stringify({ v: 2, plans: [] });
+    localStorage.setItem(KEY, raw);
+    const set = Storage.prototype.setItem.bind(localStorage);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => {
+      if (k === BACKUP) throw new DOMException('cuota', 'QuotaExceededError');
+      set(k, v);
+    });
+    expect(savePlan(make('nuevo'))).toBe('failed');
+    expect(localStorage.getItem(KEY)).toBe(raw);
+  });
+
+  it.each(UNREADABLE)('deletePlan y toggleBought no destruyen un valor %s', (_n, raw) => {
+    localStorage.setItem(KEY, raw);
+    deletePlan('futuro');
+    toggleBought('futuro', 'pr1');
+    expect(localStorage.getItem(KEY)).toBe(raw);
+  });
+
+  it('si solo algunos planes son inválidos, respalda antes de que se pierdan al escribir', () => {
+    const raw = JSON.stringify({ v: 1, plans: [{ id: 3 }, make('ok')] });
+    localStorage.setItem(KEY, raw);
+    savePlan(make('nuevo'));
+    expect(localStorage.getItem(BACKUP)).toBe(raw);
+    expect(readPlans().map((p) => p.id)).toEqual(['ok', 'nuevo']);
+  });
+});
+
+describe('traslado de planes v1 anteriores', () => {
+  it('sin el campo extra se lee como extra: false', () => {
+    const base = make('a');
+    const travel = { ...(base.summary.travel as NonNullable<SavedPlan['summary']['travel']>) };
+    Reflect.deleteProperty(travel, 'extra');
+    const old = { ...base, summary: { ...base.summary, travel } };
+    const [plan] = migrate({ v: 1, plans: [old] });
+    expect(plan?.summary.travel?.extra).toBe(false);
+  });
+
+  it('un extra que no es booleano invalida el plan', () => {
+    const bad = make('a');
+    (bad.summary.travel as unknown as { extra: unknown }).extra = 'si';
+    expect(migrate({ v: 1, plans: [bad] })).toEqual([]);
   });
 });
 

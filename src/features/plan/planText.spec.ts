@@ -75,6 +75,7 @@ const draft = (): PlanDraft => ({
     baselineCop: 15000,
     travel: {
       extraKm: 1.4,
+      extra: true,
       minutes: 19,
       costCop: null,
       assumptions: { detour: 1.3, kmh: 4.5, mode: 'none' },
@@ -124,10 +125,29 @@ describe('planToText', () => {
     expect(planToText(plan())).toContain('Plan guardado el 17-nov');
   });
 
+  it('rotula «extra» y «más» solo si la cifra es un extra', () => {
+    const base = plan();
+    const withTravel = (t: Partial<NonNullable<SavedPlan['summary']['travel']>>) =>
+      planToText({
+        ...base,
+        summary: {
+          ...base.summary,
+          travel: { ...(base.summary.travel as NonNullable<SavedPlan['summary']['travel']>), ...t },
+        },
+      });
+    expect(withTravel({ extra: true })).toMatch(/Traslado extra \(estimado\): 1,4 km más/);
+    const total = withTravel({ extra: false });
+    expect(total).toMatch(/Traslado \(estimado\): 1,4 km, 19 min/);
+    expect(total).not.toMatch(/extra|más/);
+    const less = withTravel({ extra: true, less: true });
+    expect(less).toMatch(/Traslado \(estimado\): 1,4 km menos que ir a una sola tienda/);
+    expect(less).not.toContain('extra');
+  });
+
   it('muestra totales y marca traslado y domicilio como estimado', () => {
     const text = planToText(plan());
     expect(text).toMatch(/Total productos.*\$\s?13\.380/);
-    expect(text).toMatch(/Traslado \(estimado\)/);
+    expect(text).toMatch(/Traslado extra \(estimado\)/);
     expect(text).toContain('1,4 km');
     expect(text).toContain('19 min');
     expect(text).toMatch(/Domicilio \(estimado\).*\$\s?5\.000/);

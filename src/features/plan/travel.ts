@@ -69,6 +69,37 @@ export const extraTravel = (route: TravelEstimate, baseline: TravelEstimate): Tr
     route.costCop === null || baseline.costCop === null ? null : route.costCop - baseline.costCop,
 });
 
+// El traslado que se muestra y se guarda: una sola decisión para la pantalla y el plan guardado.
+// extra: lo que suma dividir frente a ir a la mejor tienda única; menos: dividir (con domicilio)
+// deja menos traslado que eso, en valores absolutos; total: el viaje completo (1 tienda, o ninguna
+// tienda sola cubre todo y no hay con qué comparar). Nunca un número negativo rotulado «extra».
+export interface ShownTravel extends TravelEstimate {
+  kind: 'extra' | 'menos' | 'total';
+}
+
+export function shownTravel(
+  split: boolean,
+  route: TravelEstimate,
+  extra: TravelEstimate | null,
+): ShownTravel {
+  if (!split || extra === null) return { ...route, kind: 'total' };
+  if (extra.km < 0) {
+    return {
+      km: -extra.km,
+      minutes: Math.abs(extra.minutes),
+      costCop: extra.costCop === null ? null : Math.abs(extra.costCop),
+      kind: 'menos',
+    };
+  }
+  return {
+    ...extra,
+    minutes: Math.max(0, extra.minutes),
+    // Un costo negativo con más kilómetros no se rotula «extra».
+    costCop: extra.costCop !== null && extra.costCop < 0 ? null : extra.costCop,
+    kind: 'extra',
+  };
+}
+
 // Ahorro frente a la mejor tienda única y neto tras traslado y domicilio. El traslado sin costo
 // escrito no se resta (la pantalla lo dice).
 export function netEstimate(i: {

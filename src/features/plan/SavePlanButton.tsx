@@ -81,6 +81,8 @@ function draftOf(choice: PlanChoice, pending: BasketItem[]): PlanDraft {
       travel: summary.travel
         ? {
             extraKm: summary.travel.km,
+            extra: summary.travel.kind !== 'total',
+            ...(summary.travel.kind === 'menos' ? { less: true } : {}),
             minutes: summary.travel.minutes,
             costCop: summary.travel.costCop,
             assumptions,

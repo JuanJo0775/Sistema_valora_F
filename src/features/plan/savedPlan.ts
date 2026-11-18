@@ -7,6 +7,8 @@ import type { TravelAssumptions } from './travel';
 // su casa. Las coordenadas que sí van son las de la TIENDA, que es dato público.
 const KEY = 'valora:planes';
 const VERSION = 1;
+// Una sola ranura donde se copia lo que no se pudo leer antes de reescribir la clave.
+const BACKUP_KEY = 'valora:planes-respaldo';
 export const MAX_PLANS = 5;
 
 type Municipality = components['schemas']['Municipality'];
@@ -51,7 +53,11 @@ export interface SavedSummary {
   // Total en la mejor tienda única; null si ninguna tiene todo.
   baselineCop: number | null;
   travel: {
+    // Siempre no negativo. extra: es lo que suma dividir frente a ir a una sola tienda (con less,
+    // lo que resta); si no, es el total del viaje. Planes v1 anteriores no traen el campo = false.
     extraKm: number;
+    extra: boolean;
+    less?: boolean;
     minutes: number;
     costCop: number | null;
     assumptions: TravelAssumptions;
@@ -135,6 +141,8 @@ export function toSavedPlan(draft: PlanDraft, now: Date): SavedPlan {
           ? null
           : {
               extraKm: s.travel.extraKm,
+              extra: s.travel.extra,
+              ...(s.travel.less === true ? { less: true } : {}),
               minutes: s.travel.minutes,
               costCop: s.travel.costCop,
               assumptions: { ...s.travel.assumptions },
@@ -190,6 +198,8 @@ const validSummary = (s: unknown) =>
   (s.travel === null ||
     (isObj(s.travel) &&
       isNum(s.travel.extraKm) &&
+      (s.travel.extra === undefined || typeof s.travel.extra === 'boolean') &&
+      (s.travel.less === undefined || typeof s.travel.less === 'boolean') &&
       isNum(s.travel.minutes) &&
       isNumOrNull(s.travel.costCop) &&
       isObj(s.travel.assumptions))) &&
@@ -214,49 +224,93 @@ const validPlan = (p: unknown): p is SavedPlan =>
 export function migrate(raw: unknown): SavedPlan[] {
   if (!isObj(raw) || raw.v !== VERSION || !Array.isArray(raw.plans)) return [];
   const plans: unknown[] = raw.plans;
-  return plans.filter(validPlan).map((p) => structuredClone(p));
+  return plans.filter(validPlan).map((p) => {
+    const plan = structuredClone(p);
+    // Planes v1 sin el campo: el número era el que se guardaba, sin saber si era extra.
+    if (plan.summary.travel && typeof plan.summary.travel.extra !== 'boolean')
+      plan.summary.travel.extra = false;
+    return plan;
+  });
 }
 
-export function readPlans(): SavedPlan[] {
+// Lo leído de valora:planes y, si no se pudo leer entero como v1, el texto original (para respaldarlo).
+interface Stored {
+  plans: SavedPlan[];
+  unreadable: string | null;
+}
+
+function readStoredPlans(): Stored {
   const raw = readStored(KEY);
-  if (raw === null) return [];
+  if (raw === null) return { plans: [], unreadable: null };
   try {
-    return migrate(JSON.parse(raw));
+    const parsed: unknown = JSON.parse(raw);
+    const plans = migrate(parsed);
+    const count =
+      isObj(parsed) && parsed.v === VERSION && Array.isArray(parsed.plans)
+        ? parsed.plans.length
+        : -1;
+    // Versión desconocida, forma inválida o planes descartados: al escribir se perderían.
+    return { plans, unreadable: count === plans.length ? null : raw };
   } catch {
-    return [];
+    return { plans: [], unreadable: raw };
   }
 }
 
+export function readPlans(): SavedPlan[] {
+  return readStoredPlans().plans;
+}
+
 // A diferencia de writeStored, aquí hay que saber si de verdad se guardó.
-function write(plans: SavedPlan[]): boolean {
+function setItem(key: string, value: string): boolean {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: VERSION, plans }));
+    localStorage.setItem(key, value);
     return true;
   } catch {
     return false;
   }
 }
 
+// Antes de pisar un valor ilegible, copia su texto a una sola ranura de respaldo (no la pisa).
+// Si no se puede respaldar, no se escribe: mejor no guardar que perder lo que había.
+function write({ unreadable }: Stored, next: SavedPlan[]): boolean {
+  if (unreadable !== null) {
+    let hasBackup: boolean;
+    try {
+      hasBackup = localStorage.getItem(BACKUP_KEY) !== null;
+    } catch {
+      return false;
+    }
+    if (!hasBackup && !setItem(BACKUP_KEY, unreadable)) return false;
+  }
+  return setItem(KEY, JSON.stringify({ v: VERSION, plans: next }));
+}
+
 export function savePlan(plan: SavedPlan): 'saved' | 'full' | 'failed' {
-  const plans = readPlans();
+  const state = readStoredPlans();
+  const plans = [...state.plans];
   const i = plans.findIndex((p) => p.id === plan.id);
   if (i >= 0) plans[i] = plan;
   else if (plans.length >= MAX_PLANS) return 'full';
   else plans.push(plan);
-  return write(plans) ? 'saved' : 'failed';
+  return write(state, plans) ? 'saved' : 'failed';
 }
 
 export function deletePlan(id: string): void {
-  const plans = readPlans();
-  if (plans.some((p) => p.id === id)) write(plans.filter((p) => p.id !== id));
+  const state = readStoredPlans();
+  if (state.plans.some((p) => p.id === id)) {
+    write(
+      state,
+      state.plans.filter((p) => p.id !== id),
+    );
+  }
 }
 
 export function toggleBought(id: string, presentationId: string): void {
-  const plans = readPlans();
-  const plan = plans.find((p) => p.id === id);
+  const state = readStoredPlans();
+  const plan = state.plans.find((p) => p.id === id);
   if (!plan) return;
   plan.lines = plan.lines.map((l) =>
     l.presentationId === presentationId ? { ...l, bought: !l.bought } : l,
   );
-  write(plans);
+  write(state, state.plans);
 }

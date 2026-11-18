@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  within,
+  type BoundFunctions,
+  type queries,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '../../test/fakeApi';
@@ -181,5 +188,99 @@ describe('guardar el plan', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '2 tiendas' })).toBeInTheDocument();
+  });
+
+  describe('traslado guardado', () => {
+    const KM1 = new Intl.NumberFormat('es-CO', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+    const regionOf = async (name: string) => within(await screen.findByRole('region', { name }));
+    // Lo que la pantalla dice del traslado dentro de la opción.
+    const shownTravel = (section: BoundFunctions<typeof queries>) =>
+      section.getByText(/^Traslado .*estimado: /).textContent;
+    const saved = () => readPlans()[0]?.summary.travel;
+
+    it('un plan de 1 tienda guarda el viaje real, igual al mostrado, y no lo rotula extra', async () => {
+      locate();
+      stubApi(routes());
+      renderPlan(rice, milk);
+      const one = await regionOf('1 tienda');
+      const shown = shownTravel(one);
+
+      fireEvent.click(one.getByRole('button', { name: 'Guardar plan' }));
+
+      const travel = saved();
+      expect(travel?.extra).toBe(false);
+      expect(travel?.extraKm).toBeGreaterThan(0);
+      expect(shown).toContain(`${KM1.format(travel?.extraKm ?? 0)} km`);
+      expect(shown).not.toContain('extra');
+    });
+
+    it('un plan de 2 tiendas guarda el extra frente a la tienda única y lo marca extra', async () => {
+      locate();
+      stubApi(routes());
+      renderPlan(rice, milk);
+      const two = await regionOf('2 tiendas');
+      const shown = shownTravel(two);
+
+      fireEvent.click(two.getByRole('button', { name: 'Guardar plan' }));
+
+      const travel = saved();
+      expect(travel?.extra).toBe(true);
+      expect(travel?.extraKm).toBeGreaterThan(0);
+      expect(shown).toContain('Traslado extra estimado');
+      expect(shown).toContain(`${KM1.format(travel?.extraKm ?? 0)} km`);
+    });
+
+    it('si ninguna tienda sola cubre todo guarda la ruta completa como total, no como extra', async () => {
+      locate();
+      stubApi({
+        ...comparisonOf(RICE, offer(a, 'arroz-500g', 2000)),
+        ...comparisonOf(MILK, offer(b, 'leche-1l', 3000)),
+      });
+      renderPlan(rice, milk);
+      const two = await regionOf('2 tiendas');
+      const shown = shownTravel(two);
+
+      fireEvent.click(two.getByRole('button', { name: 'Guardar plan' }));
+
+      const travel = saved();
+      expect(travel?.extra).toBe(false);
+      expect(travel?.extraKm).toBeGreaterThan(0);
+      expect(shown).not.toContain('extra');
+      expect(shown).toContain(`${KM1.format(travel?.extraKm ?? 0)} km`);
+    });
+
+    it('si el domicilio deja menos traslado que ir a una sola tienda, guarda el valor absoluto como «menos»', async () => {
+      locate();
+      stubApi(routes());
+      renderPlan(rice, milk);
+      const two = await regionOf('2 tiendas');
+      // La tienda B (la lejana, la mejor tienda única) va a domicilio: solo se visita A.
+      const group = two.getAllByRole('group').find((g) => g.textContent.includes('Tienda B'));
+      fireEvent.click(within(group as HTMLElement).getByLabelText('Me lo llevan a casa'));
+      const shown = shownTravel(two);
+
+      fireEvent.click(two.getByRole('button', { name: 'Guardar plan' }));
+
+      const travel = saved();
+      expect(travel?.extraKm).toBeGreaterThan(0);
+      expect(travel?.extra).toBe(true);
+      expect(travel?.less).toBe(true);
+      expect(shown).toContain('menos');
+      expect(shown).not.toContain('extra');
+      expect(shown).not.toContain('-');
+      expect(shown).toContain(`${KM1.format(travel?.extraKm ?? 0)} km`);
+    });
+
+    it('sin ubicación el traslado guardado sigue siendo null', async () => {
+      stubApi(routes());
+      renderPlan(rice, milk);
+
+      fireEvent.click((await twoStores()).getByRole('button', { name: 'Guardar plan' }));
+
+      expect(saved()).toBeNull();
+    });
   });
 });

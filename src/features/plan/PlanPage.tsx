@@ -19,6 +19,8 @@ import {
   extraTravel,
   netEstimate,
   routeEstimate,
+  shownTravel,
+  type ShownTravel,
   type TravelAssumptions,
   type TravelEstimate,
 } from './travel';
@@ -36,7 +38,7 @@ export interface PlanChoice {
   summary: {
     productsCop: number;
     savingsCop: number | null;
-    travel: TravelEstimate | null;
+    travel: ShownTravel | null;
     deliveryCop: number;
     netCop: number | null;
   };
@@ -52,6 +54,11 @@ const feeOf = ({ fee }: Delivery): number | null => {
   const value = Number(fee);
   return Number.isFinite(value) && value >= 0 ? value : null;
 };
+
+const travelSentence = (shown: ShownTravel, distance: string, cost: string) =>
+  shown.kind === 'menos'
+    ? `Traslado estimado: ${distance} menos que ir a una sola tienda (≈ ${String(shown.minutes)} min a pie menos)${cost}`
+    : `${shown.kind === 'extra' ? 'Traslado extra estimado' : 'Traslado estimado'}: ${distance} (≈ ${String(shown.minutes)} min a pie)${cost}`;
 
 const point = ({ lat, lng }: Point): Point => ({ lat, lng });
 
@@ -178,6 +185,7 @@ function PlanContent({
       assumptions,
     );
     const extra = baselineRoute && origin ? extraTravel(route, baselineRoute) : null;
+    const shown = shownTravel(option.stores > 1, route, extra);
     const fees = option.shares.map(({ store }) => {
       const d = deliveryOf(store.id);
       return d.on ? feeOf(d) : undefined;
@@ -205,7 +213,7 @@ function PlanContent({
         names={names}
         origin={origin}
         route={route}
-        extra={extra}
+        shown={shown}
         savingsCop={savingsCop}
         netCop={netCop}
         deliveryCop={deliveryCop}
@@ -226,7 +234,7 @@ function PlanContent({
           summary: {
             productsCop: option.productsCop,
             savingsCop,
-            travel: origin ? (extra ?? route) : null,
+            travel: origin ? shown : null,
             deliveryCop,
             netCop,
           },
@@ -240,7 +248,8 @@ function PlanContent({
   return (
     <>
       <p className="muted">
-        Ordenamos por productos que faltan, total, distancia y, al final, identificadores
+        Ordenamos por productos que faltan, total, suma de las distancias a las tiendas (si
+        compartes tu ubicación) y, al final, identificadores
       </p>
       {unpricedItems.length > 0 && (
         <p role="status" className="banner warn">
@@ -266,7 +275,7 @@ function OptionCard({
   names,
   origin,
   route,
-  extra,
+  shown,
   savingsCop,
   netCop,
   deliveryCop,
@@ -284,7 +293,7 @@ function OptionCard({
   names: Map<string, { name: string; label: string }>;
   origin: Point | null;
   route: TravelEstimate;
-  extra: TravelEstimate | null;
+  shown: ShownTravel;
   savingsCop: number | null;
   netCop: number | null;
   deliveryCop: number;
@@ -298,7 +307,6 @@ function OptionCard({
 }) {
   const titleId = useId();
   const split = option.stores > 1;
-  const shown = split ? extra : route;
   const cost = (estimate: TravelEstimate) =>
     estimate.costCop === null ? '' : ` · ${formatCop(estimate.costCop)}`;
   const assumed = `Supuestos: línea recta × ${NUM.format(assumptions.detour)}; ${NUM.format(assumptions.kmh)} km/h a pie.`;
@@ -338,9 +346,7 @@ function OptionCard({
         />
       ))}
       <div className="plan-travel">
-        {origin && shown && (
-          <p>{`${split ? 'Traslado extra estimado' : 'Traslado estimado'}: ${km(shown.km)} (≈ ${String(shown.minutes)} min a pie)${cost(shown)}`}</p>
-        )}
+        {origin && <p>{travelSentence(shown, km(shown.km), cost(shown))}</p>}
         {!origin && (
           <>
             {split && route.km > 0 && (

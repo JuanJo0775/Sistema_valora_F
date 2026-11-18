@@ -75,6 +75,7 @@ const draft = (): PlanDraft => ({
     baselineCop: 15000,
     travel: {
       extraKm: 1.4,
+      extra: true,
       minutes: 19,
       costCop: null,
       assumptions: { detour: 1.3, kmh: 4.5, mode: 'none' },
@@ -166,6 +167,33 @@ describe('plan guardado', () => {
   it('con más de 7 días avisa que puede estar desactualizado', () => {
     renderAt(stored(new Date(Date.now() - 8 * 24 * 3600 * 1000)).id);
     expect(screen.getByText('Puede estar desactualizado')).toBeInTheDocument();
+  });
+
+  it('con fecha de guardado inválida también avisa que puede estar desactualizado', () => {
+    const plan = stored(NOW);
+    const raw = JSON.parse(localStorage.getItem('valora:planes') ?? '{}') as {
+      plans: { savedAt: string }[];
+    };
+    (raw.plans[0] as { savedAt: string }).savedAt = 'no es fecha';
+    localStorage.setItem('valora:planes', JSON.stringify(raw));
+    renderAt(plan.id);
+    expect(screen.getByText('Puede estar desactualizado')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['extra', true, undefined, /Traslado extra \(estimado\): 1,4 km más/],
+    ['total', false, undefined, /^Traslado \(estimado\): 1,4 km, 19 min/],
+    ['menos', true, true, /^Traslado \(estimado\): 1,4 km menos que ir a una sola tienda/],
+  ])('rotula el traslado %s', (_n, extra, less, expected) => {
+    const plan = stored(NOW);
+    const raw = JSON.parse(localStorage.getItem('valora:planes') ?? '{}') as {
+      plans: { summary: { travel: object } }[];
+    };
+    const first = raw.plans[0] as { summary: { travel: object } };
+    first.summary.travel = { ...first.summary.travel, extra, ...(less ? { less } : {}) };
+    localStorage.setItem('valora:planes', JSON.stringify(raw));
+    renderAt(plan.id);
+    expect(screen.getByText(expected)).toBeInTheDocument();
   });
 
   it('un id desconocido muestra el estado vacío con enlace a la canasta', () => {
