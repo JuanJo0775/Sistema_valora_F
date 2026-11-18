@@ -195,6 +195,46 @@ describe('detalle del producto', () => {
     expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
   });
 
+  it('reserva el lugar de la tarjeta «Más barato» mientras llega la comparación', async () => {
+    // La comparación no llega (respuesta pendiente): así la reserva sigue puesta sin depender de la
+    // velocidad de la prueba.
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: { status: 200, pending: true },
+    });
+
+    const { container } = renderDetail(rice.id);
+
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+    expect(container.querySelector('.cheapest-card.loading')).toBeInTheDocument();
+  });
+
+  it('quita el lugar reservado si la comparación falla', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: [
+        { status: 500, body: { code: 'internal', message: 'x' } },
+      ],
+    });
+
+    const { container } = renderDetail(rice.id);
+
+    await screen.findByRole('button', { name: /Reintentar/ });
+    expect(container.querySelector('.cheapest-card.loading')).not.toBeInTheDocument();
+  });
+
+  it('con la comparación, el lugar reservado pasa a ser la tarjeta «Más barato»', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([offer('Ara', 2000, true)]),
+    });
+
+    const { container } = renderDetail(rice.id);
+
+    await screen.findByText(/^Más barato en Armenia/);
+    expect(container.querySelector('.cheapest-card.loading')).not.toBeInTheDocument();
+  });
+
   it('el más barato dice cuánto menos cuesta que la tienda más cara', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },

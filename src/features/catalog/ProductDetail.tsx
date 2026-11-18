@@ -34,6 +34,7 @@ export function ProductDetail() {
   );
   const { session } = useSession();
   // La última comparación de «Todas las tiendas»: el panel muestra su más barato.
+  const [failedFor, setFailedFor] = useState<string | null>(null);
   const [compared, setCompared] = useState<{ productId: string; comparison: Comparison } | null>(
     null,
   );
@@ -117,7 +118,12 @@ export function ProductDetail() {
           lista de tiendas, para que lo que decide la compra quede primero. Orden del panel: el más
           barato, la presentación, agregar a la canasta (primaria) y registrar un precio. */}
       <aside className="side" aria-label="Precios y acciones">
-        {comparison && <CheapestCard comparison={comparison} sizeOf={sizeOf(product)} />}
+        {comparison ? (
+          <CheapestCard comparison={comparison} sizeOf={sizeOf(product)} />
+        ) : (
+          // Mientras llega la comparación se reserva el alto de la tarjeta: el botón de agregar no salta.
+          failedFor !== product.id && <div className="cheapest-card loading" aria-hidden="true" />
+        )}
         <AddToBasket
           product={product}
           suggestedPresentationId={cheapestPresentationId}
@@ -131,7 +137,11 @@ export function ProductDetail() {
       <AllStores
         product={product}
         onComparison={(latest) => {
+          setFailedFor(null);
           setCompared({ productId: product.id, comparison: latest });
+        }}
+        onFailed={() => {
+          setFailedFor(product.id);
         }}
       />
     </div>

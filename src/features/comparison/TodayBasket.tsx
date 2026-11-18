@@ -201,7 +201,7 @@ function ProductCard({ item }: { item: Item }) {
         <div className="product-card-top">
           <ProductThumb image={item.image} size="card" />
           {item.savingsPercent !== undefined && (
-            <span className="pill ok">{`Hasta −${String(item.savingsPercent)} %`}</span>
+            <span className="pill ok">{`Hasta −${String(item.savingsPercent)} % frente a la tienda más cara`}</span>
           )}
         </div>
         <h2>{item.name}</h2>
@@ -212,7 +212,7 @@ function ProductCard({ item }: { item: Item }) {
             <strong>{formatCop(cheapest.priceCop)}</strong>
           </span>
           <span className="product-card-store">
-            <span>{cheapest.establishment.name}</span>
+            <span>{`En ${cheapest.establishment.name}`}</span>
             {cheapest.establishment.distanceM !== undefined && (
               <span>{formatDistance(cheapest.establishment.distanceM)}</span>
             )}
