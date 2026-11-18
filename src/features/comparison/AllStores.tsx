@@ -59,7 +59,9 @@ export function AllStores({
   // Cada respuesta guarda la consulta que la pidió: una lenta no pisa a una más nueva.
   const [outcome, setOutcome] = useState<
     // savedAt: sin conexión, la última comparación vista (H-08), no una nueva.
-    { key: string; comparison: Comparison; savedAt?: number } | { key: string; error: unknown } | null
+    | { key: string; comparison: Comparison; savedAt?: number }
+    | { key: string; error: unknown }
+    | null
   >(null);
   const online = useOnline();
   const [attempt, setAttempt] = useState(0);
@@ -98,7 +100,8 @@ export function AllStores({
       .catch((error: unknown) => {
         if (!current) return;
         // Sin red, lo último que se vio de este producto en este municipio.
-        const last = error instanceof ApiError && error.status === 0 ? readComparison(savedKey) : null;
+        const last =
+          error instanceof ApiError && error.status === 0 ? readComparison(savedKey) : null;
         if (last) {
           setOutcome({ key, comparison: last.comparison, savedAt: last.savedAt });
           notify.current?.(last.comparison);
@@ -232,7 +235,9 @@ function SavedNotice({
 }) {
   const when = `(${ago(savedAt)}). Los precios pueden haber cambiado.`;
   if (!online) {
-    return <OfflineMessage>{`Sin conexión: te mostramos lo último que viste ${when}`}</OfflineMessage>;
+    return (
+      <OfflineMessage>{`Sin conexión: te mostramos lo último que viste ${when}`}</OfflineMessage>
+    );
   }
   return (
     <p role="status" className="banner warn">

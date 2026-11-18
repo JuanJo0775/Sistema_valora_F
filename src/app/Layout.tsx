@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { Suspense, useRef } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import logoDark from '../assets/logo-horizontal-oscuro.png';
 import logoLight from '../assets/logo-horizontal-claro.png';
@@ -8,6 +8,7 @@ import { BasketToast } from '../features/basket/BasketToast';
 import { PendingBanner } from '../pwa/PendingBanner';
 import { UpdateBanner } from '../pwa/UpdateBanner';
 import { OfflineBanner } from '../shared/ui/OfflineBanner';
+import { SkeletonList } from '../shared/ui/Skeleton';
 import { CookieNotice } from '../features/legal/CookieNotice';
 import { useRouteTitle } from './routeTitle';
 import { HeaderSearch } from './HeaderSearch';
@@ -90,7 +91,10 @@ export function Layout() {
       <UpdateBanner />
       <VerifyEmailBanner />
       <main className="page" id="contenido" tabIndex={-1} ref={mainRef}>
-        <Outlet />
+        {/* H-26: las pantallas menos usadas se descargan al abrirlas (App.tsx); mientras, el esqueleto. */}
+        <Suspense fallback={<SkeletonList kind="row" count={4} />}>
+          <Outlet />
+        </Suspense>
       </main>
       {/* Al cambiar de pantalla se anuncia su título a los lectores de pantalla. Es una región viva sin
           role="status": las pantallas ya usan ese rol para sus propios avisos y las pruebas buscan «el»

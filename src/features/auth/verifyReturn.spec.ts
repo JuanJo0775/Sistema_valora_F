@@ -34,14 +34,17 @@ describe('a dónde volver tras verificar el correo', () => {
     },
   );
 
-  it.each(['//otro.sitio', String.raw`/\otro.sitio`, 'https://otro.sitio/registrar', null, undefined])(
-    'una dirección que sale de la app (%s) no se guarda (safeReturn)',
-    (path) => {
-      rememberVerifyReturn(path);
+  it.each([
+    '//otro.sitio',
+    String.raw`/\otro.sitio`,
+    'https://otro.sitio/registrar',
+    null,
+    undefined,
+  ])('una dirección que sale de la app (%s) no se guarda (safeReturn)', (path) => {
+    rememberVerifyReturn(path);
 
-      expect(readVerifyReturn()).toBeNull();
-    },
-  );
+    expect(readVerifyReturn()).toBeNull();
+  });
 
   it('una pantalla de la cuenta no borra lo que ya se había recordado', () => {
     rememberVerifyReturn('/registrar?producto=abc');

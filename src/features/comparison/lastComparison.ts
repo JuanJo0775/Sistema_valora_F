@@ -35,7 +35,10 @@ export const comparisonKey = (parts: {
 export function saveComparison(key: string | null, comparison: Comparison, now = Date.now()) {
   if (!key) return;
   const others = read().filter((entry) => entry.key !== key);
-  writeStored(KEY, JSON.stringify([{ key, savedAt: now, comparison }, ...others].slice(0, MAX_ENTRIES)));
+  writeStored(
+    KEY,
+    JSON.stringify([{ key, savedAt: now, comparison }, ...others].slice(0, MAX_ENTRIES)),
+  );
 }
 
 export function readComparison(

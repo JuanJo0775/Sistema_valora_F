@@ -273,10 +273,9 @@ describe('verificar el correo sin perder lo que se estaba haciendo', () => {
 
     renderPage('/verificar-correo?token=abc');
 
-    expect(await screen.findByRole('link', { name: 'Seguir con registrar un precio' })).toHaveAttribute(
-      'href',
-      WHAT,
-    );
+    expect(
+      await screen.findByRole('link', { name: 'Seguir con registrar un precio' }),
+    ).toHaveAttribute('href', WHAT);
     // Ya se usó: la próxima vez no se ofrece de nuevo.
     expect(localStorage.getItem('valora:verificar-volver')).toBeNull();
   });

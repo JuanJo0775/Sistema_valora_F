@@ -121,7 +121,8 @@ describe('inicio', () => {
 
     fireEvent.click(await screen.findByRole('link', { name: 'Iniciar sesión' }));
 
-    expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
+    // La pantalla de entrar se descarga al abrirla (H-26).
+    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
   });
 
   it('desde Yo, «Crear cuenta» lleva al formulario de registro', async () => {
@@ -133,7 +134,7 @@ describe('inicio', () => {
 
     fireEvent.click(await screen.findByRole('link', { name: 'Crear cuenta' }));
 
-    expect(screen.getByRole('heading', { name: 'Crear cuenta' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Crear cuenta' })).toBeInTheDocument();
   });
 
   it('«Registrar precio» sin sesión pide entrar', async () => {
@@ -342,8 +343,13 @@ describe('inicio', () => {
 
     fireEvent.click(await screen.findByRole('link', { name: 'Ver el historial' }));
 
+    // La pantalla del historial se descarga al abrirla (H-26): con la máquina cargada tarda más.
     expect(
-      await screen.findByRole('heading', { name: 'Historial de precios · Arroz blanco' }),
+      await screen.findByRole(
+        'heading',
+        { name: 'Historial de precios · Arroz blanco' },
+        { timeout: 5000 },
+      ),
     ).toBeInTheDocument();
   });
 

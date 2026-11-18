@@ -523,7 +523,10 @@ describe('todas las tiendas, en el detalle del producto', () => {
     it('sin nada guardado dice que la pantalla necesita internet', async () => {
       localStorage.clear();
       goOffline();
-      vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))));
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+      );
       renderCompare();
 
       expect(

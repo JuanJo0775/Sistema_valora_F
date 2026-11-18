@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Comparison } from './AllStores';
 import { ago, comparisonKey, readComparison, saveComparison } from './lastComparison';
 
-const sample = (n: number) => ({ productId: `p${String(n)}`, results: [] }) as unknown as Comparison;
+const sample = (n: number) =>
+  ({ productId: `p${String(n)}`, results: [] }) as unknown as Comparison;
 const key = (productId: string, located = false) =>
   comparisonKey({ productId, located, where: 'armenia', sort: 'unit_price', onlyCurrent: false });
 

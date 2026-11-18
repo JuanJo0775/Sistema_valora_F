@@ -22,6 +22,8 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // Las fuentes y los íconos también, para que la app abra igual sin internet.
           globPatterns: ['**/*.{js,css,html,png,woff2}'],
+          // Las capturas son para la ventana de instalación, no para abrir la app.
+          globIgnores: ['screenshots/**'],
           navigateFallbackDenylist: [/^\/v1\//],
           runtimeCaching: [
             {

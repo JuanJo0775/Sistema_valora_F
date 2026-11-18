@@ -21,7 +21,9 @@ describe('caché del catálogo para registrar sin señal', () => {
 describe('caché de la canasta básica (stale-while-revalidate)', () => {
   it('guarda la canasta de un municipio, sin ubicación', () => {
     expect(
-      FEATURED_WITHOUT_LOCATION.test('https://valora.app/v1/featured-products?municipality=armenia'),
+      FEATURED_WITHOUT_LOCATION.test(
+        'https://valora.app/v1/featured-products?municipality=armenia',
+      ),
     ).toBe(true);
   });
 

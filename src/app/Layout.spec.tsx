@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, stubApi } from '../test/fakeApi';
 import { App } from './App';
@@ -49,7 +49,10 @@ describe('encabezado', () => {
 
     fireEvent.click(screen.getByRole('link', { name: /^Canasta/ }));
 
-    expect(document.title).toBe('Canasta · Valora');
+    // La pantalla se descarga al abrirla (H-26): el título y el foco cambian cuando llega.
+    await waitFor(() => {
+      expect(document.title).toBe('Canasta · Valora');
+    });
     expect(screen.getByRole('main')).toHaveFocus();
     expect(screen.getByTestId('route-announcer')).toHaveAttribute('aria-live', 'polite');
     expect(screen.getByTestId('route-announcer')).not.toHaveAttribute('role');
@@ -58,13 +61,15 @@ describe('encabezado', () => {
     ).toBeInTheDocument();
   });
 
-  it('el foco pasa sin saltar el scroll', () => {
+  it('el foco pasa sin saltar el scroll', async () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     render(<App />);
     const focus = vi.spyOn(screen.getByRole('main'), 'focus');
 
     fireEvent.click(screen.getByRole('link', { name: /^Mapa/ }));
 
-    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    await waitFor(() => {
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    });
   });
 });
