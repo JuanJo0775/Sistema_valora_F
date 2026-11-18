@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -408,7 +408,9 @@ describe('registrar un precio', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
 
     expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
-    expect(api.requested).toHaveLength(2);
+    expect(
+      api.requested.filter(({ pathname }) => pathname === `/v1/products/${rice.id}`),
+    ).toHaveLength(2);
   });
 
   it.each([
@@ -739,5 +741,253 @@ describe('registrar un precio: mejoras de flujo', () => {
     await screen.findByRole('heading', { name: 'Recibido' });
 
     expect(localStorage.getItem('valora:ultimos-productos')).toContain('Arroz blanco');
+  });
+});
+
+// EC-03: antes de enviar, un precio muy lejos de lo que ya se ve pide confirmación.
+describe('registrar un precio: precio atípico', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  const kgId = rice.presentations[1]?.id;
+  const offer = (priceCop: number, presentationId = kgId) => ({
+    establishment: donPepe,
+    reportId: crypto.randomUUID(),
+    presentationId,
+    priceCop,
+    unitPrice: { valueCop: priceCop / 10, per: '100g' },
+    source: 'comunidad',
+    freshness: 'vigente',
+    reliability: 'alta',
+    isCheapest: false,
+    confirmations: 1,
+    observedAt: '2026-11-16T10:00:00Z',
+  });
+  const comparisonRoute = (prices: number[]) => ({
+    [`GET /v1/products/${rice.id}/comparison`]: {
+      status: 200,
+      body: { results: prices.map((price) => offer(price)) },
+    },
+  });
+  const comparisonAsked = (api: ReturnType<typeof stubApi>) =>
+    api.requested.filter(({ pathname }) => pathname.endsWith('/comparison'));
+  const seen = [19_900, 24_000, 28_000];
+
+  // Igual que fillAndSend, pero con la presentación de 1 kg y esperando la referencia.
+  const sendKg = async (api: ReturnType<typeof stubApi>, price: string) => {
+    fireEvent.click(await screen.findByRole('radio', { name: '1 kg' }));
+    await waitFor(() => {
+      expect(comparisonAsked(api)).toHaveLength(1);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    stubLocation('allow');
+    fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
+    fireEvent.change(screen.getByLabelText('Precio en pesos'), { target: { value: price } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+  };
+
+  it('con referencia, un precio muy bajo no se envía: pregunta con las cifras, enfoca el bloque y no pide la ubicación', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+
+    await sendKg(api, '2400');
+
+    const block = await screen.findByRole('alertdialog');
+    expect(block).toHaveTextContent(
+      'Lo más barato que vemos para esta presentación es $19.900 y lo más caro $28.000. Tu precio es $2.400. ¿Está bien?',
+    );
+    expect(block).toHaveTextContent('Un moderador puede revisarlo antes de mostrarlo.');
+    expect(block).toHaveFocus();
+    expect(block).toHaveAttribute('aria-live');
+    expect(sentReports(api)).toHaveLength(0);
+    const [asked] = comparisonAsked(api);
+    expect(asked?.searchParams.get('municipality')).toBe('armenia');
+    expect(asked?.searchParams.has('lat')).toBe(false);
+    expect(asked?.searchParams.has('lng')).toBe(false);
+  });
+
+  it('«Corregir el precio» cierra el bloque y vuelve al campo con su valor', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+    await sendKg(api, '2400');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Corregir el precio' }));
+
+    const field = screen.getByLabelText('Precio en pesos');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(field).toHaveFocus();
+    expect(field).toHaveValue('2400');
+    expect(sentReports(api)).toHaveLength(0);
+  });
+
+  it('Escape también corrige', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+    await sendKg(api, '2400');
+
+    fireEvent.keyDown(await screen.findByRole('alertdialog'), { key: 'Escape' });
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Precio en pesos')).toHaveFocus();
+  });
+
+  it('«Sí, ese es el precio» envía normalmente, con el mismo cuerpo del contrato', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+    await sendKg(api, '2400');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sí, ese es el precio' }));
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+    const body = JSON.parse(sentReports(api)[0]?.body ?? '{}') as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual([
+      'establishmentId',
+      'observedAt',
+      'presentationId',
+      'priceCop',
+      'priceType',
+    ]);
+    expect(body).toMatchObject({ priceCop: 2400 });
+  });
+
+  it('sugiere el precio con los ceros que faltan y «Sí, escribir» lo pone en el campo', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+    await sendKg(api, '2400');
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Querías escribir $24.000?');
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, escribir $24.000' }));
+
+    expect(screen.getByLabelText('Precio en pesos')).toHaveValue('24000');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    await screen.findByRole('heading', { name: 'Recibido' });
+    expect(JSON.parse(sentReports(api)[0]?.body ?? '{}')).toMatchObject({ priceCop: 24_000 });
+  });
+
+  it('sin sugerencia evidente no la ofrece', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+    await sendKg(api, '700');
+
+    expect(await screen.findByRole('alertdialog')).not.toHaveTextContent('¿Querías escribir');
+  });
+
+  it.each([
+    ['bajo 40 % de la mediana', '399'],
+    ['sobre 250 % de la mediana', '2501'],
+  ])('con mediana de $1.000, %s pide confirmación y no envía', async (_name, price) => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute([900, 1000, 1100]) });
+    renderReport();
+
+    await sendKg(api, price);
+
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    expect(sentReports(api)).toHaveLength(0);
+  });
+
+  it.each([
+    ['justo 40 % de la mediana', '400'],
+    ['justo 250 % de la mediana', '2500'],
+  ])('con mediana de $1.000, %s envía sin preguntar', async (_name, price) => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute([900, 1000, 1100]) });
+    renderReport();
+
+    await sendKg(api, price);
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+  });
+
+  it('menos de $100 no se envía ni deja confirmar: pregunta si faltan ceros', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+
+    await sendKg(api, '99');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Revisa el precio: ¿le faltan ceros?',
+    );
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Precio en pesos')).toHaveFocus();
+    expect(sentReports(api)).toHaveLength(0);
+  });
+
+  it('$100 justo no es imposible', async () => {
+    const api = stubApi(reportRoutes);
+    renderReport();
+
+    await fillAndSend('100');
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+    expect(sentReports(api)).toHaveLength(1);
+  });
+
+  it('con un solo precio vigente no hay referencia y no pide confirmación', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute([2400]) });
+    renderReport();
+
+    await sendKg(api, '12000');
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+  });
+
+  it('solo cuentan los precios de esa presentación', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      [`GET /v1/products/${rice.id}/comparison`]: {
+        status: 200,
+        body: {
+          results: [
+            offer(900, rice.presentations[0]?.id),
+            offer(1000, rice.presentations[0]?.id),
+            offer(2400),
+          ],
+        },
+      },
+    });
+    renderReport();
+
+    await sendKg(api, '12000');
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+  });
+
+  it('si la consulta de la referencia falla, el formulario sigue y envía sin pedir confirmación', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      [`GET /v1/products/${rice.id}/comparison`]: {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' },
+      },
+    });
+    renderReport();
+
+    await sendKg(api, '12000');
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+  });
+
+  it('un precio atípico confirmado sin conexión se guarda en la cola', async () => {
+    const api = stubApi({
+      ...reportRoutes,
+      ...comparisonRoute(seen),
+      'POST /v1/reports': {
+        status: 503,
+        body: { code: 'REQUEST_ERROR', message: 'Servicio no disponible.' },
+      },
+    });
+    renderReport();
+    await sendKg(api, '2400');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sí, ese es el precio' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Guardado en tu teléfono' }),
+    ).toBeInTheDocument();
   });
 });
