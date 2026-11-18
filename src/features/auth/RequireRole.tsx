@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { OfflineMessage } from '../../shared/ui/OfflineMessage';
 import { withReturn } from './safeReturn';
 import { type Role, useSession } from './session';
 import { SuspendedNotice } from './SuspendedNotice';
@@ -28,9 +29,9 @@ export function RequireRole({
     if (allowOffline && session.lastRole === role) {
       return (
         <>
-          <p role="status" className="banner warn">
+          <OfflineMessage>
             Sin conexión: tu reporte se guardará en el teléfono y se enviará solo.
-          </p>
+          </OfflineMessage>
           {children}
         </>
       );

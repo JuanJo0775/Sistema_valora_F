@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MANIFEST } from './manifest';
@@ -22,6 +22,17 @@ describe('manifest de la PWA', () => {
         expect(existsSync(join(process.cwd(), 'public', icon.src))).toBe(true);
       }
     }
+  });
+
+  it('usa el color del tema oscuro, el mismo de la barra del navegador y del fondo', () => {
+    expect(MANIFEST.background_color).toBe('#0D0D0E');
+    expect(MANIFEST.theme_color).toBe('#0D0D0E');
+    const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
+    expect(html).toContain('content="#0D0D0E" media="(prefers-color-scheme: dark)"');
+    expect(html).toContain('content="#FFFFFF" media="(prefers-color-scheme: light)"');
+    expect(readFileSync(join(process.cwd(), 'src/shared/ui/tokens.css'), 'utf8')).toMatch(
+      /#0D0D0E/i,
+    );
   });
 
   it('los íconos del manifest existen en public/', () => {

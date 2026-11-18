@@ -17,6 +17,8 @@ vi.mock('virtual:pwa-register/react', () => ({
 // Cada prueba arranca con un IndexedDB vacío (la cola sin conexión), como otro teléfono.
 beforeEach(() => {
   vi.stubGlobal('indexedDB', new IDBFactory());
+  // Y sin preferencias guardadas (último municipio, a dónde volver…).
+  localStorage.clear();
 });
 
 afterEach(() => {

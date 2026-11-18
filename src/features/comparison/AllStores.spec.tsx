@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -466,6 +466,91 @@ describe('todas las tiendas, en el detalle del producto', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
 
     expect(await screen.findByRole('heading', { name: 'Tienda Don Pepe' })).toBeInTheDocument();
+  });
+
+  // H-08: sin conexión, lo último que se vio de este producto en este municipio.
+  describe('sin conexión', () => {
+    const goOffline = () => {
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      act(() => {
+        window.dispatchEvent(new Event('offline'));
+      });
+    };
+    // La primera consulta responde; las siguientes no llegan (sin red).
+    const dropNetwork = () => {
+      let served = false;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((input: Request) => {
+          if (!input.url.includes('/comparison')) {
+            return Promise.resolve(new Response('{}', { status: 404 }));
+          }
+          if (served) return Promise.reject(new TypeError('Failed to fetch'));
+          served = true;
+          return Promise.resolve(
+            new Response(JSON.stringify(comparison([result()]).body), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            }),
+          );
+        }),
+      );
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      localStorage.clear();
+    });
+
+    it('muestra la última comparación vista, con hace cuánto, en un solo mensaje', async () => {
+      localStorage.clear();
+      dropNetwork();
+      const first = renderCompare();
+      expect(await screen.findByRole('heading', { name: 'Tienda Don Pepe' })).toBeInTheDocument();
+      first.unmount();
+
+      goOffline();
+      renderCompare();
+
+      expect(await screen.findByRole('heading', { name: 'Tienda Don Pepe' })).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(
+        /Sin conexión: te mostramos lo último que viste \(hace un momento\)/,
+      );
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+    });
+
+    it('sin nada guardado dice que la pantalla necesita internet', async () => {
+      localStorage.clear();
+      goOffline();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+      );
+      renderCompare();
+
+      expect(
+        await screen.findByText('Sin conexión: esta pantalla necesita internet.', { exact: false }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+    });
+
+    it('con la ubicación no se guarda nada en el teléfono (EC-08)', async () => {
+      localStorage.clear();
+      stubLocation();
+      stubCompare([
+        comparison([result()]),
+        comparison([result()], { municipality: undefined, radiusKm: 1.5 }),
+      ]);
+      renderCompare();
+      await screen.findByRole('heading', { name: 'Tienda Don Pepe' });
+      localStorage.clear();
+      await openWhere();
+      fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+      await screen.findByText(/a menos de 1,5 km de ti/);
+
+      expect(localStorage.getItem('valora:comparaciones')).toBeNull();
+    });
   });
 
   // #15: comparar en cualquier municipio del Quindío, sin pedir la ubicación (EC-08).

@@ -42,11 +42,11 @@ describe('botón de volver', () => {
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/mapa');
   });
 
-  it('la política de datos vuelve a Yo', () => {
+  it('la política de datos vuelve a Yo', async () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     open('/privacidad');
 
-    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
   });
 
   it('el panel de moderación vuelve a Yo', async () => {
@@ -68,11 +68,11 @@ describe('botón de volver', () => {
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/mapa');
   });
 
-  it('ajustes sigue volviendo a Yo', () => {
+  it('ajustes sigue volviendo a Yo', async () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     open('/yo/ajustes');
 
-    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
   });
 
   it.each(['/', '/mapa', '/canasta', '/yo', '/registrar'])(

@@ -5,6 +5,7 @@ import { Loading } from '../../shared/ui/Loading';
 import { ResendVerification } from './ResendVerification';
 import { withReturn } from './safeReturn';
 import { useSession } from './session';
+import { forgetVerifyReturn, readVerifyReturn, rememberVerifyReturn } from './verifyReturn';
 
 type Outcome = 'checking' | 'verified' | 'already' | 'invalid' | 'error';
 
@@ -18,6 +19,12 @@ export function VerifyEmail() {
   const { session, reload } = useSession();
   const [outcome, setOutcome] = useState<Outcome>(token ? 'checking' : 'invalid');
   const asked = useRef(false);
+  // Lo que la persona estaba haciendo cuando pidió el correo (H-02), leído una sola vez. También
+  // puede venir en la dirección (?volver=) y entonces se recuerda.
+  const [next] = useState(() => {
+    rememberVerifyReturn(params.get('volver'));
+    return readVerifyReturn();
+  });
 
   useEffect(() => {
     if (!token || asked.current) return;
@@ -25,6 +32,7 @@ export function VerifyEmail() {
     call(api.POST('/auth/verify-email', { body: { token } }))
       .then(() => {
         setOutcome('verified');
+        forgetVerifyReturn();
         // La sesión ya trae el correo como verificado: se vuelve a pedir para quitar el aviso.
         reload();
       })
@@ -36,7 +44,10 @@ export function VerifyEmail() {
         call(api.GET('/auth/session'))
           .then((current) => {
             setOutcome(current.emailVerified ? 'already' : 'invalid');
-            if (current.emailVerified) reload();
+            if (current.emailVerified) {
+              forgetVerifyReturn();
+              reload();
+            }
           })
           .catch(() => {
             setOutcome('invalid');
@@ -54,15 +65,28 @@ export function VerifyEmail() {
         {signedIn ? (
           <>
             <p>Ya puedes registrar precios.</p>
-            <Link to="/registrar" className="btn">
-              Registrar un precio
-            </Link>
+            {next ? (
+              <>
+                <Link to={next.path} className="btn">
+                  {`Seguir con ${next.label}`}
+                </Link>
+                {next.path.split('?')[0] !== '/registrar' && (
+                  <Link to="/registrar" className="btn ghost">
+                    Registrar un precio
+                  </Link>
+                )}
+              </>
+            ) : (
+              <Link to="/registrar" className="btn">
+                Registrar un precio
+              </Link>
+            )}
           </>
         ) : (
           <>
             <p>Inicia sesión para registrar precios.</p>
-            <Link to={withReturn('/entrar', '/registrar')} className="btn">
-              Iniciar sesión
+            <Link to={withReturn('/entrar', next?.path ?? '/registrar')} className="btn">
+              {next ? `Iniciar sesión y seguir con ${next.label}` : 'Iniciar sesión'}
             </Link>
           </>
         )}
@@ -82,7 +106,7 @@ export function VerifyEmail() {
         ) : (
           <>
             <p>Abre el enlace que te enviamos por correo. Si no lo encuentras, pide otro.</p>
-            <ResendVerification />
+            <ResendVerification from={params.get('volver')} />
           </>
         )}
       </section>
@@ -99,7 +123,7 @@ export function VerifyEmail() {
             ? 'El enlace no es válido o ya venció. Pide uno nuevo.'
             : 'El enlace ya se usó o venció. Si ya lo habías abierto, tu correo está verificado: inicia sesión. Si no, entra y pide uno nuevo.'}
       </p>
-      {signedIn && outcome === 'invalid' && <ResendVerification />}
+      {signedIn && outcome === 'invalid' && <ResendVerification from={params.get('volver')} />}
       {!signedIn && (
         <Link to="/entrar" className="btn ghost">
           Iniciar sesión
