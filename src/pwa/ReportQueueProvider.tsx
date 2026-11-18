@@ -18,6 +18,32 @@ const send = (report: QueuedReport) =>
     }),
   );
 
+// Un 409 DUPLICATE_REPORT al reintentar puede significar que el servidor ya tenía el reporte:
+// se busca en «Mis aportes» (GET /v1/me/reports) uno igual (tienda, precio y hora de observación).
+const PAGES_TO_LOOK = 3;
+const alreadyReceived = async (report: QueuedReport): Promise<boolean> => {
+  const seen = new Date(report.body.observedAt).getTime();
+  let before: string | undefined;
+  for (let page = 0; page < PAGES_TO_LOOK; page++) {
+    const { items, nextBefore } = await call(
+      api.GET('/me/reports', { params: { query: before ? { before } : {} } }),
+    );
+    if (
+      items.some(
+        (item) =>
+          item.priceCop === report.body.priceCop &&
+          item.establishmentName === report.label.store &&
+          new Date(item.observedAt).getTime() === seen,
+      )
+    ) {
+      return true;
+    }
+    if (!nextBefore) return false;
+    before = nextBefore;
+  }
+  return false;
+};
+
 const RETRY_MS = 30_000;
 
 // ADR-010: la cola de reportes en IndexedDB, abierta una vez para toda la app.
@@ -34,7 +60,7 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
 
   const syncNow = useCallback(async () => {
     const reportQueue = await opened();
-    const outcome = await reportQueue.sync(send);
+    const outcome = await reportQueue.sync(send, alreadyReceived);
     setNeedsSession(outcome.needsSession);
     setReports(await reportQueue.list());
   }, [opened]);
@@ -66,13 +92,13 @@ export function ReportQueueProvider({ children }: { children: ReactNode }) {
     async (report: NewReport): Promise<SubmitResult> => {
       const reportQueue = await opened();
       await reportQueue.add(report);
-      let outcome = await reportQueue.sync(send);
+      let outcome = await reportQueue.sync(send, alreadyReceived);
       const find = async () =>
         (await reportQueue.list()).find((saved) => saved.idempotencyKey === report.idempotencyKey);
       let saved = await find();
       // Si ya corría otra sincronización, empezó antes de guardar este: se intenta una vez más.
       if (saved?.status === 'pendiente' && !outcome.needsSession) {
-        outcome = await reportQueue.sync(send);
+        outcome = await reportQueue.sync(send, alreadyReceived);
         saved = await find();
       }
       setNeedsSession(outcome.needsSession);

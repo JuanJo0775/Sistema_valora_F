@@ -54,4 +54,11 @@ describe('barra del radio: estilos', () => {
     expect(rule('.radius-control')).toMatch(/min-inline-size:\s*0/);
     expect(rule('.radius-slider')).toMatch(/width:\s*100%/);
   });
+
+  it('los seis chips van de a tres por fila, sin renglón deslizable', () => {
+    const block = rule('.radius-control .category-chips');
+    expect(block).toMatch(/display:\s*grid/);
+    expect(block).toMatch(/repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
+    expect(block).toMatch(/overflow:\s*visible/);
+  });
 });

@@ -3,7 +3,7 @@ import { readStored, writeStored } from '../../shared/storage';
 // ADR-019: el radio de búsqueda es uno solo para Inicio, comparación y mapa, y el dispositivo lo
 // recuerda. Va de 0,5 a 3 km (los límites del contrato: fuera de eso el servidor responde 400), de
 // 0,1 en 0,1 km con la barra; los chips son preajustes. 1,5 km por defecto (la canasta del Inicio).
-export const RADII = [0.5, 1, 1.5, 2, 3];
+export const RADII = [0.5, 1, 1.5, 2, 2.5, 3];
 export const MIN_RADIUS_KM = 0.5;
 export const MAX_RADIUS_KM = 3;
 export const RADIUS_STEP_KM = 0.1;

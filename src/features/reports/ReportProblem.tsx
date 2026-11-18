@@ -26,6 +26,16 @@ export function ReportProblem({ error }: { error: unknown }) {
       </Notice>
     );
   }
+  // Sin la hora desde la que se acepta otro: se dice qué hacer, sin culpar a quien reporta.
+  if (error.code === 'DUPLICATE_REPORT') {
+    return (
+      <Notice>
+        Ya hay un aporte tuyo para este producto en esta tienda. Revisa si ya aparece en{' '}
+        <Link to="/mis-aportes">Mis aportes</Link>; si es otro precio, vuelve a registrarlo en un
+        rato.
+      </Notice>
+    );
+  }
   // RF-012 RN2: más de 20 reportes observados en una misma hora (valor provisional del backend).
   if (error.status === 429 && error.retryAfterSeconds) {
     const minutes = Math.ceil(error.retryAfterSeconds / 60);

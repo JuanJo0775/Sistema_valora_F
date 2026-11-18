@@ -95,7 +95,11 @@ export function ProductDetail() {
         <BackLink fallback="/" />
         <header className="detail-head">
           <div className="detail-photo">
-            <ProductImage name={product.name} image={product.image} />
+            <ProductImage
+              name={product.name}
+              image={product.image}
+              category={product.category.code}
+            />
             {/* #58: solo un moderador cambia la foto (en el Corte 2, fotos del equipo, ADR-020). */}
             {moderator && (
               <ChangeProductPhoto

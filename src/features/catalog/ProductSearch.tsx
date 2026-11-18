@@ -106,7 +106,7 @@ export function ProductSearch({
           {result.products.map((product) => (
             <li key={product.id}>
               <Link to={linkTo(product.id)} className="result">
-                <ProductThumb image={product.image} size="row" />
+                <ProductThumb image={product.image} size="row" category={product.category.code} />
                 <span className="result-text">
                   <strong>{product.name}</strong>
                   <span className="muted">

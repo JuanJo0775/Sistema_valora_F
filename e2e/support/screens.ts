@@ -34,7 +34,16 @@ export async function expectHeading(page: Page, name: string) {
 
 // La comparación se arma con el repartidor de eventos (ADR-015): un precio nuevo, o uno recién
 // descartado, tarda un momento en verse. Se recarga hasta que la condición se cumple.
+// Además, la comparación por municipio se puede guardar en la caché hasta 30 s (ADR-031): sin más,
+// las recargas verían lo mismo que la primera visita. Aquí siempre se pide revalidarla.
+const revalidating = new WeakSet<Page>();
 export async function eventually(page: Page, check: () => Promise<void>) {
+  if (!revalidating.has(page)) {
+    revalidating.add(page);
+    await page.route('**/v1/products/*/comparison*', (route) =>
+      route.continue({ headers: { ...route.request().headers(), 'cache-control': 'no-cache' } }),
+    );
+  }
   await expect(async () => {
     await page.reload();
     await check();

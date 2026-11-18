@@ -1,32 +1,38 @@
 import { useState } from 'react';
 import type { components } from '../../shared/api/schema';
+import { CategoryArt } from './CategoryArt';
 
 type Image = NonNullable<components['schemas']['Product']['image']>;
 
-// ADR-020: sin foto, una bolsa de mercado genérica, sin marcas.
-function Illustration({ name }: { name: string }) {
+// ADR-020: sin foto, la ilustración de su categoría (o una bolsa genérica), sin marcas. Decorativa:
+// el nombre del producto ya está en el texto de la pantalla.
+function Illustration({ category }: { category?: string }) {
   return (
-    <svg
-      role="img"
-      aria-label={`${name} (sin foto)`}
-      viewBox="0 0 64 64"
-      className="product-image illustration"
-    >
-      <path d="M14 22h36l-3 32H17z" />
-      <path d="M24 22v-4a8 8 0 0 1 16 0v4" fill="none" />
-    </svg>
+    <span className="product-image illustration">
+      <CategoryArt category={category} />
+    </span>
   );
 }
 
-export function ProductImage({ name, image }: { name: string; image?: Image }) {
+export function ProductImage({
+  name,
+  image,
+  category,
+}: {
+  name: string;
+  image?: Image;
+  category?: string;
+}) {
   // Un enlace roto (Open Food Facts cambió la foto, el servidor no responde) no deja un hueco.
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  if (!image || failedUrl === image.url) return <Illustration name={name} />;
+  if (!image || failedUrl === image.url) return <Illustration category={category} />;
   return (
     <figure className="product-image">
       <img
         src={image.url}
         alt={name}
+        loading="lazy"
+        decoding="async"
         onError={() => {
           setFailedUrl(image.url);
         }}

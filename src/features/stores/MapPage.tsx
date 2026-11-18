@@ -11,6 +11,7 @@ import { useBasket } from '../basket/basketContext';
 import { useStoreTotals } from '../basket/useStoreTotals';
 import { StoreCard } from './StoreCard';
 import { StoreMap } from './StoreMap';
+import { PinShape } from './pinShapes';
 import { STORE_TYPES } from './storeTypes';
 import './stores.css';
 
@@ -91,13 +92,27 @@ export function MapPage() {
         <WhereChooser where={where} backLabel="Ver por municipio" showRadius={false} />
         <div className="map-panel">
           <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} around={around} />
-          <ul className="map-legend" aria-label="Colores del mapa">
+          <ul className="map-legend" aria-label="Leyenda del mapa">
             {Object.entries(STORE_TYPES).map(([type, name]) => (
-              <li key={type}>
-                <span className={`dot type-${type}`} aria-hidden="true" />
+              <li key={type} className={`type-${type}`}>
+                <PinShape type={type} />
                 {name}
               </li>
             ))}
+            <li>
+              <span className="legend-cluster" aria-hidden="true">
+                3
+              </span>
+              Varias tiendas juntas
+            </li>
+            {where.point && (
+              <li>
+                <span className="legend-you" aria-hidden="true">
+                  <span className="you-dot" />
+                </span>
+                Tú estás aquí
+              </li>
+            )}
           </ul>
           {/* Siempre pegado al mapa. Sin ubicación el radio no se usa: moverlo la pide, sin guardarla;
               si se niega, el valor queda recordado para cuando se active. */}
