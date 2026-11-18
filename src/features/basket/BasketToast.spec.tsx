@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { Link, MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useBasket } from './basketContext';
 import { BasketProvider } from './BasketProvider';
@@ -84,6 +84,34 @@ describe('aviso al agregar a la canasta', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
 
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+describe('aviso al agregar y la pantalla de la canasta', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('se cierra al ir a la canasta y no vuelve a taparla', () => {
+    render(
+      <BasketProvider>
+        <MemoryRouter initialEntries={['/producto']}>
+          <AddRice />
+          <BasketToast />
+          <Routes>
+            <Route path="/producto" element={<Link to="/canasta">Ir a la canasta</Link>} />
+            <Route path="/canasta" element={<h1>Mi canasta</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </BasketProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar arroz' }));
+    expect(screen.getByRole('status')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Ir a la canasta' }));
+
+    expect(screen.getByRole('heading', { name: 'Mi canasta' })).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

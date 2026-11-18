@@ -170,3 +170,17 @@ describe('precios en revisión', () => {
     expect(await screen.findByText('Arroz Diana · 500 g')).toBeInTheDocument();
   });
 });
+
+describe('precios en revisión: contexto de fecha', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('cada caso dice cuándo se reportó y hace cuánto', async () => {
+    renderQueue({ 'GET /v1/moderation/queue': queue(item('Arroz Diana · 500 g', 'marcado')) });
+
+    await screen.findByText('Arroz Diana · 500 g');
+
+    expect(caseOf('Arroz Diana · 500 g').getByText(/^Reportado el 16 nov \(/)).toBeInTheDocument();
+  });
+});

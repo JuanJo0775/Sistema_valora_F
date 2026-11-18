@@ -2,17 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
 import { Loading } from '../../shared/ui/Loading';
+import { ResendVerification } from './ResendVerification';
+import { withReturn } from './safeReturn';
 import { useSession } from './session';
 
-type Outcome = 'checking' | 'verified' | 'invalid' | 'error';
+type Outcome = 'checking' | 'verified' | 'already' | 'invalid' | 'error';
 
 // ADR-029: el enlace del correo trae un token de un solo uso. Se confirma con un POST (un GET con
 // efectos lo gastarían los antivirus y las vistas previas). Se llama una sola vez: repetir el mismo
-// token da 422 aunque la primera vez haya funcionado.
+// token da 422 aunque la primera vez haya funcionado; por eso, ante un 422 se consulta la sesión por
+// si el correo ya quedó verificado.
 export function VerifyEmail() {
   const [params] = useSearchParams();
   const token = params.get('token');
-  const { reload } = useSession();
+  const { session, reload } = useSession();
   const [outcome, setOutcome] = useState<Outcome>(token ? 'checking' : 'invalid');
   const asked = useRef(false);
 
@@ -26,33 +29,82 @@ export function VerifyEmail() {
         reload();
       })
       .catch((error: unknown) => {
-        setOutcome(error instanceof ApiError && error.status === 422 ? 'invalid' : 'error');
+        if (!(error instanceof ApiError && error.status === 422)) {
+          setOutcome('error');
+          return;
+        }
+        call(api.GET('/auth/session'))
+          .then((current) => {
+            setOutcome(current.emailVerified ? 'already' : 'invalid');
+            if (current.emailVerified) reload();
+          })
+          .catch(() => {
+            setOutcome('invalid');
+          });
       });
   }, [token, reload]);
 
-  if (outcome === 'checking') return <Loading />;
-  if (outcome === 'verified') {
+  if (outcome === 'checking' || session.status === 'loading') return <Loading />;
+  const signedIn = session.status === 'active';
+
+  if (outcome === 'verified' || outcome === 'already') {
     return (
       <section className="state">
-        <h1>Correo verificado</h1>
-        <p>Ya puedes registrar precios.</p>
-        <Link to="/registrar" className="btn">
-          Registrar un precio
-        </Link>
+        <h1>{outcome === 'already' ? 'Tu correo ya está verificado' : 'Correo verificado'}</h1>
+        {signedIn ? (
+          <>
+            <p>Ya puedes registrar precios.</p>
+            <Link to="/registrar" className="btn">
+              Registrar un precio
+            </Link>
+          </>
+        ) : (
+          <>
+            <p>Inicia sesión para registrar precios.</p>
+            <Link to={withReturn('/entrar', '/registrar')} className="btn">
+              Iniciar sesión
+            </Link>
+          </>
+        )}
       </section>
     );
   }
+
+  // Entró a la página sin enlace estando con sesión: puede pedir otro sin buscar el aviso.
+  if (!token && session.status === 'active') {
+    return (
+      <section className="state">
+        <h1>{session.emailVerified ? 'Tu correo ya está verificado' : 'Verifica tu correo'}</h1>
+        {session.emailVerified ? (
+          <Link to="/registrar" className="btn">
+            Registrar un precio
+          </Link>
+        ) : (
+          <>
+            <p>Abre el enlace que te enviamos por correo. Si no lo encuentras, pide otro.</p>
+            <ResendVerification />
+          </>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className="state" role="alert">
       <h1>No pudimos verificar tu correo</h1>
       <p>
         {outcome === 'error'
           ? 'Hubo un problema de conexión. Abre el enlace otra vez en unos minutos.'
-          : 'El enlace no es válido o ya venció. Inicia sesión y pide uno nuevo desde el aviso de la parte superior.'}
+          : signedIn
+            ? 'El enlace no es válido o ya venció. Pide uno nuevo.'
+            : 'El enlace ya se usó o venció. Si ya lo habías abierto, tu correo está verificado: inicia sesión. Si no, entra y pide uno nuevo.'}
       </p>
-      <Link to="/entrar" className="btn ghost">
-        Iniciar sesión
-      </Link>
+      {signedIn && outcome === 'invalid' && <ResendVerification />}
+      {!signedIn && (
+        <Link to="/entrar" className="btn ghost">
+          Iniciar sesión
+        </Link>
+      )}
     </section>
   );
 }

@@ -323,3 +323,16 @@
     display: none;
   }
 }
+
+/* La casilla de «comprado» dice para qué sirve: etiqueta visible pequeña junto a ella. */
+.basket-check {
+  flex-direction: column;
+  gap: 2px;
+  min-height: var(--touch);
+}
+
+.basket-check-label {
+  color: var(--ink-2);
+  font-size: 0.7rem;
+  font-weight: 500;
+}

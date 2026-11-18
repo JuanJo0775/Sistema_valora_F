@@ -69,8 +69,12 @@ export async function openReportQueue(name = 'valora'): Promise<ReportQueue> {
         await send(report);
       } catch (error) {
         // #9: 400, 409, 422 o 429 son finales. Reenviar el mismo reporte nunca pasa: su hora de
-        // observación no cambia. Sale de la cola de envío y avisa por qué.
-        if (error instanceof ApiError && FINAL.has(error.status)) {
+        // observación no cambia. Con el correo sin verificar (403) tampoco sirve reintentar hasta que la
+        // persona verifique: no es un problema de red ni de sesión. Sale de la cola de envío y avisa por qué.
+        if (
+          error instanceof ApiError &&
+          (FINAL.has(error.status) || error.code === 'EMAIL_NOT_VERIFIED')
+        ) {
           await db.put('reports', {
             ...report,
             status: 'requiere_atencion',

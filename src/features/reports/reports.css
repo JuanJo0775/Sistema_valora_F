@@ -44,3 +44,13 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* Con 20 tiendas cercanas la lista no empuja el precio y «Enviar» fuera de pantalla: tiene alto
+   máximo y se desplaza por dentro. */
+.store-list {
+  display: grid;
+  gap: 8px;
+  max-height: 16rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

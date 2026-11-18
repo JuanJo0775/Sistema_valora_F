@@ -187,7 +187,7 @@ describe('mi canasta', () => {
     expect(
       await within(panel).findByText('Ninguna tienda tiene todos tus productos.'),
     ).toBeInTheDocument();
-    expect(panel).toHaveTextContent('D1: 1 de 2');
+    expect(panel).toHaveTextContent('D1: tiene 1 de 2; le falta Leche entera');
   });
 
   it('lo comprado no entra al cálculo', async () => {
@@ -218,5 +218,38 @@ describe('mi canasta', () => {
     expect(
       await within(await where()).findByText('No pudimos calcular dónde te sale más barata.'),
     ).toBeInTheDocument();
+  });
+});
+
+describe('canasta: claridad', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('la casilla dice para qué sirve, con texto visible y ayuda', () => {
+    stubApi({});
+    renderBasket(rice);
+
+    const row = rowOf('Arroz blanco');
+    expect(row.getByText('Comprado')).not.toHaveClass('sr-only');
+    expect(row.getByRole('checkbox', { name: 'Comprado' }).closest('label')).toHaveAttribute(
+      'title',
+      'Marcar como comprado',
+    );
+  });
+
+  it('«Compra todo en» dice cuál tienda es, cuántos productos tiene', async () => {
+    const withAddress = { ...exito, address: 'Carrera 14 # 5-20' };
+    stubApi({
+      ...comparisonOf(RICE, offer(withAddress, 'arroz-500g', 2400)),
+      ...comparisonOf(MILK, offer(withAddress, 'leche-1l', 3900)),
+    });
+    renderBasket(rice, milk);
+
+    const panel = await where();
+
+    expect(await within(panel).findByText('Carrera 14 # 5-20')).toBeInTheDocument();
+    expect(panel).toHaveTextContent('Tiene 2 de 2 productos.');
   });
 });

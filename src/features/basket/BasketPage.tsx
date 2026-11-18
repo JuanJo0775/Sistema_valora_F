@@ -54,7 +54,11 @@ export function BasketPage() {
           </button>
         )}
       </section>
-      <CheapestStore municipality={municipality} totals={totals} />
+      <CheapestStore
+        municipality={municipality}
+        totals={totals}
+        items={items.filter(({ bought }) => !bought)}
+      />
     </div>
   );
 }
@@ -73,9 +77,9 @@ function BasketRow({
 }) {
   return (
     <li className={item.bought ? 'basket-row bought' : 'basket-row'}>
-      <label className="check">
+      <label className="check basket-check" title="Marcar como comprado">
         <input type="checkbox" checked={item.bought} onChange={onBought} />
-        <span className="sr-only">Comprado</span>
+        <span className="basket-check-label">Comprado</span>
       </label>
       {/* La foto y el nombre llevan al producto guardado; la foto es decorativa y no repite el enlace
           para lectores de pantalla ni para el teclado. */}

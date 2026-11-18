@@ -1,9 +1,10 @@
-import { type SyntheticEvent, useState } from 'react';
+import { type SyntheticEvent, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
 import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
+import { emailProblem, useFocusFirstInvalid } from './formErrors';
 import { safeReturn, withReturn } from './safeReturn';
 import { POLICY_VERSION } from '../legal/policy';
 import { useSession } from './session';
@@ -14,26 +15,36 @@ const MIN_PASSWORD = 10;
 // B#133: letras (con tildes y ñ) y, entre palabras, un espacio, apóstrofo o guion.
 const NAME = /^\p{L}+(?:[ '-]\p{L}+)*$/u;
 
-// Lo mismo que exige el contrato, dicho antes de enviar: el servidor vuelve a validarlo.
-function problemOf({
+type Problems = { name?: string; email?: string; password?: string; accepted?: string };
+
+// Lo mismo que exige el contrato, dicho antes de enviar y junto a cada campo: el servidor vuelve a
+// validarlo.
+function problemsOf({
   name,
+  email,
   password,
   accepted,
 }: {
   name: string;
+  email: string;
   password: string;
   accepted: boolean;
-}) {
+}): Problems {
   const trimmed = name.trim();
+  const found: Problems = {};
   if (trimmed.length < 2 || trimmed.length > 40 || !NAME.test(trimmed)) {
-    return 'Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.';
+    found.name = 'Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.';
   }
+  const mail = emailProblem(email);
+  if (mail) found.email = mail;
   if (password.length < MIN_PASSWORD) {
-    return `La contraseña debe tener al menos ${String(MIN_PASSWORD)} caracteres.`;
+    found.password = `La contraseña debe tener al menos ${String(MIN_PASSWORD)} caracteres.`;
   }
   // Ley 1581: sin consentimiento no se crea la cuenta.
-  if (!accepted) return 'Para crear la cuenta debes aceptar la política de tratamiento de datos.';
-  return '';
+  if (!accepted) {
+    found.accepted = 'Para crear la cuenta debes aceptar la política de tratamiento de datos.';
+  }
+  return found;
 }
 
 // RF-001: toda cuenta nueva es reportante. El registro no inicia sesión: se entra justo después.
@@ -45,20 +56,23 @@ export function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accepted, setAccepted] = useState(false);
-  const [problem, setProblem] = useState('');
+  const [problems, setProblems] = useState<Problems>({});
+  const [attempt, setAttempt] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<unknown>(null);
   const [existing, setExisting] = useState(false);
   const [sending, setSending] = useState(false);
   const volver = safeReturn(params.get('volver'));
+  useFocusFirstInvalid(formRef, attempt);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    const found = problemOf({ name, password, accepted });
-    if (found) {
-      setProblem(found);
+    const found = problemsOf({ name, email, password, accepted });
+    setProblems(found);
+    if (Object.keys(found).length > 0) {
+      setAttempt((n) => n + 1);
       return;
     }
-    setProblem('');
     setError(null);
     setExisting(false);
     setSending(true);
@@ -86,12 +100,13 @@ export function SignUp() {
   };
 
   return (
-    <form className="form" onSubmit={submit}>
+    <form className="form" onSubmit={submit} noValidate ref={formRef}>
       <BackLink fallback="/yo" />
       <h1>Crear cuenta</h1>
-      {problem && (
-        <p role="alert" className="banner warn">
-          {problem}
+      {volver.startsWith('/registrar') && (
+        <p className="banner">
+          Para registrar un precio necesitas una cuenta. Así tu aporte se cuenta una sola vez y se
+          evitan abusos.
         </p>
       )}
       {error !== null && <ErrorState error={error} />}
@@ -108,16 +123,25 @@ export function SignUp() {
         value={name}
         onValue={setName}
         aria-describedby="nombre-privado"
+        error={problems.name}
       />
       <p id="nombre-privado" className="muted">
         Solo tú lo ves. Nunca se publica.
       </p>
-      <Field label="Correo" type="email" autoComplete="email" value={email} onValue={setEmail} />
+      <Field
+        label="Correo"
+        type="email"
+        autoComplete="email"
+        value={email}
+        onValue={setEmail}
+        error={problems.email}
+      />
       <Field
         label="Contraseña"
         type="password"
         autoComplete="new-password"
         minLength={MIN_PASSWORD}
+        error={problems.password}
         value={password}
         onValue={setPassword}
       />
@@ -130,6 +154,8 @@ export function SignUp() {
         <input
           type="checkbox"
           checked={accepted}
+          aria-invalid={problems.accepted ? true : undefined}
+          aria-describedby={problems.accepted ? 'error-politica' : undefined}
           onChange={(event) => {
             setAccepted(event.target.checked);
           }}
@@ -142,6 +168,11 @@ export function SignUp() {
           (versión {POLICY_VERSION}).
         </span>
       </label>
+      {problems.accepted && (
+        <p id="error-politica" role="alert" className="field-error">
+          {problems.accepted}
+        </p>
+      )}
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Creando cuenta…' : 'Crear cuenta'}
       </button>
