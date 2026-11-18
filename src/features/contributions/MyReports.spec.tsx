@@ -192,3 +192,27 @@ describe('mis aportes', () => {
     );
   });
 });
+
+describe('mis aportes: producto y estado', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('cada aporte lleva a su producto y explica su estado', async () => {
+    stubApi({
+      'GET /v1/me/reports': page([
+        report('Arroz Diana · 500 g', 'normal'),
+        report('Leche entera', 'en_revision'),
+      ]),
+    });
+
+    renderMine();
+
+    expect(await screen.findByRole('link', { name: 'Arroz Diana · 500 g' })).toHaveAttribute(
+      'href',
+      '/?q=Arroz+Diana',
+    );
+    expect(rowOf('Arroz Diana · 500 g').getByText('Ya cuenta en la comparación.')).toBeVisible();
+    expect(rowOf('Leche entera').getByText('Un moderador lo está revisando.')).toBeVisible();
+  });
+});

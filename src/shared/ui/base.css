@@ -340,3 +340,20 @@ button {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+/* H-33: quien pide menos movimiento no ve transiciones ni animaciones (interruptores, páginas, el
+   zoom y los fundidos de Leaflet), ni desplazamiento suave. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .leaflet-zoom-anim .leaflet-zoom-animated {
+    transition: none !important;
+  }
+}

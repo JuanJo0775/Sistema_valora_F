@@ -263,3 +263,46 @@
   display: grid;
   gap: 4px;
 }
+
+/* Aviso «Verifica tu correo»: una o dos líneas, con el botón de reenvío como enlace y una X. */
+.verify-notice {
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-block: 6px;
+}
+
+.verify-notice p {
+  margin: 0;
+}
+
+.verify-notice .resend {
+  display: inline;
+  min-height: 0;
+  padding-block: 12px;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.verify-notice .resend:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.resend-note {
+  display: block;
+}
+
+.verify-notice-close {
+  flex: none;
+  min-width: var(--touch);
+  min-height: var(--touch);
+  margin-block: -6px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}

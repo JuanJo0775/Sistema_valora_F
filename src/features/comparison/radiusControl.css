@@ -1,0 +1,150 @@
+/* El radio de búsqueda: valor grande, barra deslizable y chips. Solo tokens del tema. */
+.radius-control {
+  display: grid;
+  gap: 4px;
+  /* En una cuadrícula o un renglón flexible, sin esto la barra ensancharía la página a 360 px. */
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.radius-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.radius-label {
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.radius-value {
+  color: var(--ink);
+  font-family: var(--f-display);
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* La barra mide 44 px de alto (zona táctil); la pista, 6 px, va al centro. El pulgar recorre de 14 px
+   a 14 px del borde (la mitad de su ancho): las marcas y el relleno usan la misma cuenta. */
+.radius-track {
+  position: relative;
+  min-inline-size: 0;
+}
+
+.radius-ticks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.radius-tick {
+  position: absolute;
+  top: 31px;
+  left: calc(14px + (100% - 28px) * var(--p));
+  width: 2px;
+  height: 6px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--line-2);
+}
+
+.radius-slider {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: var(--touch);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: pan-y;
+}
+
+.radius-slider:focus {
+  outline: none;
+}
+
+/* Pista: naranja hasta el pulgar y --line-2 el resto. */
+.radius-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) calc(14px + (100% - 28px) * var(--p)),
+    var(--line-2) calc(14px + (100% - 28px) * var(--p))
+  );
+}
+
+.radius-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) calc(14px + (100% - 28px) * var(--p)),
+    var(--line-2) calc(14px + (100% - 28px) * var(--p))
+  );
+}
+
+.radius-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  /* (pista 6 − pulgar 28) / 2: centrado sobre la pista. */
+  margin-top: -11px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease;
+}
+
+.radius-slider::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease;
+}
+
+.radius-slider:active::-webkit-slider-thumb {
+  transform: scale(1.1);
+}
+
+.radius-slider:active::-moz-range-thumb {
+  transform: scale(1.1);
+}
+
+/* Foco: anillo de tinta separado del pulgar por un aro del fondo (se ve en claro y oscuro). */
+.radius-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 5px var(--ink);
+}
+
+.radius-slider:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 5px var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radius-slider::-webkit-slider-thumb,
+  .radius-slider::-moz-range-thumb {
+    transition: none;
+  }
+}

@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { UpdateBanner } from './UpdateBanner';
 
+const layoutCss = readFileSync(join(process.cwd(), 'src/app/layout.css'), 'utf-8');
 const updateServiceWorker = vi.fn(() => Promise.resolve());
 let needRefresh = true;
 
@@ -19,7 +22,7 @@ describe('aviso de versión nueva', () => {
     needRefresh = true;
     render(<UpdateBanner />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Hay una versión nueva de Valora');
+    expect(screen.getByRole('status')).toHaveTextContent('Hay una versión nueva');
     fireEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
 
     expect(updateServiceWorker).toHaveBeenCalledWith(true);
@@ -30,5 +33,15 @@ describe('aviso de versión nueva', () => {
     const { container } = render(<UpdateBanner />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('es un aviso de estado que no queda bajo la barra inferior', () => {
+    needRefresh = true;
+    render(<UpdateBanner />);
+
+    expect(screen.getByRole('status')).toHaveClass('update-banner');
+    const rule = /\.update-banner\s*\{[^}]*\}/.exec(layoutCss)?.[0] ?? '';
+    expect(rule).not.toMatch(/position:\s*(fixed|sticky)/);
+    expect(rule).toMatch(/justify-content:\s*space-between/);
   });
 });

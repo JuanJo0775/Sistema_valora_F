@@ -57,8 +57,15 @@ export function MapPage() {
   const place = where.point ? 'cerca de ti' : `en ${MUNICIPALITIES[where.municipality]}`;
   const stores = result && 'stores' in result ? result.stores : [];
   // El círculo del radio alrededor de la persona; un objeto estable para no redibujar el mapa.
+  // Al arrastrar la barra el círculo cambia al instante (preview); la consulta espera al valor final.
+  const [preview, setPreview] = useState<number | null>(null);
   const { point, radiusKm } = where;
-  const around = useMemo(() => (point ? { ...point, radiusKm } : null), [point, radiusKm]);
+  const dragging = preview !== null;
+  const circleKm = preview ?? radiusKm;
+  const around = useMemo(
+    () => (point ? { ...point, radiusKm: circleKm, dragging } : null),
+    [point, circleKm, dragging],
+  );
   const count = stores.length;
   // Una sola frase arriba: cuántas tiendas, o que se muestran las primeras 50 del municipio.
   const subtitle = !(result && 'stores' in result && count > 0)
@@ -80,7 +87,7 @@ export function MapPage() {
       <section className="stores-main">
         <h1>{`Tiendas ${place}`}</h1>
         {subtitle && <p className="muted">{subtitle}</p>}
-        <WhereChooser where={where} backLabel="Ver por municipio" />
+        <WhereChooser where={where} backLabel="Ver por municipio" onPreviewRadius={setPreview} />
         <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} around={around} />
         <ul className="map-legend" aria-label="Colores del mapa">
           {Object.entries(STORE_TYPES).map(([type, name]) => (

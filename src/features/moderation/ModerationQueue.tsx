@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
+import { dayInColombia, relativeDay } from '../../shared/days';
 import { formatCop } from '../../shared/money';
 import { SelectField } from '../../shared/ui/SelectField';
 import { explainWith } from './explain';
@@ -84,6 +85,7 @@ export function ModerationQueue() {
             <h2>{item.productName}</h2>
             <p className="muted">{item.establishmentName}</p>
             <p>{comparison(item)}</p>
+            <p className="muted">{`Reportado el ${dayInColombia(item.createdAt)} (${relativeDay(item.createdAt).toLowerCase()})`}</p>
             {item.reportersCount > 0 && (
               <p className="muted">
                 {`Marcado como dudoso por ${String(item.reportersCount)} ${item.reportersCount === 1 ? 'cuenta' : 'cuentas'}`}

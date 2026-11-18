@@ -58,6 +58,12 @@
   }
 }
 
+/* Aviso de versión nueva: en el flujo, bajo el encabezado, nunca fijo abajo donde está la barra. */
+.update-banner {
+  justify-content: space-between;
+  margin: 8px 16px 0;
+}
+
 /* En el celular el Inicio ya tiene su buscador. */
 .header-search {
   display: none;
@@ -68,7 +74,8 @@
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 16px 16px calc(96px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h));
+  padding: 16px 16px
+    calc(96px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h) + var(--cookie-h));
 }
 
 /* Alturas de lo fijo abajo, para que la página y el aviso de cookies no queden tapados: la barra de
@@ -76,6 +83,12 @@
 :root {
   --tabbar-h: 65px;
   --action-bar-h: 0px;
+  --cookie-h: 0px;
+}
+
+/* Franja del aviso de cookies: solo cuenta mientras exista, para que no tape el botón de enviar. */
+:root:has(.cookie-notice) {
+  --cookie-h: 64px;
 }
 
 :root:has(.action-bar) {
@@ -85,7 +98,8 @@
 /* Lo que se enfoca (un campo, un enlace) no queda tapado por lo fijo de abajo. */
 html {
   scroll-padding-bottom: calc(
-    var(--tabbar-h) + 16px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h)
+    var(--tabbar-h) + 16px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h) +
+      var(--cookie-h)
   );
 }
 
@@ -263,6 +277,13 @@ html {
     box-shadow: none;
   }
 
+  /* Activo, el botón principal conserva su relleno naranja: el fondo gris de «activo» dejaba el
+     texto oscuro sobre oscuro (contraste 1,05:1 en tema oscuro). */
+  .tab.primary[aria-current='page'] {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
   .tab.primary .tab-label {
     position: static;
     width: auto;
@@ -272,7 +293,7 @@ html {
   }
 
   .page {
-    padding-bottom: 32px;
+    padding-bottom: calc(32px + var(--cookie-h));
   }
 
   /* El Inicio ya tiene el buscador en la barra superior. */

@@ -123,3 +123,31 @@ describe('proponer una tienda', () => {
     );
   });
 });
+
+describe('sugerir una tienda: salidas y ubicación', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('«Recibido» ofrece ver mis aportes y volver al mapa', async () => {
+    renderPropose();
+    fill();
+    fireEvent.click(screen.getByRole('button', { name: 'Tocar el mapa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
+
+    expect(await screen.findByRole('link', { name: 'Ver mis aportes' })).toHaveAttribute(
+      'href',
+      '/mis-aportes',
+    );
+    expect(screen.getByRole('link', { name: 'Volver al mapa' })).toHaveAttribute('href', '/mapa');
+  });
+
+  it('antes de usar la ubicación dice que no se guarda ni se publica', () => {
+    renderPropose();
+
+    expect(screen.getByRole('button', { name: 'Estoy en la tienda' })).toHaveAccessibleDescription(
+      /no se guarda ni se publica/,
+    );
+  });
+});

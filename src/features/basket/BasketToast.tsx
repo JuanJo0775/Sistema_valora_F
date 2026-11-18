@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { useBasket } from './basketContext';
 import './basket.css';
 
@@ -9,6 +9,13 @@ const SHOWN_MS = 5000;
 // los lectores de pantalla (role="status") y se va solo a los pocos segundos.
 export function BasketToast() {
   const { items, notice, dismiss } = useBasket();
+  const { pathname } = useLocation();
+  // Ya se está en la canasta: ofrecer «Ver canasta» sobraría y taparía la lista.
+  const inBasket = pathname === '/canasta';
+
+  useEffect(() => {
+    if (notice && inBasket) dismiss();
+  }, [notice, inBasket, dismiss]);
 
   useEffect(() => {
     if (!notice) return;
@@ -18,7 +25,7 @@ export function BasketToast() {
     };
   }, [notice, dismiss]);
 
-  if (!notice) return null;
+  if (!notice || inBasket) return null;
   const toBuy = items.filter(({ bought }) => !bought).length;
   return (
     <div role="status" className="basket-toast">

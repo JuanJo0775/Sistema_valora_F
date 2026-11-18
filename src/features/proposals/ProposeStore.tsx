@@ -1,4 +1,5 @@
 import { type SyntheticEvent, useState } from 'react';
+import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import { askLocation } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
@@ -6,6 +7,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { SelectField } from '../../shared/ui/SelectField';
 import { Field } from '../auth/Field';
+import { humanizeError } from './fieldLabels';
 import { type Municipality, MUNICIPALITY_OPTIONS } from '../comparison/criteria';
 import { readMunicipality } from '../comparison/lastMunicipality';
 import { StoreMap } from '../stores/StoreMap';
@@ -60,13 +62,26 @@ export function ProposeStore() {
         setReceived(true);
       })
       .catch((failure: unknown) => {
-        setError(failure);
+        setError(humanizeError(failure));
       });
   };
 
   if (received) {
     return (
-      <EmptyState title="Recibido" text="Aparecerá en el mapa cuando un moderador la apruebe." />
+      <EmptyState
+        title="Recibido"
+        text="Aparecerá en el mapa cuando un moderador la apruebe."
+        action={
+          <div className="actions">
+            <Link to="/mis-aportes" className="btn">
+              Ver mis aportes
+            </Link>
+            <Link to="/mapa" className="btn ghost">
+              Volver al mapa
+            </Link>
+          </div>
+        }
+      />
     );
   }
   return (
@@ -88,6 +103,7 @@ export function ProposeStore() {
       <button
         type="button"
         className="btn ghost"
+        aria-describedby="para-ubicacion-tienda"
         onClick={() => {
           setProblem('');
           askLocation()
@@ -99,6 +115,9 @@ export function ProposeStore() {
       >
         Estoy en la tienda
       </button>
+      <p id="para-ubicacion-tienda" className="muted">
+        Solo marca dónde queda la tienda en el mapa. Tu ubicación no se guarda ni se publica.
+      </p>
       {problem && (
         <p role="alert" className="banner warn">
           {problem}

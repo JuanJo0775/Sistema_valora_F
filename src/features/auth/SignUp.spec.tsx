@@ -166,3 +166,35 @@ describe('volver desde crear cuenta', () => {
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
   });
 });
+
+describe('crear cuenta: errores en línea y explicación', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('con el formulario vacío marca los campos, los enlaza y lleva el foco al primero', () => {
+    const api = stubSignUp({ status: 201 });
+    renderSignUp();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    const name = screen.getByLabelText('Tu nombre');
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(name).toHaveAccessibleDescription(/Escribe tu nombre/);
+    expect(screen.getByLabelText('Correo')).toHaveAccessibleDescription('Escribe tu correo.');
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('checkbox', { name: /política/ })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(name).toHaveFocus();
+    expect(api.calls.some(({ path }) => path === '/v1/auth/register')).toBe(false);
+  });
+
+  it('desde registrar un precio explica por qué hace falta la cuenta', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignUp('/crear-cuenta?volver=/registrar');
+
+    expect(screen.getByText(/Para registrar un precio necesitas una cuenta/)).toBeInTheDocument();
+  });
+});

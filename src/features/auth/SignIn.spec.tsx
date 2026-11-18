@@ -119,3 +119,57 @@ describe('volver desde iniciar sesión', () => {
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
   });
 });
+
+describe('explicación al llegar desde registrar un precio', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('dice por qué hace falta la cuenta y que se vuelve a registrar', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignIn('/entrar?volver=/registrar');
+
+    expect(screen.getByText(/Para registrar un precio necesitas una cuenta/)).toBeInTheDocument();
+    expect(screen.getByText(/Al entrar vuelves a registrar/)).toBeInTheDocument();
+  });
+
+  it('no la muestra cuando se llega de otro sitio', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignIn('/entrar?volver=/yo');
+
+    expect(screen.queryByText(/Para registrar un precio/)).not.toBeInTheDocument();
+  });
+});
+
+describe('errores en línea', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('con el formulario vacío marca cada campo, lo enlaza y lleva el foco al primero', () => {
+    const api = stubLogin({ status: 204 });
+    renderSignIn('/entrar');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    const email = screen.getByLabelText('Correo');
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(email).toHaveAccessibleDescription('Escribe tu correo.');
+    expect(screen.getByLabelText('Contraseña')).toHaveAccessibleDescription(
+      'Escribe tu contraseña.',
+    );
+    expect(email).toHaveFocus();
+    expect(api.calls.some(({ path }) => path === '/v1/auth/login')).toBe(false);
+  });
+
+  it('con un correo mal escrito lo dice', () => {
+    stubLogin({ status: 204 });
+    renderSignIn('/entrar');
+
+    signIn('ana', 'una clave larga');
+
+    expect(screen.getByLabelText('Correo')).toHaveAccessibleDescription(
+      'Escribe un correo válido, por ejemplo nombre@correo.co.',
+    );
+  });
+});

@@ -26,6 +26,21 @@ export const STATUS: Record<MyReport['status'], { text: string; tone: string }> 
   apelacion_rechazada: { text: 'Apelación rechazada', tone: 'bad' },
 };
 
+// Qué significa cada estado, en una frase (la etiqueta sola no lo dice).
+const MEANING: Record<MyReport['status'], string> = {
+  normal: 'Ya cuenta en la comparación.',
+  en_revision: 'Un moderador lo está revisando.',
+  descartado: 'No quedó en la comparación.',
+  apelacion_pendiente: 'Un moderador está revisando tu apelación.',
+  apelacion_aceptada: 'Un moderador aceptó tu apelación.',
+  apelacion_rechazada: 'Un moderador rechazó tu apelación.',
+};
+
+// «Arroz Diana · 500 g» → «Arroz Diana»: el contrato no trae el id del producto, así que el aporte
+// lleva a su búsqueda.
+const productSearch = (productName: string) =>
+  `/?${new URLSearchParams({ q: productName.split(' · ')[0] ?? productName }).toString()}`;
+
 // RF-006: mis aportes, el más reciente primero, por páginas (#76 del backend).
 export function MyReports() {
   const [reports, setReports] = useState<MyReport[] | null>(null);
@@ -95,7 +110,9 @@ export function MyReports() {
       <ul className="offers">
         {reports.map((report) => (
           <li key={report.reportId} className="offer">
-            <h2>{report.productName}</h2>
+            <h2>
+              <Link to={productSearch(report.productName)}>{report.productName}</Link>
+            </h2>
             <p className="muted">
               {[
                 report.establishmentName,
@@ -111,6 +128,7 @@ export function MyReports() {
                 {STATUS[report.status].text}
               </span>
             </p>
+            <p className="muted">{MEANING[report.status]}</p>
             {report.status === 'descartado' && report.appealableUntil && (
               <AppealForm
                 reportId={report.reportId}
