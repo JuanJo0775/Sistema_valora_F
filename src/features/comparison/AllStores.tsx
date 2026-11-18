@@ -35,9 +35,12 @@ export const competes = (offer: Comparison['results'][number]) =>
 export function AllStores({
   product,
   onComparison,
+  onFailed,
 }: {
   product: Product;
   onComparison?: (comparison: Comparison) => void;
+  // La consulta falló: el detalle deja de reservar el lugar de la tarjeta «Más barato».
+  onFailed?: () => void;
 }) {
   const [chosenSort, setSort] = useState<Sort>('unit_price');
   // «Más cerca» sin ubicación la pide; cuando llega, ordena por distancia. Si no llega, el orden
@@ -58,9 +61,11 @@ export function AllStores({
   const productId = product.id;
   // El último onComparison, sin volver a pedir la comparación cada vez que cambia.
   const notify = useRef(onComparison);
+  const notifyFailed = useRef(onFailed);
   useEffect(() => {
     notify.current = onComparison;
-  }, [onComparison]);
+    notifyFailed.current = onFailed;
+  }, [onComparison, onFailed]);
   const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${where.key}`;
 
   useEffect(() => {
@@ -77,7 +82,9 @@ export function AllStores({
         notify.current?.(comparison);
       })
       .catch((error: unknown) => {
-        if (current) setOutcome({ key, error });
+        if (!current) return;
+        setOutcome({ key, error });
+        notifyFailed.current?.();
       });
     return () => {
       current = false;
@@ -129,6 +136,16 @@ export function AllStores({
           </label>
         ))}
       </fieldset>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={onlyCurrent}
+          onChange={(event) => {
+            setOnlyCurrent(event.target.checked);
+          }}
+        />
+        Solo precios vigentes
+      </label>
       {wantsDistance && !point && !where.problem && (
         <p role="status" className="muted">
           Buscando tu ubicación para ordenar por distancia…
@@ -155,16 +172,6 @@ export function AllStores({
           register={`/registrar?producto=${productId}`}
         />
       )}
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={onlyCurrent}
-          onChange={(event) => {
-            setOnlyCurrent(event.target.checked);
-          }}
-        />
-        Solo precios vigentes
-      </label>
     </section>
   );
 }
@@ -199,19 +206,36 @@ function Results({
     );
   }
   const competing = results.filter(competes);
+  // Cuántas filas llevan el mismo nombre de tienda (cadenas con varias sedes).
+  const names = new Map<string, number>();
+  for (const { establishment } of results) {
+    const name = establishment.name.toLowerCase();
+    names.set(name, (names.get(name) ?? 0) + 1);
+  }
   const others = results.filter((offer) => !competes(offer));
   return (
     <>
       <p className="muted">
         <span>{describeCriteria(criteria)}</span>. Ningún comercio paga por aparecer primero.
+        {criteria.sort === 'unit_price' && (
+          <>
+            {' '}
+            <span>
+              Se ordena por lo que cuesta cada 100 g, 100 ml o unidad; el precio grande es el total
+              de la presentación.
+            </span>
+          </>
+        )}
       </p>
+      {results.some(needsHelp) && <LabelsHelp />}
       <ol className="offer-list">
         {competing.map((offer, index) => (
           <Offer
             key={offer.reportId}
             offer={offer}
             size={sizeOf(offer.presentationId)}
-            rank={index + 1}
+            rank={rankOf(competing, index, criteria.sort)}
+            sameName={names.get(offer.establishment.name.toLowerCase()) !== 1}
           />
         ))}
       </ol>
@@ -220,12 +244,47 @@ function Results({
           <h3>Precios viejos o en revisión</h3>
           <ul className="offer-list">
             {others.map((offer) => (
-              <Offer key={offer.reportId} offer={offer} size={sizeOf(offer.presentationId)} />
+              <Offer
+                key={offer.reportId}
+                offer={offer}
+                size={sizeOf(offer.presentationId)}
+                sameName={names.get(offer.establishment.name.toLowerCase()) !== 1}
+              />
             ))}
           </ul>
         </>
       )}
       {reference}
     </>
+  );
+}
+
+// Solo los datos iniciales y la confiabilidad baja necesitan explicación.
+const needsHelp = (offer: Comparison['results'][number]) =>
+  offer.source === 'siembra' || offer.reliability === 'baja';
+
+// Con el orden por precio por unidad, las filas con el mismo precio por unidad comparten lugar
+// («1, 1, 1, 4»): un empate no son posiciones distintas. Los otros órdenes numeran la posición.
+// El orden de las filas lo da el backend; aquí solo se numera.
+function rankOf(rows: Comparison['results'], index: number, sort: Sort): number {
+  if (sort !== 'unit_price') return index + 1;
+  const value = rows[index]?.unitPrice.valueCop;
+  return rows.findIndex(({ unitPrice }) => unitPrice.valueCop === value) + 1;
+}
+
+// Un `details` nativo: se abre con toque, Enter o Espacio, y su nombre es su resumen.
+function LabelsHelp() {
+  return (
+    <details className="labels-help">
+      <summary>¿Qué significan estas etiquetas?</summary>
+      <p>
+        <strong>Dato inicial</strong>: precio de referencia que cargó Valora para arrancar; todavía
+        ninguna persona de la comunidad lo ha confirmado.
+      </p>
+      <p>
+        <strong>Confiabilidad baja</strong>: lo vio una sola persona o no se ha confirmado. Sube
+        cuando otras personas lo confirman; tú también puedes hacerlo registrando el precio que ves.
+      </p>
+    </details>
   );
 }

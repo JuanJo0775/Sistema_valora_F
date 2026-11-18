@@ -9,8 +9,8 @@ export function UpdateBanner() {
   } = useRegisterSW();
   if (!needRefresh) return null;
   return (
-    <div role="status" className="banner warn">
-      Hay una versión nueva de Valora{' '}
+    <div role="status" className="banner warn update-banner">
+      <span>Hay una versión nueva · </span>
       <button type="button" className="btn ghost" onClick={() => void updateServiceWorker(true)}>
         Actualizar
       </button>

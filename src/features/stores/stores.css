@@ -184,3 +184,27 @@
     line-height: var(--touch);
   }
 }
+
+/* H-32: el pin se alcanza con Tab; el foco se ve con un contorno. */
+.store-map .store-pin:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* H-10: «Cómo llegar» del globo es el primero y se toca en 44 px; «Ver precios» queda al lado. */
+.store-map a.pin-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  margin: 6px 6px 0 0;
+  padding: 0 12px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-s);
+  background: var(--bg);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.store-directions {
+  justify-self: start;
+}
