@@ -108,6 +108,84 @@ export async function someStores(request: APIRequestContext, wanted: number) {
   return shuffled.slice(0, wanted);
 }
 
+export interface Offer {
+  reportId: string;
+  presentationId: string;
+  priceCop: number;
+  freshness: string;
+  reliability: string;
+  isCheapest: boolean;
+  establishment: { id: string };
+}
+
+// La comparación de un producto en Armenia, tal como la lee la app.
+export async function comparisonOf(request: APIRequestContext, productId: string) {
+  const response = await request.get(`/v1/products/${productId}/comparison?municipality=armenia`);
+  expect(response.ok(), await response.text()).toBe(true);
+  return ((await response.json()) as { results: Offer[] }).results;
+}
+
+function median(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? (sorted[middle] ?? 0)
+    : ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
+}
+
+// ADR-030: el backend manda a revisión un precio con menos del 40 % o más del 250 % de la mediana de
+// las otras tiendas, y un precio fijo cae fuera de rango según lo que traiga la semilla. El precio de
+// prueba sale de la referencia real: entre 0,9 y 1,2 veces la mediana de los vigentes de esa
+// presentación (con una variación al azar para no repetir el mismo precio entre corridas). Sin
+// referencia el servidor solo aplica el piso de $100, y cualquier precio de este orden pasa.
+export async function plausiblePrice(
+  request: APIRequestContext,
+  productId: string,
+  presentationId: string,
+): Promise<number> {
+  const prices = (await comparisonOf(request, productId))
+    .filter(
+      (offer) =>
+        offer.presentationId === presentationId &&
+        offer.freshness === 'vigente' &&
+        offer.reliability !== 'en_revision',
+    )
+    .map(({ priceCop }) => priceCop);
+  if (prices.length === 0) return 3000 + Math.floor(Math.random() * 900);
+  return Math.max(150, Math.round(median(prices) * (0.9 + Math.random() * 0.3)));
+}
+
+// Un producto y una presentación con referencia suficiente (al menos 5 tiendas con precio vigente,
+// más que las 3 que pide la regla) y un precio de $1.000 o más: así el 15 % de su mediana supera el
+// piso de $100 y cae bajo el 40 % que el servidor sospecha.
+export async function productWithReference(request: APIRequestContext) {
+  for (const product of await someProducts(request, 25)) {
+    const presentationId = product.presentations[0]?.id;
+    if (!presentationId) continue;
+    const prices = (await comparisonOf(request, product.id))
+      .filter(
+        (offer) =>
+          offer.presentationId === presentationId &&
+          offer.freshness === 'vigente' &&
+          offer.reliability !== 'en_revision',
+      )
+      .map(({ priceCop }) => priceCop);
+    if (prices.length >= 5 && median(prices) >= 1000) return { product, presentationId };
+  }
+  throw new Error('La semilla no trae un producto con referencia suficiente');
+}
+
+// Un precio claramente atípico para esa presentación: el 15 % de la mediana (bajo el 40 % que el
+// servidor sospecha) y nunca por debajo del piso de $100, que se rechaza.
+export async function atypicalPrice(
+  request: APIRequestContext,
+  productId: string,
+  presentationId: string,
+): Promise<number> {
+  const normal = await plausiblePrice(request, productId, presentationId);
+  return Math.max(120, Math.round(normal * 0.15) + Math.floor(Math.random() * 10));
+}
+
 // Un precio reportado por la API, con su clave de idempotencia (EC-07).
 export async function reportPrice(
   request: APIRequestContext,
@@ -143,6 +221,7 @@ export interface MyReport {
   productName: string;
   establishmentName: string;
   priceCop: number;
+  status: string;
 }
 
 export async function myReports(request: APIRequestContext): Promise<MyReport[]> {
