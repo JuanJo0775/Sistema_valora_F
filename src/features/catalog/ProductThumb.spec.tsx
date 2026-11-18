@@ -65,4 +65,24 @@ describe('miniatura del producto', () => {
     expect(container.querySelector('img')).toBeNull();
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
+
+  it('sin foto dibuja la ilustración de su categoría', () => {
+    const { container } = render(<ProductThumb size="card" category="household-cleaning" />);
+
+    expect(container.querySelector('svg')).toHaveAttribute('data-category', 'household-cleaning');
+  });
+
+  it('con una categoría desconocida usa la genérica', () => {
+    const { container } = render(<ProductThumb size="row" category="no-existe" />);
+
+    expect(container.querySelector('svg')).toHaveAttribute('data-category', 'generic');
+  });
+
+  it('si la foto no carga dibuja la ilustración de su categoría', () => {
+    const { container } = render(<ProductThumb image={offPhoto} size="row" category="bakery" />);
+
+    fireEvent.error(container.querySelector('img') as HTMLImageElement);
+
+    expect(container.querySelector('svg')).toHaveAttribute('data-category', 'bakery');
+  });
 });

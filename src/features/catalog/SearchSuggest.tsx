@@ -141,7 +141,7 @@ export function SearchSuggest({
                   openProduct(product);
                 }}
               >
-                <ProductThumb image={product.image} size="row" />
+                <ProductThumb image={product.image} size="row" category={product.category.code} />
                 <span className="suggest-text">
                   <span className="suggest-name">{product.name}</span>
                   <span className="muted">

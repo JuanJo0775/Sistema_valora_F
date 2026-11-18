@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_RADIUS_KM,
   normalizeRadius,
+  RADII,
   radiusLabel,
   radiusSpoken,
   readRadius,
@@ -60,5 +61,11 @@ describe('radio de búsqueda', () => {
   it('lo dice completo para el lector de pantalla', () => {
     expect(radiusSpoken(1.5)).toBe('1,5 kilómetros');
     expect(radiusSpoken(1)).toBe('1 kilómetro');
+  });
+
+  it('los preajustes van de 0,5 a 3 km, dentro de los límites del contrato, y cierran dos filas de tres', () => {
+    expect(RADII).toEqual([0.5, 1, 1.5, 2, 2.5, 3]);
+    expect(RADII.length % 3).toBe(0);
+    for (const km of RADII) expect(normalizeRadius(km)).toBe(km);
   });
 });

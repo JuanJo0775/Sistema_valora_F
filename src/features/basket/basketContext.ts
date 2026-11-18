@@ -1,8 +1,12 @@
 import { createContext, useContext } from 'react';
+import type { components } from '../../shared/api/schema';
 
 export interface BasketItem {
   productId: string;
   productName: string;
+  // Opcionales: las canastas guardadas antes no los tienen; sin ellos se ve la ilustración genérica.
+  categoryCode?: string;
+  image?: components['schemas']['ProductImage'];
   presentationId: string;
   presentationLabel: string;
   quantity: number;
@@ -11,7 +15,7 @@ export interface BasketItem {
 
 export type NewBasketItem = Pick<
   BasketItem,
-  'productId' | 'productName' | 'presentationId' | 'presentationLabel'
+  'productId' | 'productName' | 'categoryCode' | 'image' | 'presentationId' | 'presentationLabel'
 >;
 
 // #76: el aviso de lo último que se agregó. `id` cambia con cada agregado, para reiniciar el aviso.

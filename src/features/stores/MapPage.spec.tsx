@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { stubLocation } from '../../test/location';
 import { BasketProvider } from '../basket/BasketProvider';
+import { shapeOf } from './pinShapes';
 import { MapPage } from './MapPage';
 
 // Leaflet necesita un navegador de verdad para dibujar; aquí el mapa dice qué tiendas recibió.
@@ -150,7 +151,10 @@ describe('mapa de tiendas', () => {
     const card = within(
       within(side).getByRole('heading', { name: 'Ara' }).closest('li') as HTMLElement,
     );
-    expect(card.getByText('Descuento').previousElementSibling).toHaveClass('dot', 'type-descuento');
+    expect(card.getByText('Descuento').previousElementSibling).toHaveClass(
+      'pin-badge',
+      'type-descuento',
+    );
     expect(await card.findByText('$5.200')).toBeInTheDocument();
     expect(card.getByText(/1 de 1 productos/)).toBeInTheDocument();
     const other = within(
@@ -393,17 +397,38 @@ describe('mapa de tiendas', () => {
     expect(localStorage.getItem('valora:donde')).toBeNull();
   });
 
-  it('la leyenda dice el color de cada tipo de tienda', async () => {
+  it('la leyenda dice la forma de cada tipo de tienda y cómo se ven varias juntas', async () => {
     stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
 
     renderMap();
 
-    const legend = await screen.findByRole('list', { name: 'Colores del mapa' });
-    expect(
-      within(legend)
-        .getAllByRole('listitem')
-        .map(({ textContent }) => textContent),
-    ).toEqual(['Tienda de barrio', 'Minimercado', 'Supermercado', 'Descuento']);
+    const legend = await screen.findByRole('list', { name: 'Leyenda del mapa' });
+    const items = within(legend).getAllByRole('listitem');
+    expect(items.map(({ textContent }) => textContent)).toEqual([
+      'Tienda de barrio',
+      'Minimercado',
+      'Supermercado',
+      'Descuento',
+      '3Varias tiendas juntas',
+    ]);
+    // Cada tipo, con una forma distinta, la misma que dibuja el pin.
+    const shapes = items.slice(0, 4).map((item) => item.querySelector('path')?.getAttribute('d'));
+    expect(new Set(shapes).size).toBe(4);
+    expect(shapes).toEqual(['barrio', 'minimercado', 'supermercado', 'descuento'].map(shapeOf));
+  });
+
+  it('con la ubicación activa la leyenda suma «Tú estás aquí»', async () => {
+    stubApi({
+      'GET /v1/establishments': { status: 200, body: { items: [ara] } },
+      'GET /v1/establishments/nearby': { status: 200, body: { items: [ara] } },
+    });
+    stubLocation();
+    renderMap();
+
+    const legend = await screen.findByRole('list', { name: 'Leyenda del mapa' });
+    expect(within(legend).queryByText('Tú estás aquí')).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    expect(await within(legend).findByText('Tú estás aquí')).toBeInTheDocument();
   });
 
   it('mientras busca dice «Buscando tiendas…»', () => {
