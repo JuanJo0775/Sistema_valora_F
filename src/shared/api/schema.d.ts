@@ -1786,6 +1786,11 @@ export interface operations {
                         items: {
                             /** Format: uuid */
                             reportId: string;
+                            /**
+                             * Format: uuid
+                             * @description Ausente en aportes de cuentas antiguas.
+                             */
+                            productId?: string;
                             productName: string;
                             establishmentName: string;
                             priceCop: number;
