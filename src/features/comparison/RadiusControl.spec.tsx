@@ -54,12 +54,12 @@ describe('RadiusControl', () => {
     expect(slider).toHaveAttribute('aria-valuetext', '1,5 kilómetros');
   });
 
-  it('ofrece los cinco chips y marca el que coincide', () => {
+  it('ofrece los seis chips y marca el que coincide', () => {
     setup(1.5);
     const group = screen.getByRole('radiogroup', { name: 'Radio de búsqueda' });
 
-    expect(group.querySelectorAll('input')).toHaveLength(5);
-    for (const name of ['0,5 km', '1 km', '1,5 km', '2 km', '3 km']) {
+    expect(group.querySelectorAll('input')).toHaveLength(6);
+    for (const name of ['0,5 km', '1 km', '1,5 km', '2 km', '2,5 km', '3 km']) {
       expect(screen.getByRole('radio', { name })).toBeInTheDocument();
     }
     expect(screen.getByRole('radio', { name: '1,5 km' })).toBeChecked();
@@ -196,6 +196,6 @@ describe('RadiusControl', () => {
   it('dibuja una marca por preajuste', () => {
     const { container } = setup(1.5);
 
-    expect(container.querySelectorAll('.radius-tick')).toHaveLength(5);
+    expect(container.querySelectorAll('.radius-tick')).toHaveLength(6);
   });
 });
