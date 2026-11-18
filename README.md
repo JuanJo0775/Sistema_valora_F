@@ -246,6 +246,7 @@ Cada carpeta aparece cuando tiene su primer archivo (YAGNI). La organización pr
 - [UX y flujos](docs/UX.md)
 - [Offline-first](docs/OFFLINE_FIRST.md)
 - [Integración API](docs/API_INTEGRATION.md)
+- [Instalar la app y compartir enlaces](docs/INSTALAR_Y_COMPARTIR.md)
 - [Épicas](docs/EPICS.md)
 - [Contribución](CONTRIBUTING.md)
 - Backend: [README](https://github.com/JuanJo0775/Sistema_valora_B#readme), [contrato `openapi.yaml`](https://github.com/JuanJo0775/Sistema_valora_B/blob/dev/docs/openapi.yaml) y [decisiones](https://github.com/JuanJo0775/Sistema_valora_B/blob/dev/docs/DECISIONS.md)

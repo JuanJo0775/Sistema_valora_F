@@ -1,10 +1,15 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { applySiteUrl } from './site';
 
 // Vista previa al compartir el enlace por WhatsApp y redes (Open Graph): si falta una etiqueta, la
 // vista previa sale vacía o sin imagen. WhatsApp exige direcciones absolutas y una imagen pequeña.
-const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf-8');
+// El build reemplaza __SITE_URL__ por la dirección real: se prueba ya reemplazada, como la ve el rastreador.
+const SITE = 'https://valora.example';
+const raw = readFileSync(resolve(process.cwd(), 'index.html'), 'utf-8');
+const html = applySiteUrl(raw, SITE);
+const canonical = (): string | undefined => /<link rel="canonical" href="([^"]*)"/.exec(html)?.[1];
 const meta = (name: string): string | undefined =>
   new RegExp(`<meta\\s+(?:property|name)="${name}"\\s+content="([^"]*)"`, 's').exec(html)?.[1];
 
@@ -21,6 +26,40 @@ describe('index.html: vista previa al compartir el enlace', () => {
     for (const name of ['og:url', 'og:image', 'twitter:image']) {
       expect(meta(name)).toMatch(/^https:\/\//);
     }
+    expect(canonical()).toBe(`${SITE}/`);
+    expect(meta('og:image')).toBe(`${SITE}/og-image.png`);
+    expect(meta('twitter:image')).toBe(meta('og:image'));
+  });
+
+  it('la dirección del sitio sale de un solo lugar: sin direcciones fijas en index.html', () => {
+    expect(raw).not.toMatch(/https?:\/\/(?!www\.sitemaps)/);
+    expect(html).not.toContain('__SITE_URL__');
+  });
+
+  it('trae título, descripción y enlace canónico', () => {
+    expect(/<title>([^<]+)<\/title>/.exec(html)?.[1]).toMatch(/^Valora: /);
+    expect(meta('description')?.length).toBeGreaterThan(50);
+    expect(meta('description')?.length).toBeLessThan(200);
+    expect(meta('twitter:title')).toBe(meta('og:title'));
+    expect(meta('twitter:image:alt')).toBe(meta('og:image:alt'));
+    expect(meta('og:image:type')).toBe('image/png');
+    expect(meta('twitter:description')).toBeTruthy();
+  });
+
+  it('trae lo que pide iOS para instalar la app', () => {
+    expect(meta('apple-mobile-web-app-capable')).toBe('yes');
+    expect(meta('mobile-web-app-capable')).toBe('yes');
+    expect(meta('apple-mobile-web-app-title')).toBe('Valora');
+    expect(meta('apple-mobile-web-app-status-bar-style')).toBe('default');
+    expect(html).toMatch(
+      /<link rel="apple-touch-icon" sizes="180x180" href="\/apple-touch-icon.png"/,
+    );
+    const icon = readFileSync(resolve(process.cwd(), 'public/apple-touch-icon.png'));
+    expect([icon.readUInt32BE(16), icon.readUInt32BE(20)]).toEqual([180, 180]);
+  });
+
+  it('la imagen mantiene la proporción 1,91:1 de las vistas previas', () => {
+    expect(1200 / 630).toBeCloseTo(1.905, 2);
   });
 
   it('la imagen existe, mide 1200 x 630 y pesa menos de 300 KB', () => {

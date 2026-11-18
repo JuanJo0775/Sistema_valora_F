@@ -7,6 +7,7 @@ import { BasketProvider } from '../features/basket/BasketProvider';
 import { BasketSummary } from '../features/basket/BasketSummary';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { TodayBasket } from '../features/comparison/TodayBasket';
+import { InstallStrip } from '../pwa/InstallStrip';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportInvite } from '../features/reports/ReportInvite';
 import { Layout } from './Layout';
@@ -58,6 +59,7 @@ function Home() {
   return (
     <div className="with-side home">
       <div className="home-main">
+        <InstallStrip />
         {search}
         <TodayBasket />
       </div>

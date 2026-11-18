@@ -6,7 +6,18 @@
       "destination": "https://valora-api-faau.onrender.com/v1/:path*"
     },
     {
-      "source": "/((?!v1/).*)",
+      "source": "/productos/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|SkypeUriPreview|Pinterest|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "/api/og-producto?id=:id"
+    },
+    {
+      "source": "/((?!v1/|api/).*)",
       "destination": "/index.html"
     }
   ]
