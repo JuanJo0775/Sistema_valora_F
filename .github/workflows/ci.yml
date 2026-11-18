@@ -151,6 +151,11 @@ jobs:
   sonarqube:
     name: SonarQube
     needs: pruebas
+    # El plan gratuito de SonarQube Cloud solo deja leer el resultado de la rama principal que tiene
+    # configurada (dev) y de los pull requests: analizar el push a main falla con «Organization is not
+    # allowed to access data from non main branches». El código de main ya se analizó en el pull
+    # request de la release (dev a main), así que ese push no se vuelve a analizar.
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

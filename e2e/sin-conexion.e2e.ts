@@ -3,6 +3,7 @@ import { type Browser, expect, test } from '@playwright/test';
 import {
   myReports,
   newAccount,
+  plausiblePrice,
   register,
   signIn,
   someProducts,
@@ -30,7 +31,13 @@ interface Outcome {
   confirmationsMs: number[];
 }
 
-async function oneReporter(browser: Browser, count: number, products: Product[], store: Store) {
+async function oneReporter(
+  browser: Browser,
+  count: number,
+  products: Product[],
+  prices: number[],
+  store: Store,
+) {
   const context = await browser.newContext();
   const page = await context.newPage();
   const account = newAccount('Reportera Sin Señal');
@@ -56,8 +63,7 @@ async function oneReporter(browser: Browser, count: number, products: Product[],
   await chooseFirstPresentation(page);
   await chooseStoreByName(page, store);
   await context.setOffline(true);
-  await page.getByLabel('Precio en pesos').fill('3000');
-  await page.getByRole('button', { name: 'Enviar' }).click();
+  await sendPrice(page, prices[0] ?? 0);
   await expectHeading(page, 'Guardado en tu teléfono');
   for (const [index, product] of rest.entries()) {
     await page.goto(`/registrar?producto=${product.id}`);
@@ -65,7 +71,7 @@ async function oneReporter(browser: Browser, count: number, products: Product[],
     // La tienda de la vez anterior ya viene elegida.
     await expect(page.getByRole('radio', { name: store.name, exact: true })).toBeChecked();
     await chooseFirstPresentation(page);
-    await sendPrice(page, 3001 + index);
+    await sendPrice(page, prices[index + 1] ?? 0);
     await expectHeading(page, 'Guardado en tu teléfono');
   }
 
@@ -102,12 +108,23 @@ test('EC-07: 50 reportes sin señal se envían todos al volver la señal, sin du
   const total = SHARES.reduce((sum, share) => sum + share, 0);
   const products = await someProducts(request, Math.max(...SHARES));
   const stores = await someStores(request, SHARES.length);
+  // Un precio verosímil por producto (ADR-030): la app pide confirmar uno atípico y, sin señal, el
+  // reporte no se enviaría. Se calculan con señal, antes de cortarla.
+  const prices = await Promise.all(
+    products.map(async (product) => {
+      const presentationId = product.presentations[0]?.id;
+      if (!presentationId) throw new Error('Sin presentaciones en la semilla');
+      return plausiblePrice(request, product.id, presentationId);
+    }),
+  );
 
   const outcomes: Outcome[] = [];
   for (const [index, share] of SHARES.entries()) {
     const store = stores[index];
     if (!store) throw new Error('Sin tiendas');
-    outcomes.push(await oneReporter(browser, share, products.slice(0, share), store));
+    outcomes.push(
+      await oneReporter(browser, share, products.slice(0, share), prices.slice(0, share), store),
+    );
   }
 
   const confirmations = outcomes.flatMap(({ confirmationsMs }) => confirmationsMs);

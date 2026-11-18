@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/v1/:path*",
-      "destination": "https://valora-api-e9ep.onrender.com/v1/:path*"
+      "destination": "https://valora-api-faau.onrender.com/v1/:path*"
     },
     {
       "source": "/((?!v1/).*)",
