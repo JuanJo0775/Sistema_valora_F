@@ -13,6 +13,8 @@ const receipt = {
   receivedAt: '2026-11-16T15:00:00Z',
 };
 
+const observedAtOfLeft = new Date().toISOString();
+
 // Un reporte que quedó guardado en el teléfono la vez anterior.
 const leftFromBefore = async () => {
   const queue = await openReportQueue();
@@ -23,7 +25,7 @@ const leftFromBefore = async () => {
       establishmentId: '5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d',
       priceCop: 2500,
       priceType: 'normal',
-      observedAt: new Date().toISOString(),
+      observedAt: observedAtOfLeft,
     },
     label: { product: 'Arroz blanco · 500 g', store: 'Tienda Don Pepe' },
   });
@@ -89,6 +91,54 @@ describe('sincronización de la cola', () => {
       '11111111-1111-4111-8111-111111111111',
       '11111111-1111-4111-8111-111111111111',
     ]);
+  });
+
+  it('un 409 al reintentar de un reporte que el servidor ya tiene lo confirma, sin «requiere atención»', async () => {
+    await leftFromBefore();
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'POST /v1/reports': {
+        status: 409,
+        body: { code: 'DUPLICATE_REPORT', message: 'Repetido.' },
+      },
+      'GET /v1/me/reports': {
+        status: 200,
+        body: {
+          items: [
+            {
+              reportId: '7e6d5c4b-3a29-4180-9f7e-6d5c4b3a2918',
+              productId: '3b1f6f0e-6b7a-4c1d-9d5e-0a1b2c3d4e5f',
+              productName: 'Arroz blanco · 500 g',
+              establishmentName: 'Tienda Don Pepe',
+              priceCop: 2500,
+              priceType: 'normal',
+              observedAt: observedAtOfLeft,
+              status: 'normal',
+            },
+          ],
+        },
+      },
+    });
+
+    renderQueue();
+
+    expect(await screen.findByText('Arroz blanco · 500 g: sincronizado')).toBeInTheDocument();
+  });
+
+  it('un 409 sin aporte igual en «Mis aportes» sí requiere atención', async () => {
+    await leftFromBefore();
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'POST /v1/reports': {
+        status: 409,
+        body: { code: 'DUPLICATE_REPORT', message: 'Repetido.' },
+      },
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
+    });
+
+    renderQueue();
+
+    expect(await screen.findByText('Arroz blanco · 500 g: requiere_atencion')).toBeInTheDocument();
   });
 
   it('si el servidor falla con la red arriba, reintenta cada 30 segundos mientras la app está abierta', async () => {

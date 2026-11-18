@@ -102,6 +102,84 @@ describe('cola de reportes sin conexión', () => {
     expect(saved?.problem).toMatchObject({ status, code, message: 'Motivo del servidor.' });
   });
 
+  describe('409 DUPLICATE_REPORT en un reintento', () => {
+    const duplicate = () =>
+      new ApiError({ status: 409, code: 'DUPLICATE_REPORT', message: 'Repetido.' });
+
+    it('si el servidor ya tiene el reporte, sale de la cola como sincronizado, sin «Requiere atención»', async () => {
+      const queue = await openReportQueue(freshName());
+      await queue.add(report());
+      const confirm = vi.fn(() => Promise.resolve(true));
+
+      await queue.sync(answers(duplicate()), confirm);
+
+      const [saved] = await queue.list();
+      expect(saved?.status).toBe('sincronizado');
+      expect(saved?.problem).toBeUndefined();
+      expect(confirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('si el servidor no lo tiene, requiere atención con su motivo', async () => {
+      const queue = await openReportQueue(freshName());
+      await queue.add(report());
+
+      await queue.sync(answers(duplicate()), () => Promise.resolve(false));
+
+      const [saved] = await queue.list();
+      expect(saved?.status).toBe('requiere_atencion');
+      expect(saved?.problem).toMatchObject({ status: 409, code: 'DUPLICATE_REPORT' });
+    });
+
+    it('si no se puede consultar (sin red), sigue pendiente y se reintenta con la misma clave', async () => {
+      const queue = await openReportQueue(freshName());
+      await queue.add(report());
+      const send = answers(duplicate(), duplicate());
+      const offline = () =>
+        Promise.reject(new ApiError({ status: 0, code: 'NETWORK_ERROR', message: 'Sin red.' }));
+
+      await queue.sync(send, offline);
+      expect((await queue.list())[0]?.status).toBe('pendiente');
+      await queue.sync(send, () => Promise.resolve(true));
+
+      expect((await queue.list())[0]?.status).toBe('sincronizado');
+      expect(send).toHaveBeenCalledTimes(2);
+    });
+
+    it('si la consulta pide sesión, los pendientes esperan a iniciarla', async () => {
+      const queue = await openReportQueue(freshName());
+      await queue.add(report());
+
+      const outcome = await queue.sync(answers(duplicate()), () =>
+        Promise.reject(new ApiError({ status: 401, code: 'UNAUTHENTICATED', message: 'Sesión.' })),
+      );
+
+      expect(outcome.needsSession).toBe(true);
+      expect((await queue.list())[0]?.status).toBe('pendiente');
+    });
+  });
+
+  it('«el primer envío se aplicó pero no llegó la respuesta»: el reintento usa la misma clave y el 200 cuenta como éxito', async () => {
+    const queue = await openReportQueue(freshName());
+    await queue.add(report());
+    // Primer envío: el servidor lo aplicó, pero el cliente solo vio un corte de red.
+    const send = answers(
+      new ApiError({ status: 0, code: 'NETWORK_ERROR', message: 'Sin red.' }),
+      'ok', // 200 idempotente con el recibo original
+    );
+
+    await queue.sync(send);
+    expect((await queue.list())[0]?.status).toBe('pendiente');
+    await queue.sync(send);
+
+    const [saved] = await queue.list();
+    expect(saved?.status).toBe('sincronizado');
+    expect(saved?.problem).toBeUndefined();
+    expect(send.mock.calls.map(([sent]) => sent.idempotencyKey)).toEqual([
+      report().idempotencyKey,
+      report().idempotencyKey,
+    ]);
+  });
+
   it('un reporte que requiere atención no detiene a los siguientes', async () => {
     const queue = await openReportQueue(freshName());
     await queue.add(report('11111111-1111-4111-8111-111111111111'));
