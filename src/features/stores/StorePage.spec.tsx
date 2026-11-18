@@ -76,6 +76,17 @@ describe('página de una tienda', () => {
     expect(row.getByText('Confiabilidad alta')).toBeInTheDocument();
   });
 
+  it('«Cómo llegar» queda arriba, antes del filtro y de la lista de precios', async () => {
+    stubStore(storeReply([banana]));
+    renderStore();
+
+    const directions = await screen.findByRole('link', { name: 'Cómo llegar a Ara' });
+    const filter = screen.getByRole('checkbox', { name: 'Solo precios vigentes' });
+    expect(
+      directions.compareDocumentPosition(filter) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('«Solo precios vigentes» vuelve a pedir los precios sin los viejos', async () => {
     const api = stubStore(storeReply([banana]));
     renderStore();

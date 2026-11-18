@@ -8,8 +8,20 @@ import { MapPage } from './MapPage';
 
 // Leaflet necesita un navegador de verdad para dibujar; aquí el mapa dice qué tiendas recibió.
 vi.mock('./StoreMap', () => ({
-  StoreMap: ({ stores }: { stores: { name: string }[]; label: string }) => (
-    <p>{`Mapa con: ${stores.map(({ name }) => name).join(', ')}`}</p>
+  StoreMap: ({
+    stores,
+    around,
+  }: {
+    stores: { name: string }[];
+    label: string;
+    around?: { radiusKm: number; dragging?: boolean } | null;
+  }) => (
+    <>
+      <p>{`Mapa con: ${stores.map(({ name }) => name).join(', ')}`}</p>
+      {around && (
+        <p>{`Círculo de ${String(around.radiusKm)} km${around.dragging ? ' (arrastrando)' : ''}`}</p>
+      )}
+    </>
   ),
 }));
 
@@ -233,6 +245,55 @@ describe('mapa de tiendas', () => {
     expect(localStorage.getItem('valora:radio')).toBe('1');
   });
 
+  it('al arrastrar la barra el círculo cambia al instante y solo el valor final se consulta y se guarda', async () => {
+    const api = stubApi({
+      'GET /v1/establishments/nearby': { status: 200, body: { items: [pepe] } },
+    });
+    stubLocation();
+    renderMap();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    const slider = await screen.findByRole('slider', { name: 'Radio' });
+    await screen.findByText('Círculo de 1.5 km');
+    const nearbyCalls = () => api.requested.filter(({ pathname }) => pathname.endsWith('/nearby'));
+    const before = nearbyCalls().length;
+
+    vi.useFakeTimers();
+    try {
+      for (const value of ['1.8', '2.1', '2.6']) {
+        fireEvent.change(slider, { target: { value } });
+        expect(screen.getByText(`Círculo de ${value} km (arrastrando)`)).toBeInTheDocument();
+      }
+      expect(localStorage.getItem('valora:radio')).toBeNull();
+      expect(nearbyCalls()).toHaveLength(before);
+
+      fireEvent.pointerUp(slider);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(screen.getByText('Círculo de 2.6 km')).toBeInTheDocument();
+    expect(localStorage.getItem('valora:radio')).toBe('2.6');
+    await vi.waitFor(() => {
+      expect(nearbyCalls()).toHaveLength(before + 1);
+    });
+    expect(nearbyCalls().at(-1)?.searchParams.get('radiusKm')).toBe('2.6');
+  });
+
+  it('un radio entre preajustes recordado se recupera tal cual', async () => {
+    localStorage.setItem('valora:radio', '2.3');
+    localStorage.setItem('valora:donde', 'ubicacion');
+    const api = stubApi({
+      'GET /v1/establishments/nearby': { status: 200, body: { items: [pepe] } },
+    });
+    stubLocation();
+    renderMap();
+
+    expect(await screen.findByRole('slider', { name: 'Radio' })).toHaveValue('2.3');
+    await vi.waitFor(() => {
+      expect(api.requested.at(-1)?.searchParams.get('radiusKm')).toBe('2.3');
+    });
+  });
+
   it('sin la ubicación no hay chips del radio', async () => {
     stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
 
@@ -240,6 +301,7 @@ describe('mapa de tiendas', () => {
 
     await screen.findByText('Mapa con: Ara');
     expect(screen.queryByRole('radiogroup', { name: 'Radio de búsqueda' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('slider', { name: 'Radio' })).not.toBeInTheDocument();
   });
 
   it('si la última vez usó su ubicación, la vuelve a pedir y muestra las cercanas, sin guardar dónde está', async () => {

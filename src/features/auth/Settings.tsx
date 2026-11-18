@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RadiusChips } from '../comparison/RadiusChips';
+import { RadiusControl } from '../comparison/RadiusControl';
 import { type Municipality, MUNICIPALITY_OPTIONS } from '../comparison/criteria';
 import { readMunicipality, saveMunicipality } from '../comparison/lastMunicipality';
 import { readRadius, saveRadius } from '../comparison/radius';
@@ -43,7 +43,7 @@ export function Settings() {
               setMunicipality(chosen);
             }}
           />
-          <RadiusChips
+          <RadiusControl
             radiusKm={radiusKm}
             onChange={(km) => {
               saveRadius(km);

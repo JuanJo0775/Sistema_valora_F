@@ -145,8 +145,120 @@ describe('todas las tiendas, en el detalle del producto', () => {
 
     renderCompare();
 
-    expect(await screen.findByText('Dato inicial')).toHaveClass('pill', 'mute');
-    expect(screen.getByText('Confiabilidad baja')).not.toHaveClass('bad');
+    const [row] = await screen.findAllByRole('listitem');
+    const item = within(row as HTMLElement);
+    expect(item.getByText(/^Dato inicial · /)).toHaveClass('pill', 'mute');
+    expect(item.getByText('Confiabilidad baja')).not.toHaveClass('bad');
+  });
+
+  it('un dato inicial no se ve como «Hoy» en verde: dice «Dato inicial · fecha» en neutro', async () => {
+    stubCompare(comparison([result({ source: 'siembra', reliability: 'baja' })]));
+
+    renderCompare();
+
+    const [found] = await screen.findAllByRole('listitem');
+    const row = found as HTMLElement;
+    expect(row).not.toHaveTextContent('Hoy');
+    expect(row.querySelector('.pill.ok')).toBeNull();
+    expect(within(row).getByText(/^Dato inicial · \d{1,2} [a-z]{3}$/)).toHaveClass('mute');
+  });
+
+  it('un dato inicial por confirmar conserva su advertencia de vigencia', async () => {
+    stubCompare(comparison([result({ source: 'siembra', freshness: 'por_confirmar' })]));
+
+    renderCompare();
+
+    const [row] = await screen.findAllByRole('listitem');
+    const item = within(row as HTMLElement);
+    expect(item.getByText(/^Por confirmar/)).toBeInTheDocument();
+    expect(item.getByText('Dato inicial')).toBeInTheDocument();
+  });
+
+  it('explica «Dato inicial» y «Confiabilidad baja» en una ayuda que se abre con el teclado', async () => {
+    stubCompare(comparison([result({ source: 'siembra', reliability: 'baja' })]));
+
+    renderCompare();
+
+    const help = await screen.findByText('¿Qué significan estas etiquetas?');
+    expect(help.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(help);
+    expect(help.closest('details')).toHaveAttribute('open');
+    expect(screen.getByText(/precio de referencia que cargó Valora/)).toBeVisible();
+    expect(screen.getByText(/Sube cuando otras personas lo confirman/)).toBeVisible();
+  });
+
+  it('sin datos iniciales ni confiabilidad baja no hay ayuda de etiquetas', async () => {
+    stubCompare(comparison([result()]));
+
+    renderCompare();
+
+    await screen.findByRole('listitem');
+    expect(screen.queryByText('¿Qué significan estas etiquetas?')).not.toBeInTheDocument();
+  });
+
+  it('el filtro «Solo precios vigentes» va arriba de la lista que filtra', async () => {
+    stubCompare(comparison([result()]));
+
+    renderCompare();
+
+    const list = await screen.findByRole('list');
+    const filter = screen.getByRole('checkbox', { name: 'Solo precios vigentes' });
+    expect(filter.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('el orden por precio dice qué significa y que el precio grande es el total', async () => {
+    stubCompare(comparison([result()]));
+
+    renderCompare();
+
+    expect(await screen.findByText(/el precio grande es el total/)).toBeInTheDocument();
+  });
+
+  it('un empate no se numera como posiciones distintas y las tiendas homónimas se distinguen', async () => {
+    const same = {
+      priceCop: 4600,
+      unitPrice: { valueCop: 460, per: '100g' },
+      isCheapest: true,
+    };
+    stubCompare(
+      comparison([
+        result({
+          ...same,
+          establishment: {
+            ...store('5d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d', 'Carulla'),
+            address: 'Avenida Centenario',
+          },
+        }),
+        result({
+          ...same,
+          reportId: '8f7e6d5c-4b3a-4291-8a0f-7e6d5c4b3a29',
+          establishment: {
+            ...store('6e3d2c1b-0a9f-4b8c-9d7e-6f5a4b3c2d1e', 'Carulla'),
+            distanceM: 1300,
+          },
+        }),
+        result({
+          ...same,
+          reportId: '9a8f7e6d-5c4b-4392-8b1a-8f7e6d5c4b3a',
+          establishment: store('7f4e3d2c-1b0a-4c9d-8e8f-7a6b5c4d3e2f', 'Carulla'),
+        }),
+        result({
+          reportId: 'ab9a8f7e-6d5c-4493-8c2b-9a8f7e6d5c4b',
+          establishment: store('80f5e4d3-2c1b-4d0e-9f9a-8b7c6d5e4f30', 'D1'),
+          priceCop: 5000,
+          unitPrice: { valueCop: 500, per: '100g' },
+        }),
+      ]),
+    );
+
+    renderCompare();
+
+    const rows = await screen.findAllByRole('listitem');
+    const ranks = rows.map((row) => row.querySelector('.rank')?.textContent);
+    expect(ranks).toEqual(['1', '1', '1', '4']);
+    expect(rows[1]).toHaveTextContent('Sin dirección registrada · a 1,3 km');
+    expect(rows[2]).toHaveTextContent('Sin dirección registrada');
+    expect(rows[3]).not.toHaveTextContent('Sin dirección');
   });
 
   it.each([
@@ -188,6 +300,7 @@ describe('todas las tiendas, en el detalle del producto', () => {
         result({
           reportId: '8f7e6d5c-4b3a-4291-8a0f-7e6d5c4b3a29',
           establishment: store('6e3d2c1b-0a9f-4b8c-9d7e-6f5a4b3c2d1e', 'Minimercado La 14'),
+          unitPrice: { valueCop: 450, per: '100g' },
         }),
       ]),
     );
@@ -394,6 +507,32 @@ describe('todas las tiendas, en el detalle del producto', () => {
     ).toBeInTheDocument();
     const asked = lastAsked(api);
     expect(asked?.searchParams.get('radiusKm')).toBe('0.5');
+  });
+
+  it('con la barra del radio la comparación pide solo el valor final', async () => {
+    const api = stubCompare([
+      comparison([result()]),
+      comparison([result()], { municipality: undefined, radiusKm: 1.5 }),
+      comparison([result()], { municipality: undefined, radiusKm: 2.4 }),
+    ]);
+    stubLocation();
+    renderCompare();
+    await openWhere();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
+    const slider = await screen.findByRole('slider', { name: 'Radio' });
+    await screen.findByText('Ordenado por precio por unidad · a menos de 1,5 km de ti');
+    const before = api.requested.length;
+
+    fireEvent.change(slider, { target: { value: '2' } });
+    fireEvent.change(slider, { target: { value: '2.4' } });
+    expect(api.requested).toHaveLength(before);
+    fireEvent.pointerUp(slider);
+
+    expect(
+      await screen.findByText('Ordenado por precio por unidad · a menos de 2,4 km de ti'),
+    ).toBeInTheDocument();
+    expect(api.requested).toHaveLength(before + 1);
+    expect(lastAsked(api)?.searchParams.get('radiusKm')).toBe('2.4');
   });
 
   it('con la ubicación no se elige municipio, y se puede volver a comparar por municipio', async () => {

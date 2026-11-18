@@ -5,7 +5,7 @@ import './legal.css';
 
 const KEY = 'valora:aviso-cookies';
 
-// Aviso de cookies. Valora solo usa las necesarias (sesión, CSRF y preferencias del dispositivo), que
+// Aviso de cookies (franja de una línea; el texto completo está en /privacidad). Valora solo usa las necesarias (sesión, CSRF y preferencias del dispositivo), que
 // no piden aceptación: el aviso informa y se recuerda cuando la persona lo cierra.
 export function CookieNotice() {
   const [seen, setSeen] = useState(() => readStored(KEY) === '1');
@@ -13,13 +13,12 @@ export function CookieNotice() {
   return (
     <aside className="cookie-notice" aria-label="Aviso de cookies">
       <p>
-        Valora usa solo cookies y almacenamiento necesarios para tu sesión y tus preferencias. No
-        usamos cookies de publicidad ni de seguimiento.{' '}
+        Solo usamos cookies necesarias, sin publicidad ni seguimiento.{' '}
         <Link to="/privacidad#cookies">Más información</Link>
       </p>
       <button
         type="button"
-        className="btn"
+        className="btn ghost"
         onClick={() => {
           writeStored(KEY, '1');
           setSeen(true);

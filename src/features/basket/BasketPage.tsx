@@ -17,6 +17,7 @@ export function BasketPage() {
     return (
       <EmptyState
         title="Tu canasta está vacía"
+        level={1}
         text="Agrega productos desde su página para armar tu lista de compras."
         action={
           <Link to="/" className="btn">

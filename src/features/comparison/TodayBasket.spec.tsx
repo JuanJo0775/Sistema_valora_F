@@ -111,10 +111,10 @@ describe('canasta básica de hoy, en el Inicio', () => {
     });
 
     const rice = await card('Arroz Diana');
-    expect(rice.getByText('Hasta −15 %')).toBeInTheDocument();
+    expect(rice.getByText('Hasta −15 % frente a la tienda más cara')).toBeInTheDocument();
     expect(rice.getByText('1 kg')).toBeInTheDocument();
     expect(rice.getByText('$3.890')).toBeInTheDocument();
-    expect(rice.getByText('Ahorra Más')).toBeInTheDocument();
+    expect(rice.getByText('En Ahorra Más')).toBeInTheDocument();
     expect(rice.getByText('900 m')).toBeInTheDocument();
     expect(rice.getByRole('link', { name: /Arroz Diana/ })).toHaveAttribute(
       'href',

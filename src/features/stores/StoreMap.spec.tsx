@@ -35,6 +35,31 @@ describe('mapa de Leaflet', () => {
     create.mockRestore();
   });
 
+  // H-33: con «reducir movimiento» el mapa no anima el zoom ni los fundidos.
+  it.each([
+    [true, false],
+    [false, true],
+  ])('con reducir movimiento=%s, las animaciones del mapa quedan en %s', (reduce, animated) => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)' && reduce,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    const create = vi.spyOn(L, 'map');
+    renderMap();
+
+    const options = create.mock.calls[0]?.[1];
+    expect(options?.zoomAnimation).toBe(animated);
+    expect(options?.fadeAnimation).toBe(animated);
+    expect(options?.markerZoomAnimation).toBe(animated);
+    create.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
   it('dibuja un marcador por tienda, con la atribución de OpenStreetMap', () => {
     const { container } = renderMap();
 
@@ -54,6 +79,43 @@ describe('mapa de Leaflet', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Ver precios' }));
 
     expect(await screen.findByText('Estás en /tiendas/a1')).toBeInTheDocument();
+  });
+
+  // H-32: los pines se alcanzan con Tab, dicen la tienda y abren su globo con Enter.
+  it('cada pin recibe foco con Tab y se nombra con su tienda', () => {
+    const { container } = renderMap();
+
+    const pins = container.querySelectorAll('path.store-pin');
+    expect([...pins].map((pin) => pin.getAttribute('tabindex'))).toEqual(['0', '0']);
+    expect([...pins].map((pin) => pin.getAttribute('aria-label'))).toEqual(['Ara', 'D1']);
+    expect(screen.getByRole('button', { name: 'Ara' })).toBeInTheDocument();
+  });
+
+  it('Enter sobre un pin abre su globo, con «Cómo llegar» y «Ver precios», y el foco entra en él', async () => {
+    renderMap();
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Ara' }), { key: 'Enter' });
+
+    const directions = await screen.findByRole('link', { name: 'Cómo llegar a Ara' });
+    expect(directions).toHaveAttribute(
+      'href',
+      expect.stringContaining('destination=4.5339%2C-75.6811'),
+    );
+    expect(directions).toHaveTextContent('Cómo llegar');
+    expect(screen.getByRole('button', { name: 'Ver precios' })).toBeInTheDocument();
+    expect(directions).toHaveFocus();
+  });
+
+  it('el globo de un pin ofrece «Cómo llegar» antes que «Ver precios»', async () => {
+    const { container } = renderMap();
+
+    fireEvent.click(container.querySelector('path.store-pin') as Element);
+
+    const directions = await screen.findByRole('link', { name: 'Cómo llegar a Ara' });
+    const prices = screen.getByRole('button', { name: 'Ver precios' });
+    expect(
+      directions.compareDocumentPosition(prices) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   // #12: al proponer una tienda, se toca el mapa para poner su ubicación.
@@ -112,6 +174,38 @@ describe('mapa de Leaflet', () => {
 
     expect(container.querySelectorAll('path.user-pin')).toHaveLength(1);
     expect(container.querySelectorAll('path.radius-circle')).toHaveLength(1);
+  });
+
+  // El círculo del radio se redimensiona en vivo, sin volver a dibujar ni mover la vista mientras se arrastra.
+  it('al cambiar el radio redimensiona el círculo y solo ajusta la vista al soltar', () => {
+    const resize = vi.spyOn(L.Circle.prototype, 'setRadius');
+    const fit = vi.spyOn(L.Map.prototype, 'fitBounds');
+    const draw = (radiusKm: number, dragging = false) => (
+      <MemoryRouter>
+        <StoreMap
+          stores={stores}
+          label="Mapa de las tiendas"
+          around={{ lat: 4.53, lng: -75.68, radiusKm, dragging }}
+        />
+      </MemoryRouter>
+    );
+    const { container, rerender } = render(draw(1.5));
+    expect(resize).toHaveBeenLastCalledWith(1500);
+    fit.mockClear();
+
+    rerender(draw(2, true));
+    rerender(draw(2.5, true));
+
+    expect(resize).toHaveBeenLastCalledWith(2500);
+    expect(fit).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('path.radius-circle')).toHaveLength(1);
+    expect(container.querySelectorAll('path.user-pin')).toHaveLength(1);
+
+    rerender(draw(2.5, false));
+
+    expect(fit).toHaveBeenCalledTimes(1);
+    resize.mockRestore();
+    fit.mockRestore();
   });
 
   it('sin la ubicación no dibuja ni el punto ni el radio', () => {

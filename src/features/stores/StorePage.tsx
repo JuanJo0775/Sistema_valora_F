@@ -83,6 +83,16 @@ export function StorePage() {
             .filter(Boolean)
             .join(' · ')}
         </p>
+        {/* H-10: en el celular el mapa queda al final; quien solo quiere ir a la tienda no cruza la lista. */}
+        <a
+          href={directionsTo(store)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Cómo llegar a ${store.name}`}
+          className="btn store-directions"
+        >
+          Cómo llegar
+        </a>
         <label className="check">
           <input
             type="checkbox"
@@ -112,15 +122,6 @@ export function StorePage() {
       </section>
       <aside className="side" aria-label="Dónde queda">
         <StoreMap stores={[store]} label={`Mapa: ${store.name}`} />
-        <a
-          href={directionsTo(store)}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Cómo llegar a ${store.name}`}
-          className="btn"
-        >
-          Cómo llegar
-        </a>
       </aside>
     </div>
   );
