@@ -18,7 +18,7 @@
 
 .basket-row {
   display: grid;
-  grid-template-columns: auto auto 1fr auto auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 14px;
   padding: 14px 0;
@@ -60,6 +60,34 @@
 
 .basket-name .muted {
   font-size: 0.9rem;
+}
+
+/* Celular angosto (360 px o menos): con todo en una línea el nombre quedaba en 20 px y el contador
+   se le montaba encima. El nombre usa el ancho que queda y el contador y la papelera pasan a una
+   segunda línea, debajo de él. */
+@media (width < 420px) {
+  .basket-row {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    gap: 4px 12px;
+  }
+
+  .basket-row .basket-check,
+  .basket-row .basket-thumb {
+    grid-row: 1 / span 2;
+  }
+
+  .basket-row .basket-name {
+    grid-column: 3 / -1;
+  }
+
+  .basket-row .stepper {
+    grid-column: 3;
+    justify-self: start;
+  }
+
+  .basket-row .trash {
+    grid-column: 4;
+  }
 }
 
 /* Lo comprado se tacha y se apaga, para ir marcando en la tienda. */

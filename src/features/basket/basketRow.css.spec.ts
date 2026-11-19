@@ -16,4 +16,14 @@ describe('fila de la canasta', () => {
     expect(/\.basket-name \{[^}]*color:\s*inherit/.test(css)).toBe(true);
     expect(css).toMatch(/\.basket-name:focus-visible/);
   });
+
+  it('en el celular angosto el contador y la papelera pasan a una segunda línea, debajo del nombre', () => {
+    const start = css.indexOf('@media (width < 420px)');
+    expect(start).toBeGreaterThan(-1);
+    const block = css.slice(start, css.indexOf('\n}\n', start));
+    expect(block).toMatch(/\.basket-row \.stepper\s*\{[^}]*grid-column:\s*3/);
+    expect(block).toMatch(/\.basket-row \.trash\s*\{[^}]*grid-column:\s*4/);
+    // El nombre puede encogerse: sin esto quedaba en 20 px a 360 px de ancho.
+    expect(css).toMatch(/grid-template-columns:\s*auto auto minmax\(0, 1fr\) auto auto/);
+  });
 });
