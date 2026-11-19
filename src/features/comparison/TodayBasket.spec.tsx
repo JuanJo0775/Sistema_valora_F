@@ -158,6 +158,35 @@ describe('canasta básica de hoy, en el Inicio', () => {
     expect(asked(api)?.has('municipality')).toBe(false);
   });
 
+  it('cambiar de municipio actualiza la canasta sin recargar, con la misma categoría y el skeleton mientras llega', async () => {
+    const api = renderBasket({
+      'GET /v1/featured-products': [
+        basket([featured('Arroz')]),
+        basket([featured('Arroz')]),
+        {
+          status: 200,
+          body: {
+            ...(basket([featured('Lenteja')]).body as object),
+            criteria: { municipality: 'calarca', sort: 'store_count' },
+          },
+        },
+      ],
+    });
+    fireEvent.click(await screen.findByRole('radio', { name: 'Aceites' }));
+    await vi.waitFor(() => {
+      expect(asked(api)?.get('category')).toBe('aceites');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dónde buscar: Armenia' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Calarcá' }));
+
+    expect(await screen.findByText('Precios de 7 tiendas en Calarcá.')).toBeInTheDocument();
+    expect(asked(api)?.get('municipality')).toBe('calarca');
+    expect(asked(api)?.get('category')).toBe('aceites');
+    expect(screen.getByRole('radio', { name: 'Aceites' })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Dónde buscar: Calarcá' })).toBeInTheDocument();
+  });
+
   it('los chips de categoría filtran la canasta', async () => {
     const api = renderBasket({ 'GET /v1/featured-products': basket([featured('Arroz')]) });
     const all = await screen.findByRole('radio', { name: 'Todo' });
