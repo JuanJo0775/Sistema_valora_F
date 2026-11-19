@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { formatCop } from '../../shared/money';
 import { Loading } from '../../shared/ui/Loading';
 import { MUNICIPALITIES } from '../comparison/criteria';
@@ -77,6 +78,11 @@ export function CheapestStore({
             })}
           </ul>
         </>
+      )}
+      {ready && (
+        <Link to="/canasta/plan" className="btn ghost">
+          Armar plan de compra
+        </Link>
       )}
     </aside>
   );

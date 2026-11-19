@@ -7,9 +7,10 @@
   z-index: 0;
 }
 
-/* Pines: la forma dice el tipo (círculo, cuadrado, hexágono, estrella) y el color lo refuerza. Las
-   teselas del mapa son claras en los dos temas, así que los pines llevan colores fijos oscuros con un
-   borde blanco y una sombra: se leen igual en tema claro y oscuro (3:1 o más contra el mapa). */
+/* Pines: círculos cuyo color dice el tipo. Quien lo pide en Ajustes › Accesibilidad ve además una
+   forma por tipo (.pin-shape). Las teselas del mapa son claras en los dos temas, así que los pines
+   llevan colores fijos oscuros con un borde blanco y una sombra: se leen igual en tema claro y oscuro
+   (3:1 o más contra el mapa). */
 .stores,
 .store-map,
 .map-legend {
@@ -39,6 +40,25 @@
   display: inline-flex;
 }
 
+.pin-dot {
+  display: block;
+  box-sizing: border-box;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  background: var(--pin, #5e5850);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
+}
+
+/* En el mapa el pin mide más (el área táctil sigue siendo de 36 px). */
+.store-map .pin-dot {
+  width: 28px;
+  height: 28px;
+  border-width: 3px;
+}
+
 .pin-shape {
   display: block;
   overflow: visible;
@@ -57,7 +77,8 @@
   filter: drop-shadow(0 1px 2px rgb(0 0 0 / 55%));
 }
 
-.store-map .store-pin:hover .pin-shape {
+.store-map .store-pin:hover .pin-shape,
+.store-map .store-pin:hover .pin-dot {
   transform: scale(1.12);
 }
 
@@ -336,10 +357,6 @@
   text-decoration: none;
 }
 
-.store-directions {
-  justify-self: start;
-}
-
 /* En escritorio el radio va compacto bajo el mapa: título, ayuda y barra a la izquierda, los chips a
    la derecha, para que mapa y radio quepan juntos en la ventana. */
 @media (width >= 960px) {
@@ -362,5 +379,236 @@
 
   .map-panel .radius-note {
     grid-column: 1 / -1;
+  }
+}
+
+/* Página de una tienda (/tiendas/:id): encabezado en tarjeta, mapa y precios. En el celular van uno
+   debajo del otro en ese orden; en escritorio, encabezado y precios a la izquierda y el mapa fijo a
+   la derecha (.side y --side-h vienen de base.css). */
+.store-page {
+  gap: 16px;
+  grid-template-areas: 'top' 'side' 'prices';
+}
+
+.store-top {
+  grid-area: top;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.store-head {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.store-head h1,
+.store-head p,
+.store-card-box h2 {
+  margin: 0;
+}
+
+.store-type {
+  gap: 6px;
+  padding-left: 6px;
+  font-size: 0.85rem;
+}
+
+.store-address {
+  font-weight: 600;
+}
+
+.store-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.store-head-actions .ico {
+  width: 20px;
+  height: 20px;
+}
+
+.store-side {
+  grid-area: side;
+  min-width: 0;
+}
+
+.store-card-box {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  background: var(--bg);
+}
+
+.store-card-box .store-map {
+  height: 260px;
+  border-radius: var(--r-m);
+}
+
+.store-prices {
+  grid-area: prices;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.store-prices-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.store-prices-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.store-count {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* El filtro es una ficha discreta; encendida, toma el color de la marca. */
+.store-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch);
+  margin-left: auto;
+  padding: 0 14px;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.store-filter input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.store-filter:has(input:checked) {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.store-filter:has(input:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.store-offer {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+}
+
+.store-offer-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.store-offer-body .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.store-offer-price {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+
+.store-offer .offer-price {
+  font-family: var(--f-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.store-offer .store-offer-price .unit {
+  color: var(--ink-2);
+  font-family: var(--f-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.store-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px 20px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-l);
+  background: var(--bg-2);
+  text-align: center;
+}
+
+.store-empty h3,
+.store-empty p {
+  margin: 0;
+}
+
+.store-empty .btn {
+  margin-top: 6px;
+}
+
+.store-empty .ico {
+  width: 20px;
+  height: 20px;
+}
+
+.store-art .art-body {
+  fill: var(--accent-soft);
+  stroke: var(--accent-ink);
+}
+
+.store-art .art-line {
+  fill: none;
+  stroke: var(--accent-ink);
+}
+
+.store-art path {
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.skeleton.skeleton-store-map {
+  width: 100%;
+  height: 290px;
+}
+
+@media (width >= 960px) {
+  .store-page {
+    grid-template-columns: 1.5fr 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'top side'
+      'prices side';
+  }
+
+  .store-card-box .store-map {
+    height: 340px;
   }
 }

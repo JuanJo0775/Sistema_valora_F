@@ -397,7 +397,7 @@ describe('mapa de tiendas', () => {
     expect(localStorage.getItem('valora:donde')).toBeNull();
   });
 
-  it('la leyenda dice la forma de cada tipo de tienda y cómo se ven varias juntas', async () => {
+  it('la leyenda muestra un círculo de color por tipo y cómo se ven varias juntas', async () => {
     stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
 
     renderMap();
@@ -411,10 +411,29 @@ describe('mapa de tiendas', () => {
       'Descuento',
       '3Varias tiendas juntas',
     ]);
-    // Cada tipo, con una forma distinta, la misma que dibuja el pin.
+    const types = ['barrio', 'minimercado', 'supermercado', 'descuento'];
+    expect(items.slice(0, 4).map((item) => item.className)).toEqual(
+      types.map((type) => `type-${type}`),
+    );
+    expect(items.slice(0, 4).every((item) => item.querySelector('.pin-dot'))).toBe(true);
+    expect(legend.querySelector('path')).toBeNull();
+  });
+
+  it('con la preferencia de forma, la leyenda y las tarjetas muestran la forma de cada tipo', async () => {
+    localStorage.setItem('valora:pines-forma', '1');
+    stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
+
+    renderMap();
+
+    const legend = await screen.findByRole('list', { name: 'Leyenda del mapa' });
+    const items = within(legend).getAllByRole('listitem');
     const shapes = items.slice(0, 4).map((item) => item.querySelector('path')?.getAttribute('d'));
     expect(new Set(shapes).size).toBe(4);
     expect(shapes).toEqual(['barrio', 'minimercado', 'supermercado', 'descuento'].map(shapeOf));
+    expect(legend.querySelector('.pin-dot')).toBeNull();
+    const side = screen.getByRole('complementary', { name: 'Lista de tiendas' });
+    expect(side.querySelector('.pin-badge .pin-shape')).not.toBeNull();
+    expect(side.querySelector('.pin-badge .pin-dot')).toBeNull();
   });
 
   it('con la ubicación activa la leyenda suma «Tú estás aquí»', async () => {

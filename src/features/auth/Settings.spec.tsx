@@ -16,13 +16,13 @@ describe('ajustes', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('tiene el enlace «Volver» y tres bloques con título', () => {
+  it('tiene el enlace «Volver» y cuatro bloques con título', () => {
     renderSettings();
 
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
     expect(screen.getByRole('heading', { level: 1, name: 'Ajustes' })).toBeInTheDocument();
     const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(titles).toEqual(['Apariencia', 'Búsqueda', 'Pruebas del equipo']);
+    expect(titles).toEqual(['Apariencia', 'Accesibilidad', 'Búsqueda', 'Pruebas del equipo']);
   });
 
   it('el tema se elige y queda recordado', () => {
@@ -32,6 +32,23 @@ describe('ajustes', () => {
 
     expect(screen.getByRole('radio', { name: 'Oscuro' })).toBeChecked();
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+  });
+
+  it('«Distinguir los tipos de tienda por su forma» empieza apagado y se recuerda', () => {
+    const { unmount } = renderSettings();
+    const toggle = () =>
+      screen.getByRole('switch', { name: 'Distinguir los tipos de tienda por su forma' });
+    expect(toggle()).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(toggle());
+
+    expect(toggle()).toHaveAttribute('aria-checked', 'true');
+    expect(localStorage.getItem('valora:pines-forma')).toBe('1');
+    unmount();
+    renderSettings();
+    expect(toggle()).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(toggle());
+    expect(localStorage.getItem('valora:pines-forma')).toBeNull();
   });
 
   it('el radio de búsqueda se guarda en el dispositivo', () => {
