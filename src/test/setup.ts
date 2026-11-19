@@ -24,3 +24,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
+
+// jsdom no trae scrollIntoView (las listas lo usan para mostrar la opción activa).
+Element.prototype.scrollIntoView = vi.fn();
