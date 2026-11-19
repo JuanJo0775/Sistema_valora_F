@@ -3,6 +3,7 @@ import { RadiusControl } from '../comparison/RadiusControl';
 import { type Municipality, MUNICIPALITY_OPTIONS } from '../comparison/criteria';
 import { readMunicipality, saveMunicipality } from '../comparison/lastMunicipality';
 import { readRadius, saveRadius } from '../comparison/radius';
+import { UninstallLink } from '../../pwa/InstallRow';
 import { setPinShapes, usePinShapes } from '../stores/pinShapePref';
 import { BackLink } from '../../shared/ui/BackLink';
 import { SelectField } from '../../shared/ui/SelectField';
@@ -66,6 +67,14 @@ export function Settings() {
             }}
           />
         </div>
+      </section>
+      <section className="profile-block" aria-labelledby="la-app">
+        <h2 id="la-app" className="eyebrow">
+          La app
+        </h2>
+        <ul className="nav-list profile-card">
+          <UninstallLink />
+        </ul>
       </section>
       <section className="profile-block" aria-labelledby="pruebas">
         <h2 id="pruebas" className="eyebrow">

@@ -1,7 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InstallRow } from './InstallRow';
-import { InstallStrip } from './InstallStrip';
+import { MemoryRouter } from 'react-router';
+import { dismissCookieNotice } from '../features/legal/cookieNoticeState';
+import { InstallAndUninstall } from './InstallAndUninstall';
+import { InstallPrompt, INSTALL_PROMPT_DELAY_MS } from './InstallPrompt';
+import { deviceOf, UninstallGuide } from './UninstallGuide';
 import {
   detectPlatform,
   HIDDEN_DAYS,
@@ -174,24 +180,73 @@ describe('useInstall con eventos simulados', () => {
   });
 });
 
-describe('franja del Inicio', () => {
-  it('con el evento ofrece «Instalar Valora» y abre el cuadro del navegador', async () => {
+// Con las cookies ya aceptadas y pasados unos segundos de uso, que es cuando el aviso puede salir.
+function renderPrompt(path = '/') {
+  vi.useFakeTimers();
+  localStorage.setItem('valora:aviso-cookies', '1');
+  const view = render(
+    <MemoryRouter initialEntries={[path]}>
+      <InstallPrompt />
+    </MemoryRouter>,
+  );
+  const wait = () => {
+    act(() => {
+      vi.advanceTimersByTime(INSTALL_PROMPT_DELAY_MS);
+    });
+  };
+  return { ...view, wait };
+}
+
+const promptRegion = () => screen.queryByRole('region', { name: 'Instalar la app' });
+const onIphone = () => {
+  setBrowser(IPHONE_SAFARI, { platform: 'iPhone', touch: 5 });
+};
+
+describe('aviso de instalar en cualquier pantalla', () => {
+  it('con el evento ofrece «Instalar Valora» tras unos segundos y abre el cuadro del navegador', async () => {
     startInstallListener();
-    render(<InstallStrip />);
+    const view = renderPrompt('/mapa');
     const { event, prompt } = fakeInstallEvent();
     act(() => {
       window.dispatchEvent(event);
     });
+    expect(promptRegion()).toBeNull();
+    view.wait();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Instalar Valora' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Instalar Valora' }));
+      await Promise.resolve();
+    });
 
     expect(prompt).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('complementary', { name: 'Instalar la app' })).toBeInTheDocument();
+  });
+
+  it.each(['/', '/productos/abc', '/mapa', '/canasta'])('sale también en %s', (path) => {
+    startInstallListener();
+    const view = renderPrompt(path);
+    act(() => {
+      window.dispatchEvent(fakeInstallEvent().event);
+    });
+    view.wait();
+    expect(promptRegion()).not.toBeNull();
+  });
+
+  it('no sale antes de los segundos de espera', () => {
+    onIphone();
+    renderPrompt();
+    act(() => {
+      vi.advanceTimersByTime(INSTALL_PROMPT_DELAY_MS - 1000);
+    });
+    expect(promptRegion()).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(promptRegion()).not.toBeNull();
   });
 
   it('en iPhone con Safari explica Compartir > Añadir a pantalla de inicio', () => {
-    setBrowser(IPHONE_SAFARI, { platform: 'iPhone', touch: 5 });
-    render(<InstallStrip />);
+    onIphone();
+    renderPrompt().wait();
 
     const how = screen.getByRole('button', { name: 'Cómo instalar' });
     expect(how).toHaveAttribute('aria-expanded', 'false');
@@ -204,55 +259,106 @@ describe('franja del Inicio', () => {
 
   it('en iPad (que se presenta como Mac) también muestra la guía de Safari', () => {
     setBrowser(IPAD_AS_MAC, { platform: 'MacIntel', touch: 5 });
-    render(<InstallStrip />);
+    renderPrompt().wait();
     fireEvent.click(screen.getByRole('button', { name: 'Cómo instalar' }));
     expect(screen.getByRole('list')).toHaveTextContent('Añadir a pantalla de inicio');
   });
 
   it('en iOS con otro navegador pide abrirla en Safari', () => {
     setBrowser(IPHONE_CHROME, { platform: 'iPhone', touch: 5 });
-    render(<InstallStrip />);
+    renderPrompt().wait();
     fireEvent.click(screen.getByRole('button', { name: 'Cómo instalar' }));
     expect(screen.getByRole('list')).toHaveTextContent('Ábrela en Safari');
   });
 
-  it('en un celular Android sin evento indica el menú del navegador', () => {
-    render(<InstallStrip />);
-    fireEvent.click(screen.getByRole('button', { name: 'Cómo instalar' }));
-    expect(screen.getByRole('list')).toHaveTextContent('menú del navegador');
+  it('en Android sin evento no sale: Chrome decide cuándo ofrecer, y en Yo está la guía', () => {
+    renderPrompt().wait();
+    expect(promptRegion()).toBeNull();
   });
 
   it('en el computador sin evento no aparece', () => {
     setBrowser(DESKTOP_CHROME);
-    const { container } = render(<InstallStrip />);
-    expect(container).toBeEmptyDOMElement();
+    renderPrompt().wait();
+    expect(promptRegion()).toBeNull();
+  });
+
+  it('en el computador con evento habla de la ventana propia', () => {
+    setBrowser(DESKTOP_CHROME);
+    startInstallListener();
+    const view = renderPrompt();
+    act(() => {
+      window.dispatchEvent(fakeInstallEvent().event);
+    });
+    view.wait();
+    expect(promptRegion()).toHaveTextContent('en su propia ventana');
   });
 
   it('ya instalada, no aparece', () => {
     setStandalone(true);
-    const { container } = render(<InstallStrip />);
-    expect(container).toBeEmptyDOMElement();
+    onIphone();
+    renderPrompt().wait();
+    expect(promptRegion()).toBeNull();
   });
 
-  it('«Ahora no» la esconde, lo recuerda y sigue escondida al volver', () => {
-    const first = render(<InstallStrip />);
+  it('no sale al registrar un precio', () => {
+    onIphone();
+    renderPrompt('/registrar?producto=abc').wait();
+    expect(promptRegion()).toBeNull();
+  });
+
+  it('espera al aviso de cookies: primero cookies, luego instalar, nunca los dos', () => {
+    onIphone();
+    const view = renderPrompt();
+    localStorage.removeItem('valora:aviso-cookies');
+    view.rerender(
+      <MemoryRouter>
+        <InstallPrompt />
+      </MemoryRouter>,
+    );
+    view.wait();
+    expect(promptRegion()).toBeNull();
+
+    act(() => {
+      dismissCookieNotice();
+    });
+
+    expect(promptRegion()).not.toBeNull();
+  });
+
+  it('«Ahora no» la esconde, lo recuerda 14 días y sigue escondida al volver', () => {
+    onIphone();
+    const first = renderPrompt();
+    first.wait();
     fireEvent.click(screen.getByRole('button', { name: 'Ahora no' }));
-    expect(first.container).toBeEmptyDOMElement();
+    expect(promptRegion()).toBeNull();
     expect(localStorage.getItem(HIDDEN_KEY)).not.toBeNull();
 
     first.unmount();
-    const again = render(<InstallStrip />);
-    expect(again.container).toBeEmptyDOMElement();
+    renderPrompt().wait();
+    expect(promptRegion()).toBeNull();
+  });
+
+  it('Escape también la cierra', () => {
+    onIphone();
+    renderPrompt().wait();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Cómo instalar' }), { key: 'Escape' });
+    expect(promptRegion()).toBeNull();
   });
 
   it('pasados 14 días vuelve a aparecer', () => {
+    onIphone();
     localStorage.setItem(HIDDEN_KEY, String(Date.now() - (HIDDEN_DAYS + 1) * 86_400_000));
-    render(<InstallStrip />);
-    expect(screen.getByRole('complementary', { name: 'Instalar la app' })).toBeInTheDocument();
+    renderPrompt().wait();
+    expect(promptRegion()).not.toBeNull();
   });
 
-  it('es accesible: todo se alcanza con botones con nombre y la guía está enlazada', () => {
-    render(<InstallStrip />);
+  it('es accesible: región viva siempre presente, botones con nombre y guía enlazada', () => {
+    onIphone();
+    const { container, wait } = renderPrompt();
+    const live = container.querySelector('[aria-live="polite"]');
+    expect(live).not.toBeNull();
+    wait();
+    expect(live).toContainElement(promptRegion());
     const how = screen.getByRole('button', { name: 'Cómo instalar' });
     fireEvent.click(how);
     const guide = document.getElementById(how.getAttribute('aria-controls') ?? '');
@@ -267,9 +373,11 @@ describe('franja del Inicio', () => {
 describe('fila «Instalar la app» de Yo', () => {
   const inList = () =>
     render(
-      <ul>
-        <InstallRow />
-      </ul>,
+      <MemoryRouter>
+        <ul>
+          <InstallRow />
+        </ul>
+      </MemoryRouter>,
     );
 
   it('con el evento abre el cuadro de instalación', () => {
@@ -298,5 +406,101 @@ describe('fila «Instalar la app» de Yo', () => {
     inList();
     expect(screen.getByText('Valora ya está instalada en este dispositivo.')).toBeInTheDocument();
     expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('enlaza a la pantalla de desinstalar, instalada o no', () => {
+    inList();
+    expect(screen.getByRole('link', { name: /Desinstalar la app/ })).toHaveAttribute(
+      'href',
+      '/yo/app',
+    );
+  });
+});
+
+describe('desinstalar la app', () => {
+  const page = () =>
+    render(
+      <MemoryRouter>
+        <InstallAndUninstall />
+      </MemoryRouter>,
+    );
+  const openTitles = () =>
+    [...document.querySelectorAll('details')]
+      .filter((d) => d.open)
+      .map((d) => d.querySelector('summary')?.textContent ?? '');
+  const allTitles = () =>
+    [...document.querySelectorAll('details > summary')].map((n) => n.textContent);
+
+  it('elige el dispositivo según la plataforma detectada', () => {
+    expect(deviceOf(detectPlatform({ userAgent: DESKTOP_CHROME, maxTouchPoints: 0 }))).toBe('pc');
+    expect(deviceOf(detectPlatform({ userAgent: ANDROID_CHROME, maxTouchPoints: 5 }))).toBe(
+      'android',
+    );
+    expect(deviceOf(detectPlatform({ userAgent: IPHONE_SAFARI, maxTouchPoints: 5 }))).toBe('ios');
+    expect(deviceOf(detectPlatform({ userAgent: IPHONE_CHROME, maxTouchPoints: 5 }))).toBe('ios');
+  });
+
+  it('instalada en un computador: avisa, trae los pasos de PC primero y los demás plegados', () => {
+    setStandalone(true);
+    setBrowser(DESKTOP_CHROME, { platform: 'Win32' });
+    page();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Estás usando la app instalada');
+    expect(allTitles()[0]).toContain('Computador');
+    expect(openTitles()).toHaveLength(1);
+    expect(openTitles()[0]).toContain('Computador');
+    const text = document.body.textContent;
+    expect(text).toContain('Desinstalar Valora…');
+    expect(text).toContain('Aplicaciones instaladas');
+    expect(text).toContain('borrar también los datos');
+  });
+
+  it('en Android pone Android primero', () => {
+    setStandalone(true);
+    page();
+    expect(allTitles()[0]).toBe('Android (este dispositivo)');
+    expect(openTitles()).toEqual(['Android (este dispositivo)']);
+    expect(document.body.textContent).toContain('Mantén pulsado el ícono');
+  });
+
+  it('en iPhone pone iPhone y iPad primero, con «Eliminar app»', () => {
+    setStandalone(true);
+    onIphone();
+    page();
+    expect(allTitles()[0]).toContain('iPhone y iPad');
+    expect(document.body.textContent).toContain('Eliminar de la pantalla de inicio');
+  });
+
+  it('sin instalar no muestra el aviso de «app instalada», pero sí los pasos y la nota de datos', () => {
+    page();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Desinstalar' })).toBeInTheDocument();
+    expect(document.body.textContent).toContain('no borra tu cuenta ni tus aportes');
+  });
+
+  it('sin emojis ni imágenes', () => {
+    render(<UninstallGuide device="pc" />);
+    expect(document.querySelector('img')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
+  });
+});
+
+describe('aviso de instalar: estilos', () => {
+  const read = (path: string) =>
+    readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
+
+  it('se coloca sobre la barra, la barra de compra y cede ante las cookies', () => {
+    const css = read('./install.css');
+    const block = /\.install-prompt\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+    expect(block).toMatch(/position:\s*fixed/);
+    expect(block).toMatch(/var\(--tabbar-h\)/);
+    expect(block).toMatch(/var\(--action-bar-h\)/);
+    expect(css).toMatch(/:root:has\(\.cookie-notice\)\s*\.install-prompt\s*\{\s*display:\s*none/);
+  });
+
+  it('la página reserva sitio mientras el aviso está', () => {
+    const layout = read('../app/layout.css');
+    expect(layout).toMatch(/:root:has\(\.install-prompt\)\s*\{\s*--install-h:\s*\d+px/);
+    expect(layout).toMatch(/\.page\s*\{[^}]*var\(--install-h\)/);
   });
 });

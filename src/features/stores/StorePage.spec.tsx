@@ -72,7 +72,7 @@ describe('página de una tienda', () => {
     expect(within(head).getByRole('link', { name: 'Cómo llegar a Ara' })).toBeInTheDocument();
     expect(within(head).getByRole('link', { name: 'Registrar un precio aquí' })).toHaveAttribute(
       'href',
-      '/registrar',
+      `/registrar?tienda=${ARA}`,
     );
   });
 
@@ -153,7 +153,7 @@ describe('página de una tienda', () => {
     expect(screen.getByText('Nadie ha reportado un precio en esta tienda todavía.')).toBeVisible();
     expect(
       screen.getByRole('link', { name: 'Sé el primero en registrar un precio' }),
-    ).toHaveAttribute('href', '/registrar');
+    ).toHaveAttribute('href', `/registrar?tienda=${ARA}`);
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByText(/con precio/)).not.toBeInTheDocument();
     expect(screen.getByText('Mapa con: Ara')).toBeInTheDocument();

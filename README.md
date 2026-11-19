@@ -222,7 +222,7 @@ src/
   features/history/     # historial y gráfica de los últimos 30 días
   features/moderation/  # panel del moderador: precios en revisión (tiendas, productos y roles en camino)
   features/proposals/   # proponer un producto o sugerir una tienda que no existe
-  features/reports/     # registrar un precio: producto, tienda cercana, precio y hora
+  features/reports/     # registrar un precio: producto, tienda cercana, precio y hora (acepta ?producto= y ?tienda=)
   features/stores/      # mapa de tiendas (Leaflet + OpenStreetMap) y página de cada tienda
   pwa/                  # cola sin conexión (IndexedDB), reportes pendientes y aviso de versión nueva
   shared/api/           # cliente de la API con los tipos del contrato
