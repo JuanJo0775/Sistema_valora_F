@@ -284,12 +284,12 @@ describe('todas las tiendas, en el detalle del producto', () => {
     renderCompare();
     const chip = await screen.findByRole('button', { name: 'Dónde buscar: Armenia' });
     expect(chip).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('combobox', { name: 'Municipio' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('listbox', { name: 'Municipio' })).not.toBeInTheDocument();
 
     fireEvent.click(chip);
 
     expect(chip).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('combobox', { name: 'Municipio' })).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Municipio' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Usar mi ubicación' })).toBeInTheDocument();
   });
 
@@ -561,10 +561,11 @@ describe('todas las tiendas, en el detalle del producto', () => {
     ]);
     renderCompare();
     await openWhere();
-    const where = await screen.findByRole('combobox', { name: 'Municipio' });
+    const where = await screen.findByRole('listbox', { name: 'Municipio' });
     expect(within(where).getAllByRole('option')).toHaveLength(12);
 
-    fireEvent.change(where, { target: { value: 'calarca' } });
+    fireEvent.click(within(where).getByRole('option', { name: 'Calarcá' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     expect(
       await screen.findByText('Ordenado por precio por unidad · en Calarcá'),
@@ -631,11 +632,16 @@ describe('todas las tiendas, en el detalle del producto', () => {
     await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
     await screen.findByRole('radiogroup', { name: 'Radio de búsqueda' });
-    expect(screen.queryByRole('combobox', { name: 'Municipio' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Dónde buscar: Cerca de mí/ })).toBeInTheDocument();
+    for (const option of screen.getAllByRole('option')) {
+      expect(option).toHaveAttribute('aria-selected', 'false');
+    }
 
-    fireEvent.click(screen.getByRole('button', { name: 'Comparar por municipio' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Armenia' }));
 
-    expect(await screen.findByRole('combobox', { name: 'Municipio' })).toHaveValue('armenia');
+    expect(
+      await screen.findByRole('button', { name: 'Dónde buscar: Armenia' }),
+    ).toBeInTheDocument();
     const asked = lastAsked(api);
     expect(asked?.searchParams.has('lat')).toBe(false);
   });
@@ -682,9 +688,9 @@ describe('todas las tiendas, en el detalle del producto', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: 'Más cerca' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Activa la ubicación del navegador para ordenar por distancia.',
-    );
+    expect(
+      (await screen.findAllByRole('alert')).map((alert) => alert.textContent).join(' '),
+    ).toContain('Activa la ubicación del navegador para ordenar por distancia.');
     expect(screen.getByRole('radio', { name: 'Más barato' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Más cerca' })).not.toBeChecked();
     expect(lastAsked(api)?.searchParams.get('sort')).toBe('unit_price');
@@ -738,9 +744,9 @@ describe('todas las tiendas, en el detalle del producto', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
     fireEvent.click(await screen.findByRole('radio', { name: 'Más cerca' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Comparar por municipio' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Armenia' }));
 
-    await screen.findByRole('combobox', { name: 'Municipio' });
+    await screen.findByRole('button', { name: 'Dónde buscar: Armenia' });
     const asked = lastAsked(api);
     expect(asked?.searchParams.get('sort')).toBe('unit_price');
   });
@@ -749,15 +755,16 @@ describe('todas las tiendas, en el detalle del producto', () => {
     stubCompare(comparison([result()]));
     const first = renderCompare();
     await openWhere();
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Municipio' }), {
-      target: { value: 'calarca' },
-    });
+    fireEvent.click(await screen.findByRole('option', { name: 'Calarcá' }));
     first.unmount();
 
     renderCompare();
     await openWhere();
 
-    expect(await screen.findByRole('combobox', { name: 'Municipio' })).toHaveValue('calarca');
+    expect(await screen.findByRole('option', { name: 'Calarcá' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   // #16 / RF-014: la referencia mayorista del DANE va aparte; nunca es precio de una tienda.
