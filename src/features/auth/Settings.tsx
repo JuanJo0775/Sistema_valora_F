@@ -3,6 +3,7 @@ import { RadiusControl } from '../comparison/RadiusControl';
 import { type Municipality, MUNICIPALITY_OPTIONS } from '../comparison/criteria';
 import { readMunicipality, saveMunicipality } from '../comparison/lastMunicipality';
 import { readRadius, saveRadius } from '../comparison/radius';
+import { setPinShapes, usePinShapes } from '../stores/pinShapePref';
 import { BackLink } from '../../shared/ui/BackLink';
 import { SelectField } from '../../shared/ui/SelectField';
 import { isUsabilityMode, setUsabilityMode } from '../../shared/usabilityMode';
@@ -15,6 +16,7 @@ export function Settings() {
   const [municipality, setMunicipality] = useState<Municipality>(readMunicipality);
   const [radiusKm, setRadiusKm] = useState(readRadius);
   const [testing, setTesting] = useState(isUsabilityMode);
+  const pinShapes = usePinShapes();
   return (
     <section className="profile">
       <div className="profile-top">
@@ -28,6 +30,19 @@ export function Settings() {
         <div className="profile-card profile-pad">
           <ThemeChoice />
         </div>
+      </section>
+      <section className="profile-block" aria-labelledby="accesibilidad">
+        <h2 id="accesibilidad" className="eyebrow">
+          Accesibilidad
+        </h2>
+        <ul className="settings-list profile-card">
+          <SettingSwitch
+            title="Distinguir los tipos de tienda por su forma"
+            description="En el mapa, la leyenda y la lista, cada tipo suma una forma a su color: círculo, cuadrado redondeado, hexágono o estrella. Útil si te cuesta distinguir los colores."
+            on={pinShapes}
+            onChange={setPinShapes}
+          />
+        </ul>
       </section>
       <section className="profile-block" aria-labelledby="busqueda">
         <h2 id="busqueda" className="eyebrow">

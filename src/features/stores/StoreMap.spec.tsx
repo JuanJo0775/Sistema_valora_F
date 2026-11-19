@@ -1,8 +1,9 @@
 import L from 'leaflet';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clusterPoints } from './cluster';
+import { setPinShapes } from './pinShapePref';
 import { StoreMap } from './StoreMap';
 
 const stores = [
@@ -227,22 +228,56 @@ describe('mapa de Leaflet', () => {
     expect(container.querySelectorAll('.store-pin .you-dot')).toHaveLength(0);
   });
 
-  it('cada tipo de tienda dibuja una forma distinta', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <StoreMap
-          label="Mapa"
-          stores={(['barrio', 'minimercado', 'supermercado', 'descuento'] as const).map(
-            (type, index) => ({ id: type, name: type, type, lat: 4.5 + index, lng: -75.68 }),
-          )}
-        />
-      </MemoryRouter>,
+  describe('pines por tipo', () => {
+    const allTypes = (['barrio', 'minimercado', 'supermercado', 'descuento'] as const).map(
+      (type, index) => ({ id: type, name: type, type, lat: 4.5 + index, lng: -75.68 }),
     );
+    const renderTypes = () =>
+      render(
+        <MemoryRouter>
+          <StoreMap label="Mapa" stores={allTypes} />
+        </MemoryRouter>,
+      );
+    afterEach(() => {
+      localStorage.clear();
+    });
 
-    const shapes = [...container.querySelectorAll('.store-pin path')].map((path) =>
-      path.getAttribute('d'),
-    );
-    expect(new Set(shapes).size).toBe(4);
+    it('por defecto cada tienda es un círculo de color, sin formas', () => {
+      const { container } = renderTypes();
+
+      expect(container.querySelectorAll('.store-pin .pin-dot')).toHaveLength(4);
+      expect(container.querySelectorAll('.store-pin .pin-shape')).toHaveLength(0);
+      const classes = [...container.querySelectorAll('.store-pin')].map((pin) =>
+        [...pin.classList].find((name) => name.startsWith('type-')),
+      );
+      expect(classes).toEqual([
+        'type-barrio',
+        'type-minimercado',
+        'type-supermercado',
+        'type-descuento',
+      ]);
+    });
+
+    it('con la preferencia de forma, cada tipo dibuja una forma distinta', () => {
+      localStorage.setItem('valora:pines-forma', '1');
+      const { container } = renderTypes();
+
+      expect(container.querySelectorAll('.store-pin .pin-dot')).toHaveLength(0);
+      const shapes = [...container.querySelectorAll('.store-pin path')].map((path) =>
+        path.getAttribute('d'),
+      );
+      expect(new Set(shapes).size).toBe(4);
+    });
+
+    it('al cambiar la preferencia el mapa se redibuja al instante', () => {
+      const { container } = renderTypes();
+
+      act(() => {
+        setPinShapes(true);
+      });
+
+      expect(container.querySelectorAll('.store-pin .pin-shape')).toHaveLength(4);
+    });
   });
 
   it('sin la ubicación no dibuja ni el punto ni el radio', () => {

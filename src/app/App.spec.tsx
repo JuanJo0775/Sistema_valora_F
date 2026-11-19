@@ -374,7 +374,7 @@ describe('inicio', () => {
 
     fireEvent.click(await screen.findByRole('link', { name: 'Ver precios de Ara' }));
 
-    expect(await screen.findByText('Todavía no hay precios en esta tienda.')).toBeInTheDocument();
+    expect(await screen.findByText('Aún no hay precios aquí')).toBeInTheDocument();
   });
 
   it('un reportante puede marcar como dudoso un precio de la comparación', async () => {
