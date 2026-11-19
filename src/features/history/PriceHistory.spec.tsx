@@ -87,6 +87,23 @@ describe('historial de precios', () => {
     expect(chart.querySelectorAll('circle.dot')).toHaveLength(3);
   });
 
+  it('con un solo precio no dibuja la gráfica: lo dice en una tarjeta compacta', async () => {
+    stubHistory(
+      history({
+        presentationId: 'p500',
+        label: '500 g',
+        points: [point('2026-11-16', 2300, 2300, 1)],
+      }),
+    );
+
+    renderHistory();
+
+    expect(
+      await screen.findByText('Hasta ahora hay un solo precio registrado: $2.300 el 16 nov.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
   it('dice de qué producto es y qué días abarca', async () => {
     stubHistory(
       history({
