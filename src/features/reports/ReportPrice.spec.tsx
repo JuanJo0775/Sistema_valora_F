@@ -332,6 +332,54 @@ describe('registrar un precio', () => {
     expect(stores).not.toHaveTextContent('350 m');
   });
 
+  describe('tienda preseleccionada con ?tienda=', () => {
+    const pepePrices = {
+      [`GET /v1/establishments/${donPepe.id}/prices`]: {
+        status: 200,
+        body: { establishment: donPepe, prices: [] },
+      },
+    };
+
+    it('deja elegida la tienda de la dirección, junto con el producto', async () => {
+      stubApi({ ...productRoute, ...pepePrices });
+      renderReport(`/registrar?producto=${rice.id}&tienda=${donPepe.id}`);
+
+      expect(await screen.findByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+    });
+
+    it('si no es un UUID se ignora sin llamar a la API ni romper la pantalla', async () => {
+      const api = stubApi(productRoute);
+      renderReport(`/registrar?producto=${rice.id}&tienda=otra`);
+
+      expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: /Tienda/ })).toBeNull();
+      expect(api.calls.some(({ path }) => path.includes('/establishments/'))).toBe(false);
+    });
+
+    it('si la tienda no existe se ignora y queda la última recordada', async () => {
+      localStorage.setItem('valora:ultima-tienda', JSON.stringify(donPepe));
+      stubApi(productRoute);
+      renderReport(`/registrar?producto=${rice.id}&tienda=11111111-2222-4333-8444-555555555555`);
+
+      expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+    });
+
+    it('sin producto, la tienda sigue en los enlaces de cada resultado reciente', () => {
+      localStorage.setItem(
+        'valora:ultimos-productos',
+        JSON.stringify([{ id: rice.id, name: 'Arroz blanco' }]),
+      );
+      stubApi({});
+      renderReport(`/registrar?tienda=${donPepe.id}`);
+
+      expect(screen.getByRole('link', { name: 'Arroz blanco' })).toHaveAttribute(
+        'href',
+        `/registrar?producto=${rice.id}&tienda=${donPepe.id}`,
+      );
+    });
+  });
+
   it('después de «Recibido» se puede registrar otro producto en la misma tienda', async () => {
     stubApi(reportRoutes);
     renderReport();
