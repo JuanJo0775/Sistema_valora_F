@@ -4,6 +4,7 @@ import { api, call } from '../../shared/api';
 import type { components, operations } from '../../shared/api/schema';
 import { formatDistance } from '../../shared/location';
 import { formatCop } from '../../shared/money';
+import { ChipRow } from '../../shared/ui/ChipRow';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { SkeletonCard, SkeletonList } from '../../shared/ui/Skeleton';
 import { useBasket } from '../basket/basketContext';
@@ -113,8 +114,7 @@ export function TodayBasket() {
         />
       </div>
       {categories.length > 0 && (
-        <fieldset role="radiogroup" className="category-chips">
-          <legend className="sr-only">Categoría</legend>
+        <ChipRow legend="Categoría">
           {[{ code: '', name: 'Todo' }, ...categories].map((option) => (
             <label key={option.code} className="category-chip">
               <input
@@ -130,7 +130,7 @@ export function TodayBasket() {
               {option.name}
             </label>
           ))}
-        </fieldset>
+        </ChipRow>
       )}
       <p className="muted small">Primero los productos con precio en más tiendas.</p>
       {!result && !featured && <SkeletonList kind="card" count={4} />}
