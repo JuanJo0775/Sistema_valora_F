@@ -1,17 +1,45 @@
-/* Franja para instalar la app (Inicio) y su guía de pasos. Colores solo de los tokens: sirve en
-   claro y en oscuro. */
-.install-strip {
+/* Aviso para instalar la app (en cualquier pantalla) y la guía de pasos. Colores solo de los tokens:
+   sirve en claro y en oscuro. Celular: sobre la barra de navegación (y sobre la barra de compra del
+   detalle si está). Escritorio: esquina inferior derecha. El aviso de cookies tiene prioridad: aquí
+   solo se muestra cuando no hay cookies pendientes (InstallPrompt); el CSS lo repite por seguridad. */
+.install-prompt {
+  position: fixed;
+  inset: auto 8px
+    calc(var(--tabbar-h) + 8px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h));
+  z-index: 19;
   display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
+  gap: 8px;
+  max-width: 520px;
+  max-height: 60vh;
+  margin-inline: auto;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
   border-radius: var(--r-m);
   background: var(--bg-2);
+  box-shadow: var(--shadow);
   color: var(--ink);
 }
 
-.install-strip p {
+:root:has(.cookie-notice) .install-prompt {
+  display: none;
+}
+
+@media (width >= 960px) {
+  .install-prompt {
+    inset: auto 16px 16px auto;
+    width: 360px;
+    margin: 0;
+  }
+}
+
+.install-prompt .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.install-prompt p {
   margin: 0;
   font-size: 14px;
   overflow-wrap: anywhere;
@@ -44,4 +72,48 @@
 .install-row > .install-steps {
   flex: 1 1 100%;
   padding: 0 16px 12px 38px;
+}
+
+/* Pantalla «Instalar y desinstalar la app». */
+.install-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-m);
+  background: var(--bg-2);
+  color: var(--ink);
+}
+
+.uninstall-guide {
+  display: grid;
+  gap: 8px;
+  margin-block: 8px;
+}
+
+.uninstall-device {
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  padding: 0 12px;
+}
+
+.uninstall-device > summary {
+  min-height: var(--touch);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.uninstall-device[open] > summary {
+  margin-bottom: 4px;
+}
+
+.uninstall-device p {
+  margin: 8px 0 4px;
+  font-size: 14px;
+}
+
+.uninstall-device .install-steps {
+  margin-bottom: 12px;
 }

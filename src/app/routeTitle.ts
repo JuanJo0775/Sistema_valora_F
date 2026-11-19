@@ -10,6 +10,7 @@ const FIXED: Record<string, string> = {
   '/canasta': 'Canasta',
   '/yo': 'Tu cuenta',
   '/yo/ajustes': 'Ajustes',
+  '/yo/app': 'Instalar y desinstalar la app',
   '/entrar': 'Entrar',
   '/crear-cuenta': 'Crear cuenta',
   '/privacidad': 'Privacidad',
