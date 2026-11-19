@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { choose } from '../../test/choose';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi } from '../../test/fakeApi';
@@ -117,12 +118,12 @@ describe('ajustes', () => {
     expect(screen.getByText('2,4 km', { selector: '.radius-value' })).toBeInTheDocument();
   });
 
-  it('el municipio se elige y queda recordado', () => {
+  it('el municipio se elige y queda recordado', async () => {
     renderSettings();
 
-    fireEvent.change(screen.getByLabelText('Municipio'), { target: { value: 'calarca' } });
+    await choose('Municipio', 'Calarcá');
 
-    expect(screen.getByLabelText('Municipio')).toHaveValue('calarca');
+    expect(screen.getByRole('button', { name: /^Municipio/ })).toHaveTextContent('Calarcá');
     expect(localStorage.getItem('valora:municipio')).toBe('calarca');
   });
 
