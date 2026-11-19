@@ -16,13 +16,26 @@ describe('ajustes', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('tiene el enlace «Volver» y cuatro bloques con título', () => {
+  it('tiene el enlace «Volver» y cinco bloques con título', () => {
     renderSettings();
 
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
     expect(screen.getByRole('heading', { level: 1, name: 'Ajustes' })).toBeInTheDocument();
     const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(titles).toEqual(['Apariencia', 'Accesibilidad', 'Búsqueda', 'Pruebas del equipo']);
+    expect(titles).toEqual([
+      'Apariencia',
+      'Accesibilidad',
+      'Búsqueda',
+      'La app',
+      'Pruebas del equipo',
+    ]);
+  });
+  it('enlaza a la guía para desinstalar la app', () => {
+    renderSettings();
+    expect(screen.getByRole('link', { name: /Desinstalar la app/ })).toHaveAttribute(
+      'href',
+      '/yo/app',
+    );
   });
 
   it('el tema se elige y queda recordado', () => {
