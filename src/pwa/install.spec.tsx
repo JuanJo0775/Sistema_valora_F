@@ -408,9 +408,10 @@ describe('fila «Instalar la app» de Yo', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('enlaza a la pantalla de desinstalar, instalada o no', () => {
+  it('no anuncia «Desinstalar» en Yo: la guía se llama desde la fila de instalar', () => {
     inList();
-    expect(screen.getByRole('link', { name: /Desinstalar la app/ })).toHaveAttribute(
+    expect(screen.queryByText(/Desinstalar la app/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Ver la guía completa' })).toHaveAttribute(
       'href',
       '/yo/app',
     );

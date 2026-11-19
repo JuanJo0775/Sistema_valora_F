@@ -29,6 +29,7 @@ const InstallAndUninstall = screen(
   'InstallAndUninstall',
 );
 const Settings = screen(() => import('../features/auth/Settings'), 'Settings');
+const DeleteAccount = screen(() => import('../features/auth/DeleteAccount'), 'DeleteAccount');
 const SignIn = screen(() => import('../features/auth/SignIn'), 'SignIn');
 const SignUp = screen(() => import('../features/auth/SignUp'), 'SignUp');
 const VerifyEmail = screen(() => import('../features/auth/VerifyEmail'), 'VerifyEmail');
@@ -139,6 +140,7 @@ export function App() {
                 <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
                 <Route path="/yo" element={<Profile />} />
                 <Route path="/yo/ajustes" element={<Settings />} />
+                <Route path="/yo/eliminar-cuenta" element={<DeleteAccount />} />
                 <Route path="/yo/app" element={<InstallAndUninstall />} />
                 <Route path="/entrar" element={<SignIn />} />
                 <Route path="/crear-cuenta" element={<SignUp />} />

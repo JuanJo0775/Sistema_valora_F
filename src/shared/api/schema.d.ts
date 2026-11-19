@@ -4,6 +4,43 @@
  */
 
 export interface paths {
+    /* TODO(regenerar): agregado a mano; debe salir de openapi.yaml al regenerar. */
+    "/auth/restore-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restaurar una cuenta programada para eliminarse; inicia la sesión */
+        post: operations["restoreAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    /* TODO(regenerar): agregado a mano mientras el backend publica el contrato; al regenerar con
+     * `pnpm api:types` esta entrada y su operación `deleteMyAccount` salen de openapi.yaml. */
+    "/me/account-deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Eliminar la cuenta propia (pide la contraseña) */
+        post: operations["deleteMyAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1951,6 +1988,15 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["BadRequest"];
+            /** @description TODO(regenerar): code ACCOUNT_PENDING_DELETION con scheduledFor (cuenta en período de gracia). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"] & { scheduledFor?: string };
+                };
+            };
             /** @description code UNAUTHORIZED con «Correo o contraseña incorrectos.», exista o no la cuenta. */
             401: {
                 headers: {
@@ -1970,6 +2016,71 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    /* TODO(regenerar): agregado a mano; debe salir de openapi.yaml al regenerar. */
+    deleteMyAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Eliminación programada con 10 días de gracia; se revocan todas las sesiones */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date-time */
+                        scheduledFor: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description code INVALID_PASSWORD, LAST_MODERATOR_CANNOT_DELETE, MODERATOR_CANNOT_DELETE o CSRF_TOKEN_INVALID. */
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    /* TODO(regenerar): agregado a mano; debe salir de openapi.yaml al regenerar. */
+    restoreAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Cuenta restaurada y sesión iniciada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     logout: {

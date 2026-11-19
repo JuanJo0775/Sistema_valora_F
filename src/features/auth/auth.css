@@ -306,3 +306,134 @@
   line-height: 1;
   cursor: pointer;
 }
+
+/* Opciones avanzadas: plegadas, con aspecto neutro; el peligro solo se nota dentro. */
+.advanced {
+  display: block;
+}
+
+.advanced-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--touch);
+  padding: 0 4px;
+  color: var(--ink-2);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.advanced-summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced[open] > .advanced-summary {
+  margin-bottom: 10px;
+}
+
+.advanced-arrow {
+  transition: transform 0.15s ease;
+}
+
+.advanced[open] .advanced-arrow {
+  transform: rotate(90deg);
+}
+
+.advanced-divider {
+  border-top: 8px solid var(--bg-2);
+}
+
+.danger-row .settings-text strong {
+  color: var(--bad);
+}
+
+.install-more {
+  margin: 0 16px 8px;
+}
+
+.btn.danger {
+  background: var(--bad);
+  color: var(--bg);
+}
+
+.btn.danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.delete-account {
+  max-width: 560px;
+  margin-inline: 0;
+}
+
+.delete-account h1,
+.delete-account h2,
+.delete-account p,
+.delete-account ul {
+  margin: 0;
+}
+
+.delete-account h2 {
+  font-size: 1.05rem;
+}
+
+.delete-list {
+  display: grid;
+  gap: 6px;
+}
+
+.delete-list ul {
+  padding-left: 20px;
+}
+
+.delete-warning {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.delete-alert:empty {
+  display: none;
+}
+
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--touch);
+  cursor: pointer;
+}
+
+.delete-confirm input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  accent-color: var(--bad);
+}
+
+.delete-actions {
+  align-items: stretch;
+}
+
+.delete-done {
+  justify-self: center;
+  max-width: 520px;
+}
+
+.delete-done h1,
+.pending-deletion h1 {
+  overflow-wrap: anywhere;
+}
+
+.pending-deletion {
+  max-width: 520px;
+  margin-inline: 0;
+}
+
+.pending-deletion h1,
+.pending-deletion p {
+  margin: 0;
+}

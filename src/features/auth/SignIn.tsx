@@ -1,10 +1,12 @@
-import { type SyntheticEvent, useRef, useState } from 'react';
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { ApiError } from '../../shared/api';
 import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
 import { emailProblem, useFocusFirstInvalid } from './formErrors';
 import { safeReturn, withReturn } from './safeReturn';
+import { longDate } from './scheduledDate';
 import { useSession } from './session';
 import './auth.css';
 
@@ -13,13 +15,17 @@ import './auth.css';
 export function SignIn() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { signIn } = useSession();
+  const { signIn, restoreAccount } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
   const [problems, setProblems] = useState<{ email?: string; password?: string }>({});
   const [attempt, setAttempt] = useState(0);
+  // 403 ACCOUNT_PENDING_DELETION: no es un error de credenciales, la cuenta está en período de gracia.
+  const [pendingFor, setPendingFor] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<unknown>(null);
+  const panelRef = useRef<HTMLHeadingElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const volver = safeReturn(params.get('volver'));
   useFocusFirstInvalid(formRef, attempt);
@@ -42,10 +48,68 @@ export function SignIn() {
         void navigate(volver, { replace: true });
       })
       .catch((failure: unknown) => {
-        setError(failure);
+        if (
+          failure instanceof ApiError &&
+          failure.status === 403 &&
+          failure.code === 'ACCOUNT_PENDING_DELETION' &&
+          failure.scheduledFor
+        ) {
+          setPendingFor(failure.scheduledFor);
+          setRestoreError(null);
+        } else setError(failure);
         setSending(false);
       });
   };
+
+  const restore = () => {
+    setRestoreError(null);
+    setSending(true);
+    restoreAccount({ email, password })
+      .then(() => {
+        void navigate(volver, { replace: true });
+      })
+      .catch((failure: unknown) => {
+        setRestoreError(failure);
+        setSending(false);
+      });
+  };
+
+  useEffect(() => {
+    if (pendingFor) panelRef.current?.focus();
+  }, [pendingFor]);
+
+  if (pendingFor) {
+    return (
+      <section className="form pending-deletion">
+        <BackLink fallback="/yo" />
+        <h1 ref={panelRef} tabIndex={-1}>
+          Tu cuenta está programada para eliminarse el {longDate(pendingFor)}
+        </h1>
+        <p>
+          Pediste eliminar tu cuenta. Hasta esa fecha puedes cambiar de opinión y restaurarla con
+          todo como estaba. Pasada la fecha se elimina de forma definitiva.
+        </p>
+        {restoreError !== null && <ErrorState error={restoreError} />}
+        <div className="actions">
+          <button type="button" className="btn" disabled={sending} onClick={restore}>
+            {sending ? 'Restaurando…' : 'Restaurar mi cuenta'}
+          </button>
+          <button
+            type="button"
+            className="btn ghost"
+            disabled={sending}
+            onClick={() => {
+              setPendingFor(null);
+              setRestoreError(null);
+              setPassword('');
+            }}
+          >
+            Dejar que se elimine
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <form className="form" onSubmit={submit} noValidate ref={formRef}>
