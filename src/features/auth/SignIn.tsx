@@ -4,6 +4,7 @@ import { ApiError } from '../../shared/api';
 import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
+import { GoogleError, GoogleSignIn } from './GoogleSignIn';
 import { emailProblem, useFocusFirstInvalid } from './formErrors';
 import { safeReturn, withReturn } from './safeReturn';
 import { longDate } from './scheduledDate';
@@ -121,6 +122,7 @@ export function SignIn() {
           evitan abusos. Al entrar vuelves a registrar tu precio.
         </p>
       )}
+      <GoogleError code={params.get('error')} />
       {/* 401, 429 y sin red: el servidor y el cliente ya traen el mensaje en español. */}
       {error !== null && <ErrorState error={error} />}
       <Field
@@ -142,6 +144,7 @@ export function SignIn() {
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Entrando…' : 'Entrar'}
       </button>
+      <GoogleSignIn />
       <p className="muted">
         ¿No tienes cuenta? <Link to={withReturn('/crear-cuenta', volver)}>Crea una cuenta</Link>
       </p>

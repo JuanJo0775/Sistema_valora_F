@@ -39,6 +39,17 @@ describe('crear cuenta', () => {
     vi.unstubAllGlobals();
   });
 
+  // ADR-029, fase 2 (F#154): con Google no hace falta contraseña; la política se acepta en /bienvenida.
+  it('ofrece crear la cuenta con Google con el mismo enlace que /entrar', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignUp();
+
+    expect(screen.getByRole('link', { name: 'Continuar con Google' })).toHaveAttribute(
+      'href',
+      '/v1/auth/google/start',
+    );
+  });
+
   it('con correo, contraseña y la política aceptada crea la cuenta, entra y vuelve', async () => {
     const api = stubSignUp({ status: 201 });
     renderSignUp();

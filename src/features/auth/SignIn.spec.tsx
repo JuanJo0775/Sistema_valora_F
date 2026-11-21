@@ -189,6 +189,44 @@ describe('volver desde iniciar sesión', () => {
     vi.unstubAllGlobals();
   });
 
+  // ADR-029, fase 2 (F#154): un enlace normal, sin el JavaScript de Google; el servidor hace el resto.
+  it('ofrece continuar con Google con un enlace al inicio del flujo en el servidor', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignIn('/entrar');
+
+    expect(screen.getByRole('link', { name: 'Continuar con Google' })).toHaveAttribute(
+      'href',
+      '/v1/auth/google/start',
+    );
+  });
+
+  // El servidor vuelve de Google a /entrar?error=… (B#181). Solo se muestran mensajes propios: un código
+  // desconocido no pinta nada, así nadie puede escribir texto en la pantalla desde la dirección.
+  it.each([
+    ['google', 'No pudimos confirmar tu cuenta de Google. Inténtalo de nuevo.'],
+    [
+      'google-correo-sin-verificar',
+      'Google no ha verificado ese correo. Verifícalo en Google o crea una cuenta con contraseña.',
+    ],
+    [
+      'eliminacion-pendiente',
+      'Tu cuenta está programada para eliminarse. Si tiene contraseña, entra con tu correo y contraseña para restaurarla.',
+    ],
+  ])('con error=%s explica qué pasó al entrar con Google', (code, message) => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignIn(`/entrar?error=${code}`);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+  });
+
+  it('con un error desconocido en la dirección no muestra ningún mensaje', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignIn('/entrar?error=<b>texto-inventado</b>');
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/texto-inventado/)).not.toBeInTheDocument();
+  });
+
   it('trae un enlace de volver con respaldo en Yo', () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     renderSignIn('/entrar');

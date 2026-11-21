@@ -1,0 +1,108 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NO_SESSION, sessionAs, stubApi } from '../../test/fakeApi';
+import { SessionProvider } from './SessionProvider';
+import { Welcome } from './Welcome';
+
+const renderWelcome = () =>
+  render(
+    <SessionProvider>
+      <MemoryRouter initialEntries={['/bienvenida']}>
+        <Routes>
+          <Route path="/" element={<h1>Inicio</h1>} />
+          <Route path="/bienvenida" element={<Welcome />} />
+        </Routes>
+      </MemoryRouter>
+    </SessionProvider>,
+  );
+
+const writeName = (name: string) => {
+  fireEvent.change(screen.getByLabelText('Tu nombre'), { target: { value: name } });
+};
+const create = () => {
+  fireEvent.click(screen.getByRole('button', { name: 'Crear mi cuenta' }));
+};
+
+// RF-001 y grill de la #178, pregunta 2 (F#154): quien entró con Google y no tenía cuenta llega aquí.
+// Pulsar el botón de Google no es aceptar la política: se acepta en esta página.
+describe('bienvenida de quien entró con Google', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('sin aceptar la política no crea la cuenta y dice por qué', async () => {
+    const api = stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderWelcome();
+
+    writeName('Ana María');
+    create();
+
+    expect(
+      await screen.findByText(
+        'Para crear la cuenta debes aceptar la política de tratamiento de datos.',
+      ),
+    ).toBeInTheDocument();
+    expect(api.calls.some(({ path }) => path === '/v1/auth/google/complete')).toBe(false);
+  });
+
+  it('con un nombre que no son letras no crea la cuenta', async () => {
+    const api = stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderWelcome();
+
+    writeName('x');
+    fireEvent.click(screen.getByRole('checkbox'));
+    create();
+
+    expect(
+      await screen.findByText('Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.'),
+    ).toBeInTheDocument();
+    expect(api.calls.some(({ path }) => path === '/v1/auth/google/complete')).toBe(false);
+  });
+
+  it('con nombre y política crea la cuenta, entra y lleva al inicio', async () => {
+    const api = stubApi({
+      'GET /v1/auth/session': [NO_SESSION, sessionAs('reportante')],
+      'POST /v1/auth/google/complete': { status: 204 },
+    });
+    renderWelcome();
+
+    writeName('  Ana María ');
+    fireEvent.click(screen.getByRole('checkbox'));
+    create();
+
+    expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
+    const complete = api.calls.find(({ path }) => path === '/v1/auth/google/complete');
+    // El correo no viaja en el cuerpo: lo pone el servidor desde la cookie firmada.
+    expect(JSON.parse(complete?.body ?? '{}')).toEqual({
+      displayName: 'Ana María',
+      acceptedPolicyVersion: '2026-11',
+    });
+  });
+
+  // El registro pendiente dura 10 minutos y vive en una cookie de este navegador (B#181).
+  it('si el ingreso con Google venció, lo explica y ofrece volver a intentarlo', async () => {
+    stubApi({
+      'GET /v1/auth/session': NO_SESSION,
+      'POST /v1/auth/google/complete': {
+        status: 401,
+        body: { code: 'UNAUTHORIZED', message: 'Se requiere iniciar sesión.' },
+      },
+    });
+    renderWelcome();
+
+    writeName('Ana María');
+    fireEvent.click(screen.getByRole('checkbox'));
+    create();
+
+    expect(
+      await screen.findByText(
+        'Tu ingreso con Google venció o empezó en otro navegador. Vuelve a intentarlo.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Continuar con Google' })).toHaveAttribute(
+      'href',
+      '/v1/auth/google/start',
+    );
+  });
+});
