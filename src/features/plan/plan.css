@@ -8,8 +8,34 @@
 .plan h1,
 .plan h2,
 .plan h3,
-.plan p {
+.plan p,
+.plan-side h2,
+.plan-side h3,
+.plan-side p {
   margin: 0;
+}
+
+.plan-options {
+  display: grid;
+  gap: 16px;
+}
+
+/* El hueco del panel lateral donde se dibujan los supuestos: no es una caja. */
+.plan-slot {
+  display: contents;
+}
+
+/* Panel lateral oculto mientras no tiene nada (sin supuestos ni planes guardados). */
+.plan-side:not(:has(section)) {
+  display: none;
+}
+
+/* Computador: el plan a la izquierda y el panel fijo a la derecha, como /canasta. */
+@media (width >= 960px) {
+  .plan-layout > .plan {
+    max-width: none;
+    min-width: 0;
+  }
 }
 
 .plan-where {
@@ -66,7 +92,8 @@
 }
 
 /* Casillas e interruptor de al menos 24 px (WCAG 2.5.8); la etiqueta ya da la zona táctil de 44 px. */
-.plan .check input {
+.plan .check input,
+.plan-side .check input {
   flex: none;
   width: 24px;
   height: 24px;
