@@ -6,7 +6,8 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import { RadiusControl } from '../comparison/RadiusControl';
-import { useWhere, WhereChooser } from '../comparison/WhereChooser';
+import { useWhere } from '../comparison/useWhere';
+import { WherePicker } from '../comparison/WherePicker';
 import { useBasket } from '../basket/basketContext';
 import { useStoreTotals } from '../basket/useStoreTotals';
 import { StoreCard } from './StoreCard';
@@ -89,7 +90,7 @@ export function MapPage() {
       <section className="stores-main">
         <h1>{`Tiendas ${place}`}</h1>
         {subtitle && <p className="muted">{subtitle}</p>}
-        <WhereChooser where={where} backLabel="Ver por municipio" showRadius={false} />
+        <WherePicker where={where} showRadius={false} />
         <div className="map-panel">
           <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} around={around} />
           <ul className="map-legend" aria-label="Leyenda del mapa">

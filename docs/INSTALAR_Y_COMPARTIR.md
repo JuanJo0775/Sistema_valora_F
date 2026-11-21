@@ -20,13 +20,50 @@ dirección del sitio cuando llegue el dominio propio.
   copiar el enlace y abrirlo en Safari. Las ventanas internas de otras apps no pueden instalar.
 - iPadOS se detecta aunque se presente como Mac (Mac con pantalla táctil).
 
-## Cuándo se muestra la franja
+## Cuándo se muestra el aviso de instalar
 
+Es una sola tarjeta (`src/pwa/InstallPrompt.tsx`), montada en el `Layout`, así que sale en la primera
+pantalla que abra la persona y no solo en el Inicio. La antigua franja del Inicio ya no existe.
+
+- Sale unos 6 segundos después de abrir la app, y solo si hay forma de instalar: el navegador dio el
+  evento `beforeinstallprompt` (Chrome, Edge, Samsung Internet, también en el computador) o es iOS (con
+  la guía de Safari). En Android sin evento no sale; la guía sigue en **Yo > Instalar la app**.
 - Se esconde si la app ya está instalada (`display-mode: standalone` o `navigator.standalone`).
-- **Ahora no** la esconde 14 días (`localStorage`, clave `valora:instalar-oculto`). La fila de **Yo** no
-  se esconde nunca.
-- En el computador solo aparece si el navegador ofrece la instalación; no se muestra la guía general.
-- Es una franja dentro de la página (no fija): no tapa el botón de acción, la barra ni el aviso de cookies.
+- **Ahora no** (o la tecla Escape) la esconde 14 días (`localStorage`, clave `valora:instalar-oculto`).
+  **Instalar Valora** abre el cuadro del navegador; si se rechaza, cuenta como «ahora no».
+- Prioridad con lo fijo de abajo: primero el aviso de cookies; el de instalar espera a que se cierre y
+  nunca se apilan. No sale en `/registrar`. En el celular se coloca sobre la barra de navegación y sobre la
+  barra de compra del detalle (`--tabbar-h`, `--action-bar-h`); en escritorio, en la esquina inferior
+  derecha. Mientras está, la página suma `--install-h` de relleno para que no tape el final del contenido.
+- Accesibilidad: es una región con nombre (`Instalar la app`) dentro de una región `aria-live="polite"`
+  que existe siempre; no roba el foco. Usa solo los tokens de color (claro y oscuro).
+- La fila de **Yo** nunca se esconde.
+
+## Desinstalar la app
+
+Los navegadores no dejan desinstalar una app por código, así que la app solo guía. La pantalla
+**Yo > Instalar y desinstalar la app** (`/yo/app`) está enlazada desde la fila **Desinstalar la app** de Yo
+y desde **Ajustes > La app**. Si se abre instalada, muestra «Estás usando la app instalada» y pone primero,
+abiertos, los pasos del dispositivo detectado (computador, Android o iPhone/iPad); los demás quedan plegados.
+
+- **Computador, Chrome o Edge, con la app en su ventana:** menú de tres puntos de la ventana (arriba a la
+  derecha) > **Desinstalar Valora…** (Chrome) o **Desinstalar** (Edge). Hay una casilla opcional para borrar
+  también los datos del sitio.
+- **Windows:** Configuración > Aplicaciones > Aplicaciones instaladas > buscar **Valora** > Desinstalar (las
+  apps de Chrome y de Edge aparecen ahí).
+- **Mac y Linux:** en Chrome, `chrome://apps` > clic derecho en Valora > **Quitar de Chrome**, o el menú de
+  la ventana de la app. Los nombres pueden variar según la versión.
+- **Android:** mantener pulsado el ícono > **Desinstalar** (o Información de la app > Desinstalar).
+- **iPhone y iPad:** mantener pulsado el ícono > **Eliminar app** > **Eliminar de la pantalla de inicio**.
+- Desinstalar no borra la cuenta ni los aportes. La canasta y las preferencias guardadas en el dispositivo
+  se borran desde el navegador (borrar los datos del sitio).
+
+## Registrar un precio con la tienda elegida
+
+`/registrar` acepta `?tienda=<id>` junto a `?producto=<id>` para dejar el establecimiento preseleccionado
+(por ejemplo, desde la página de una tienda). Si no es un UUID, o la tienda no existe
+(`GET /establishments/{id}/prices` responde 404), se ignora y queda la última tienda recordada. Sin
+`?producto=`, la tienda se conserva en los enlaces de los productos recientes y del buscador.
 
 ## Auditoría de instalabilidad móvil (18-nov-2026)
 
