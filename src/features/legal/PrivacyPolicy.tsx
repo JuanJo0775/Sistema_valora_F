@@ -207,10 +207,18 @@ export function PrivacyPolicy() {
           </li>
         </ul>
         <p>
-          Si pides la supresión, eliminamos tu cuenta y tus datos de contacto. Los precios que
-          reportaste pueden conservarse porque son información pública sin tu nombre ni tu correo.
-          La supresión no procede mientras tengas un deber legal o contractual de permanecer en la
-          base de datos.
+          <strong>Eliminar tu cuenta desde la aplicación.</strong> Entra a Ajustes, abre «Opciones
+          avanzadas» y elige «Eliminar mi cuenta». Tu cuenta queda programada para eliminarse a los
+          10 días corridos y se cierran todas tus sesiones. En ese plazo puedes cambiar de opinión:
+          inicia sesión con tu correo y tu contraseña y pulsa «Restaurar mi cuenta». Pasado el
+          plazo, eliminamos de forma definitiva tu cuenta, tu correo, tu nombre, tu contraseña
+          cifrada y tus sesiones.
+        </p>
+        <p>
+          Los precios, propuestas y marcas que aportaste se conservan sin tu nombre ni tu correo y
+          ya no se pueden vincular a ti: son información pública que la comunidad usa para comparar.
+          También puedes pedir la supresión por el canal de contacto (sección 1). La supresión no
+          procede mientras tengas un deber legal o contractual de permanecer en la base de datos.
         </p>
       </section>
 
@@ -221,8 +229,11 @@ export function PrivacyPolicy() {
           cifrada (HTTPS), datos personales separados del resto en la base y pruebas automáticas que
           verifican que ninguna respuesta pública traiga tu correo, tu identificador ni tu
           ubicación. Conservamos tus datos mientras tu cuenta esté activa y por el tiempo que dure
-          el proyecto. Ningún sistema es infalible; si ocurre un incidente que afecte tus datos, lo
-          informaremos a la SIC y a los titulares afectados, como exige la ley.
+          el proyecto. Cuando eliminas tu cuenta, las copias de respaldo de la base de datos y los
+          registros de envío de correo de nuestros proveedores pueden conservar tus datos por un
+          plazo limitado, hasta que vence su retención, y no se usan para nada más. Ningún sistema
+          es infalible; si ocurre un incidente que afecte tus datos, lo informaremos a la SIC y a
+          los titulares afectados, como exige la ley.
         </p>
       </section>
 

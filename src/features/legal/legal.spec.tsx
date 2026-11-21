@@ -33,6 +33,19 @@ describe('política de tratamiento de datos', () => {
     expect(screen.getByText(/Superintendencia de Industria y Comercio/)).toBeInTheDocument();
   });
 
+  it('explica cómo eliminar la cuenta, los 10 días de gracia y qué se conserva', () => {
+    render(
+      <MemoryRouter>
+        <PrivacyPolicy />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/Eliminar tu cuenta desde la aplicación/)).toBeInTheDocument();
+    expect(screen.getByText(/10 días corridos/)).toBeInTheDocument();
+    expect(screen.getByText(/Restaurar mi cuenta/)).toBeInTheDocument();
+    expect(screen.getByText(/se conservan sin tu nombre ni tu correo/)).toBeInTheDocument();
+    expect(screen.getByText(/copias de respaldo de la base de datos/)).toBeInTheDocument();
+  });
+
   it('dice que no guarda la ubicación y que no usa cookies de seguimiento', () => {
     render(
       <MemoryRouter>
