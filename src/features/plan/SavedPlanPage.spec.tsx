@@ -58,6 +58,14 @@ describe('plan guardado', () => {
     expect(screen.queryByText('Puede estar desactualizado')).not.toBeInTheDocument();
   });
 
+  it('cada producto sin precio es una sola fila que se lee seguida', () => {
+    renderAt(stored(NOW).id);
+
+    const row = screen.getByText('Sal marina').closest('li');
+    expect(row?.children).toHaveLength(1);
+    expect(row?.textContent.replaceAll(' ', ' ').trim()).toBe('1 × Sal marina 500 g');
+  });
+
   it('tachar Comprado cambia solo esa línea y persiste', () => {
     renderAt(stored(NOW).id);
 
