@@ -10,6 +10,7 @@ import { safeReturn, withReturn } from './safeReturn';
 import { POLICY_VERSION } from '../legal/policy';
 import { useSession } from './session';
 import { rememberVerifyReturn } from './verifyReturn';
+import { NameField, PolicyConsent } from './AccountConsent';
 import './auth.css';
 
 const MIN_PASSWORD = 10;
@@ -112,18 +113,7 @@ export function SignUp() {
           <Link to={withReturn('/entrar', volver)}>Iniciar sesión</Link>
         </p>
       )}
-      <Field
-        label="Tu nombre"
-        autoComplete="given-name"
-        maxLength={40}
-        value={name}
-        onValue={setName}
-        aria-describedby="nombre-privado"
-        error={problems.name}
-      />
-      <p id="nombre-privado" className="muted">
-        Solo tú lo ves. Nunca se publica.
-      </p>
+      <NameField value={name} onValue={setName} error={problems.name} />
       <Field
         label="Correo"
         type="email"
@@ -141,34 +131,7 @@ export function SignUp() {
         value={password}
         onValue={setPassword}
       />
-      <p className="muted" id="aviso-privacidad">
-        Aviso de privacidad: usamos tu correo y tu nombre solo para tu cuenta y tus aportes. No
-        publicamos tus datos ni los usamos para publicidad. Puedes conocerlos, corregirlos, pedir su
-        supresión o revocar tu autorización cuando quieras.
-      </p>
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={accepted}
-          aria-invalid={problems.accepted ? true : undefined}
-          aria-describedby={problems.accepted ? 'error-politica' : undefined}
-          onChange={(event) => {
-            setAccepted(event.target.checked);
-          }}
-        />
-        <span>
-          Acepto la{' '}
-          <Link to="/privacidad" target="_blank" rel="noopener">
-            política de tratamiento de datos
-          </Link>{' '}
-          (versión {POLICY_VERSION}).
-        </span>
-      </label>
-      {problems.accepted && (
-        <p id="error-politica" role="alert" className="field-error">
-          {problems.accepted}
-        </p>
-      )}
+      <PolicyConsent accepted={accepted} onAccepted={setAccepted} error={problems.accepted} />
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Creando cuenta…' : 'Crear cuenta'}
       </button>

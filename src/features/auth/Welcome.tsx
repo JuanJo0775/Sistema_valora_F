@@ -1,12 +1,12 @@
 import { type SyntheticEvent, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { POLICY_VERSION } from '../legal/policy';
-import { Field } from './Field';
 import { GoogleSignIn } from './GoogleSignIn';
 import { nameProblem, POLICY_REQUIRED, useFocusFirstInvalid } from './formErrors';
 import { useSession } from './session';
+import { NameField, PolicyConsent } from './AccountConsent';
 import './auth.css';
 
 type Problems = { name?: string; accepted?: string };
@@ -78,46 +78,8 @@ export function Welcome() {
         Entraste con Google. Para terminar, dinos cómo te llamamos y acepta la política de datos.
       </p>
       {error !== null && <ErrorState error={error} />}
-      <Field
-        label="Tu nombre"
-        autoComplete="given-name"
-        maxLength={40}
-        value={name}
-        onValue={setName}
-        aria-describedby="nombre-privado"
-        error={problems.name}
-      />
-      <p id="nombre-privado" className="muted">
-        Solo tú lo ves. Nunca se publica.
-      </p>
-      <p className="muted">
-        Aviso de privacidad: usamos tu correo y tu nombre solo para tu cuenta y tus aportes. No
-        publicamos tus datos ni los usamos para publicidad. Puedes conocerlos, corregirlos, pedir su
-        supresión o revocar tu autorización cuando quieras.
-      </p>
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={accepted}
-          aria-invalid={problems.accepted ? true : undefined}
-          aria-describedby={problems.accepted ? 'error-politica' : undefined}
-          onChange={(event) => {
-            setAccepted(event.target.checked);
-          }}
-        />
-        <span>
-          Acepto la{' '}
-          <Link to="/privacidad" target="_blank" rel="noopener">
-            política de tratamiento de datos
-          </Link>{' '}
-          (versión {POLICY_VERSION}).
-        </span>
-      </label>
-      {problems.accepted && (
-        <p id="error-politica" className="field-error" role="alert">
-          {problems.accepted}
-        </p>
-      )}
+      <NameField value={name} onValue={setName} error={problems.name} />
+      <PolicyConsent accepted={accepted} onAccepted={setAccepted} error={problems.accepted} />
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Creando cuenta…' : 'Crear mi cuenta'}
       </button>
