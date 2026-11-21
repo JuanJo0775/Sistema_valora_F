@@ -66,6 +66,9 @@ export interface SavedSummary {
   netCop: number | null;
   // Productos de la canasta sin precio vigente en el área.
   missing: number;
+  // Cuándo se actualizaron los precios desde el plan guardado. Si está, baselineCop y netCop son
+  // null porque se calcularon con los precios viejos: hay que recalcular el plan.
+  pricesUpdatedAt?: string;
 }
 
 export interface SavedPlan {
@@ -190,6 +193,16 @@ const validLine = (l: unknown) =>
   (l.observedAt === null || isStr(l.observedAt)) &&
   typeof l.bought === 'boolean';
 
+const isPositive = (x: unknown) => isNum(x) && x > 0;
+
+const validAssumptions = (a: unknown) =>
+  isObj(a) &&
+  isPositive(a.detour) &&
+  isPositive(a.kmh) &&
+  (a.mode === 'none' || a.mode === 'fare' || a.mode === 'perKm') &&
+  (a.fareCop === undefined || isNum(a.fareCop)) &&
+  (a.perKmCop === undefined || isNum(a.perKmCop));
+
 const validSummary = (s: unknown) =>
   isObj(s) &&
   isNum(s.stores) &&
@@ -202,10 +215,11 @@ const validSummary = (s: unknown) =>
       (s.travel.less === undefined || typeof s.travel.less === 'boolean') &&
       isNum(s.travel.minutes) &&
       isNumOrNull(s.travel.costCop) &&
-      isObj(s.travel.assumptions))) &&
+      validAssumptions(s.travel.assumptions))) &&
   isNum(s.deliveryCop) &&
   isNumOrNull(s.netCop) &&
-  isNum(s.missing);
+  isNum(s.missing) &&
+  (s.pricesUpdatedAt === undefined || isStr(s.pricesUpdatedAt));
 
 const validPlan = (p: unknown): p is SavedPlan =>
   isObj(p) &&
@@ -293,6 +307,144 @@ export function savePlan(plan: SavedPlan): 'saved' | 'full' | 'failed' {
   else if (plans.length >= MAX_PLANS) return 'full';
   else plans.push(plan);
   return write(state, plans) ? 'saved' : 'failed';
+}
+
+// Lo que hace igual a dos planes: tiendas, líneas, cantidades, precios y área. No cuentan ni el id,
+// ni savedAt, ni lo ya comprado (es avance de la persona, no contenido del plan).
+const contentKey = (p: SavedPlan) =>
+  JSON.stringify(
+    {
+      area: p.area,
+      stores: p.stores,
+      lines: p.lines.map((l) => ({ ...l, bought: false })),
+      summary: p.summary,
+    },
+    (_key, value: unknown) =>
+      isObj(value)
+        ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+        : value,
+  );
+
+// Como savePlan, pero si ya hay un plan con el mismo contenido no crea otro ni gasta cupo: solo
+// actualiza su savedAt y devuelve su id.
+export function savePlanOnce(plan: SavedPlan): {
+  outcome: 'saved' | 'full' | 'failed' | 'same';
+  id: string;
+} {
+  const state = readStoredPlans();
+  const key = contentKey(plan);
+  const same = state.plans.find((p) => contentKey(p) === key);
+  if (!same) return { outcome: savePlan(plan), id: plan.id };
+  same.savedAt = plan.savedAt;
+  return { outcome: write(state, state.plans) ? 'same' : 'failed', id: same.id };
+}
+
+// Lo que se usa de una oferta de la comparación (ComparisonItem la cumple).
+export interface PriceOffer {
+  establishment: { id: string; name: string };
+  presentationId: string;
+  priceCop: number;
+  source: Source;
+  freshness: Freshness;
+  observedAt: string;
+}
+
+export interface LineDiff {
+  productId: string;
+  presentationId: string;
+  productName: string;
+  storeId: string;
+  storeName: string;
+  // up/down/same: el precio en la misma tienda; gone: ya no hay precio vigente en ella.
+  kind: 'same' | 'up' | 'down' | 'gone';
+  beforeCop: number;
+  beforeAt: string | null;
+  now: ({ priceCop: number } & Pick<SavedLine, 'observedAt' | 'source' | 'freshness'>) | null;
+  // Otra tienda con la misma presentación más barata que el precio de referencia (el de ahora, o el
+  // de antes si ya no hay). Solo se dice: el reparto no cambia.
+  cheaper: { storeName: string; priceCop: number } | null;
+}
+
+const cheapest = (offers: PriceOffer[]): PriceOffer | undefined =>
+  offers.reduce<PriceOffer | undefined>(
+    (min, o) => (!min || o.priceCop < min.priceCop ? o : min),
+    undefined,
+  );
+
+// Compara cada línea con tienda y precio contra las ofertas de hoy de su producto (productId →
+// ofertas), siempre la misma presentación en la misma tienda.
+export function diffPrices(
+  plan: SavedPlan,
+  offersByProduct: Map<string, PriceOffer[]>,
+): LineDiff[] {
+  return plan.lines.flatMap((line): LineDiff[] => {
+    if (line.storeId === null || line.priceCop === null) return [];
+    const { storeId } = line;
+    const offers = (offersByProduct.get(line.productId) ?? []).filter(
+      (o) => o.presentationId === line.presentationId,
+    );
+    const mine = cheapest(offers.filter((o) => o.establishment.id === storeId));
+    const reference = mine?.priceCop ?? line.priceCop;
+    const other = cheapest(offers.filter((o) => o.establishment.id !== storeId));
+    let kind: LineDiff['kind'] = 'gone';
+    if (mine)
+      kind =
+        mine.priceCop === line.priceCop ? 'same' : mine.priceCop > line.priceCop ? 'up' : 'down';
+    return [
+      {
+        productId: line.productId,
+        presentationId: line.presentationId,
+        productName: line.productName,
+        storeId,
+        storeName: plan.stores.find((st) => st.id === storeId)?.name ?? storeId,
+        kind,
+        beforeCop: line.priceCop,
+        beforeAt: line.observedAt,
+        now: mine
+          ? {
+              priceCop: mine.priceCop,
+              observedAt: mine.observedAt,
+              source: mine.source,
+              freshness: mine.freshness,
+            }
+          : null,
+        cheaper:
+          other && other.priceCop < reference
+            ? { storeName: other.establishment.name, priceCop: other.priceCop }
+            : null,
+      },
+    ];
+  });
+}
+
+// Guarda solo los precios que cambiaron (sube o baja). No toca tiendas, domicilios, supuestos ni
+// lo comprado. El ahorro y el neto se calcularon con los precios viejos: quedan en null.
+export function applyPriceUpdate(plan: SavedPlan, diffs: LineDiff[], now = new Date()): SavedPlan {
+  const changed = new Map(
+    diffs
+      .filter((d) => (d.kind === 'up' || d.kind === 'down') && d.now)
+      .map((d) => [d.presentationId, d.now]),
+  );
+  if (changed.size === 0) return plan;
+  const lines = plan.lines.map((l) => {
+    const fresh = changed.get(l.presentationId);
+    return fresh ? { ...l, ...fresh } : l;
+  });
+  const productsCop = lines.reduce(
+    (sum, l) => sum + (l.storeId !== null && l.priceCop !== null ? l.priceCop * l.quantity : 0),
+    0,
+  );
+  return {
+    ...plan,
+    lines,
+    summary: {
+      ...plan.summary,
+      productsCop,
+      baselineCop: null,
+      netCop: null,
+      pricesUpdatedAt: now.toISOString(),
+    },
+  };
 }
 
 export function deletePlan(id: string): void {

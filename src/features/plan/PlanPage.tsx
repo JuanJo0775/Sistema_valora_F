@@ -18,6 +18,7 @@ import { SavedPlansList } from './SavedPlansList';
 import { bestSplits, type SplitOption } from './split';
 import {
   extraTravel,
+  hasLocation,
   netEstimate,
   routeEstimate,
   shownTravel,
@@ -310,6 +311,10 @@ function OptionCard({
   const split = option.stores > 1;
   const cost = (estimate: TravelEstimate) =>
     estimate.costCop === null ? '' : ` · ${formatCop(estimate.costCop)}`;
+  // Una tienda que se visita pero no tiene coordenadas válidas queda fuera del traslado.
+  const unlocated = option.shares.filter(
+    ({ store }) => !deliveryOf(store.id).on && !hasLocation(store),
+  ).length;
   const assumed = `Supuestos: línea recta × ${NUM.format(assumptions.detour)}; ${NUM.format(assumptions.kmh)} km/h a pie.`;
   return (
     <section className="plan-option" aria-labelledby={titleId}>
@@ -355,6 +360,11 @@ function OptionCard({
             )}
             <p className="muted">Sin tu ubicación no estimamos el trayecto desde tu casa</p>
           </>
+        )}
+        {unlocated > 0 && (
+          <p className="muted">
+            {`No pudimos ubicar ${String(unlocated)} ${unlocated === 1 ? 'tienda' : 'tiendas'}; el traslado no ${unlocated === 1 ? 'la cuenta' : 'las cuenta'}.`}
+          </p>
         )}
         <p className="muted">{assumed}</p>
         {hasFee && <p>{`Domicilio estimado: ${formatCop(deliveryCop)} (tarifa que escribiste)`}</p>}
