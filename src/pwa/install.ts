@@ -96,7 +96,7 @@ export function isInstalled(win: Window = window): boolean {
   return standalone || displayMode;
 }
 
-// «Ahora no»: se recuerda 14 días y la franja vuelve a aparecer.
+// «Ahora no»: se recuerda 14 días y el aviso vuelve a aparecer.
 export function isHiddenForNow(now = Date.now()): boolean {
   const saved = Number(readStored(HIDDEN_KEY));
   if (!Number.isFinite(saved) || saved <= 0) return false;

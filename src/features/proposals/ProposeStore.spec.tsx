@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { choose } from '../../test/choose';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, sessionAs, stubApi } from '../../test/fakeApi';
@@ -38,11 +39,11 @@ const renderPropose = (
   return api;
 };
 
-const fill = () => {
+const fill = async () => {
   fireEvent.change(screen.getByLabelText('Nombre de la tienda'), {
     target: { value: 'Tienda La Esperanza' },
   });
-  fireEvent.change(screen.getByRole('combobox', { name: 'Tipo' }), { target: { value: 'barrio' } });
+  await choose('Tipo', 'Tienda de barrio');
   fireEvent.change(screen.getByLabelText('Dirección (opcional)'), {
     target: { value: 'Carrera 19 # 10-20' },
   });
@@ -62,7 +63,7 @@ describe('proponer una tienda', () => {
 
   it('se marca la tienda en el mapa y queda pendiente de un moderador', async () => {
     const api = renderPropose();
-    fill();
+    await fill();
     fireEvent.click(screen.getByRole('button', { name: 'Tocar el mapa' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
@@ -84,7 +85,7 @@ describe('proponer una tienda', () => {
   it('«Estoy en la tienda» marca el punto donde está la persona, solo si lo toca', async () => {
     const api = renderPropose();
     stubLocation();
-    fill();
+    await fill();
 
     fireEvent.click(screen.getByRole('button', { name: 'Estoy en la tienda' }));
     expect(await screen.findByText('Marcado en 4.53, -75.68')).toBeInTheDocument();
@@ -97,9 +98,9 @@ describe('proponer una tienda', () => {
   it.each([
     ['el nombre', false, true, 'Escribe el nombre de la tienda.'],
     ['el punto en el mapa', true, false, 'Toca el mapa para marcar dónde queda la tienda.'],
-  ])('sin %s lo dice y no envía', (_missing, withName, withPoint, message) => {
+  ])('sin %s lo dice y no envía', async (_missing, withName, withPoint, message) => {
     const api = renderPropose();
-    if (withName) fill();
+    if (withName) await fill();
     if (withPoint) fireEvent.click(screen.getByRole('button', { name: 'Tocar el mapa' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
@@ -113,7 +114,7 @@ describe('proponer una tienda', () => {
       status: 400,
       body: { code: 'VALIDATION_ERROR', message: 'La ubicación está fuera del Quindío.' },
     });
-    fill();
+    await fill();
     fireEvent.click(screen.getByRole('button', { name: 'Tocar el mapa' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
@@ -132,7 +133,7 @@ describe('sugerir una tienda: salidas y ubicación', () => {
 
   it('«Recibido» ofrece ver mis aportes y volver al mapa', async () => {
     renderPropose();
-    fill();
+    await fill();
     fireEvent.click(screen.getByRole('button', { name: 'Tocar el mapa' }));
     fireEvent.click(screen.getByRole('button', { name: 'Enviar propuesta' }));
 

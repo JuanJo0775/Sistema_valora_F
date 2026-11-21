@@ -4,12 +4,13 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { directionsTo } from '../../shared/directions';
 import { clusterPoints } from './cluster';
-import { pinSvg } from './pinShapes';
+import { pinHtml } from './pinShapes';
+import { usePinShapes } from './pinShapePref';
 
 export interface MapStore {
   id: string;
   name: string;
-  // #73: el tipo da la forma y el color del marcador (barrio, minimercado, supermercado, descuento).
+  // El tipo da el color (y, si se pidió, la forma) del marcador (barrio, minimercado, supermercado, descuento).
   type?: string;
   lat: number;
   lng: number;
@@ -66,6 +67,8 @@ export function StoreMap({
   // El último onPick, sin volver a crear el mapa cada vez que cambia.
   const pick = useRef(onPick);
   const navigate = useNavigate();
+  // Accesibilidad: con la preferencia activa, cada tipo suma su forma al color (Ajustes).
+  const shaped = usePinShapes();
 
   useEffect(() => {
     pick.current = onPick;
@@ -159,7 +162,7 @@ export function StoreMap({
           const marker: L.Marker = L.marker([store.lat, store.lng], {
             icon: L.divIcon({
               className: `store-pin${kind}`,
-              html: pinSvg(store.type),
+              html: pinHtml(store.type, shaped),
               iconSize: [PIN, PIN],
               iconAnchor: [PIN / 2, PIN / 2],
               popupAnchor: [0, -PIN / 2],
@@ -218,7 +221,7 @@ export function StoreMap({
     return () => {
       current.off('zoomend', draw);
     };
-  }, [stores, navigate, hasAround]);
+  }, [stores, navigate, hasAround, shaped]);
 
   // La persona y su círculo: se vuelven a dibujar solo si cambia dónde está.
   const lat = around?.lat;

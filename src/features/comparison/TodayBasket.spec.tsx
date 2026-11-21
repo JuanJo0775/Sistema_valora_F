@@ -111,7 +111,13 @@ describe('canasta básica de hoy, en el Inicio', () => {
     });
 
     const rice = await card('Arroz Diana');
-    expect(rice.getByText('Hasta −15 % frente a la tienda más cara')).toBeInTheDocument();
+    // El ahorro cabe en una línea; contra qué compara lo oye el lector de pantalla y sale al pasar el ratón.
+    const savings = rice.getByText('Ahorra hasta 15 %');
+    expect(savings.closest('.pill')).toHaveAttribute(
+      'title',
+      'Ahorra hasta 15 % frente a la tienda más cara',
+    );
+    expect(rice.getByText('frente a la tienda más cara')).toHaveClass('sr-only');
     expect(rice.getByText('1 kg')).toBeInTheDocument();
     expect(rice.getByText('$3.890')).toBeInTheDocument();
     expect(rice.getByText('En Ahorra Más')).toBeInTheDocument();
@@ -121,7 +127,7 @@ describe('canasta básica de hoy, en el Inicio', () => {
       `/productos/${RICE_ID}`,
     );
     // Sin dos tiendas no hay ahorro que mostrar.
-    expect((await card('Leche')).queryByText(/Hasta/)).not.toBeInTheDocument();
+    expect((await card('Leche')).queryByText(/Ahorra hasta/)).not.toBeInTheDocument();
   });
 
   it('dice cuántas tiendas tienen precios y el criterio del orden', async () => {
@@ -156,6 +162,35 @@ describe('canasta básica de hoy, en el Inicio', () => {
     expect(asked(api)?.get('lat')).toBe('4.53');
     expect(asked(api)?.get('radiusKm')).toBe('1.5');
     expect(asked(api)?.has('municipality')).toBe(false);
+  });
+
+  it('cambiar de municipio actualiza la canasta sin recargar, con la misma categoría y el skeleton mientras llega', async () => {
+    const api = renderBasket({
+      'GET /v1/featured-products': [
+        basket([featured('Arroz')]),
+        basket([featured('Arroz')]),
+        {
+          status: 200,
+          body: {
+            ...(basket([featured('Lenteja')]).body as object),
+            criteria: { municipality: 'calarca', sort: 'store_count' },
+          },
+        },
+      ],
+    });
+    fireEvent.click(await screen.findByRole('radio', { name: 'Aceites' }));
+    await vi.waitFor(() => {
+      expect(asked(api)?.get('category')).toBe('aceites');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dónde buscar: Armenia' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Calarcá' }));
+
+    expect(await screen.findByText('Precios de 7 tiendas en Calarcá.')).toBeInTheDocument();
+    expect(asked(api)?.get('municipality')).toBe('calarca');
+    expect(asked(api)?.get('category')).toBe('aceites');
+    expect(screen.getByRole('radio', { name: 'Aceites' })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Dónde buscar: Calarcá' })).toBeInTheDocument();
   });
 
   it('los chips de categoría filtran la canasta', async () => {

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { choose } from '../../test/choose';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -47,6 +48,11 @@ const renderMap = () =>
     </BasketProvider>,
   );
 
+// El «¿Dónde?» abre la elección de la ubicación o del municipio.
+const openWhere = async () => {
+  fireEvent.click(await screen.findByRole('button', { name: /^Dónde buscar/ }));
+};
+
 describe('mapa de tiendas', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -94,7 +100,8 @@ describe('mapa de tiendas', () => {
     expect(
       await screen.findByText('2 tiendas registradas en Valora en Armenia.'),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+    await openWhere();
+    fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
     expect(
       await screen.findByText(
         '1 tienda registrada en Valora a menos de 1,5 km. Tu ubicación no se guarda.',
@@ -209,9 +216,7 @@ describe('mapa de tiendas', () => {
     renderMap();
     await screen.findByRole('heading', { name: 'Tiendas en Armenia' });
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Municipio' }), {
-      target: { value: 'calarca' },
-    });
+    await choose('Dónde buscar', 'Calarcá');
 
     expect(await screen.findByRole('heading', { name: 'Tiendas en Calarcá' })).toBeInTheDocument();
     const asked = api.requested.filter(({ pathname }) => pathname === '/v1/establishments').at(-1);
@@ -229,6 +234,7 @@ describe('mapa de tiendas', () => {
     stubLocation();
     renderMap();
 
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
 
     expect(await screen.findByRole('heading', { name: 'Tiendas cerca de ti' })).toBeInTheDocument();
@@ -255,6 +261,7 @@ describe('mapa de tiendas', () => {
     });
     stubLocation();
     renderMap();
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
     const slider = await screen.findByRole('slider', { name: 'Radio de búsqueda' });
     await screen.findByText('Círculo de 1.5 km');
@@ -388,16 +395,17 @@ describe('mapa de tiendas', () => {
     stubLocation();
     renderMap();
 
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
     await screen.findByRole('heading', { name: 'Tiendas cerca de ti' });
     expect(localStorage.getItem('valora:donde')).toBe('ubicacion');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ver por municipio' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Armenia' }));
     await screen.findByRole('heading', { name: 'Tiendas en Armenia' });
     expect(localStorage.getItem('valora:donde')).toBeNull();
   });
 
-  it('la leyenda dice la forma de cada tipo de tienda y cómo se ven varias juntas', async () => {
+  it('la leyenda muestra un círculo de color por tipo y cómo se ven varias juntas', async () => {
     stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
 
     renderMap();
@@ -411,10 +419,29 @@ describe('mapa de tiendas', () => {
       'Descuento',
       '3Varias tiendas juntas',
     ]);
-    // Cada tipo, con una forma distinta, la misma que dibuja el pin.
+    const types = ['barrio', 'minimercado', 'supermercado', 'descuento'];
+    expect(items.slice(0, 4).map((item) => item.className)).toEqual(
+      types.map((type) => `type-${type}`),
+    );
+    expect(items.slice(0, 4).every((item) => item.querySelector('.pin-dot'))).toBe(true);
+    expect(legend.querySelector('path')).toBeNull();
+  });
+
+  it('con la preferencia de forma, la leyenda y las tarjetas muestran la forma de cada tipo', async () => {
+    localStorage.setItem('valora:pines-forma', '1');
+    stubApi({ 'GET /v1/establishments': { status: 200, body: { items: [ara] } } });
+
+    renderMap();
+
+    const legend = await screen.findByRole('list', { name: 'Leyenda del mapa' });
+    const items = within(legend).getAllByRole('listitem');
     const shapes = items.slice(0, 4).map((item) => item.querySelector('path')?.getAttribute('d'));
     expect(new Set(shapes).size).toBe(4);
     expect(shapes).toEqual(['barrio', 'minimercado', 'supermercado', 'descuento'].map(shapeOf));
+    expect(legend.querySelector('.pin-dot')).toBeNull();
+    const side = screen.getByRole('complementary', { name: 'Lista de tiendas' });
+    expect(side.querySelector('.pin-badge .pin-shape')).not.toBeNull();
+    expect(side.querySelector('.pin-badge .pin-dot')).toBeNull();
   });
 
   it('con la ubicación activa la leyenda suma «Tú estás aquí»', async () => {
@@ -427,6 +454,7 @@ describe('mapa de tiendas', () => {
 
     const legend = await screen.findByRole('list', { name: 'Leyenda del mapa' });
     expect(within(legend).queryByText('Tú estás aquí')).not.toBeInTheDocument();
+    await openWhere();
     fireEvent.click(await screen.findByRole('button', { name: 'Usar mi ubicación' }));
     expect(await within(legend).findByText('Tú estás aquí')).toBeInTheDocument();
   });
