@@ -111,7 +111,13 @@ describe('canasta básica de hoy, en el Inicio', () => {
     });
 
     const rice = await card('Arroz Diana');
-    expect(rice.getByText('Hasta −15 % frente a la tienda más cara')).toBeInTheDocument();
+    // El ahorro cabe en una línea; contra qué compara lo oye el lector de pantalla y sale al pasar el ratón.
+    const savings = rice.getByText('Ahorra hasta 15 %');
+    expect(savings.closest('.pill')).toHaveAttribute(
+      'title',
+      'Ahorra hasta 15 % frente a la tienda más cara',
+    );
+    expect(rice.getByText('frente a la tienda más cara')).toHaveClass('sr-only');
     expect(rice.getByText('1 kg')).toBeInTheDocument();
     expect(rice.getByText('$3.890')).toBeInTheDocument();
     expect(rice.getByText('En Ahorra Más')).toBeInTheDocument();
@@ -121,7 +127,7 @@ describe('canasta básica de hoy, en el Inicio', () => {
       `/productos/${RICE_ID}`,
     );
     // Sin dos tiendas no hay ahorro que mostrar.
-    expect((await card('Leche')).queryByText(/Hasta/)).not.toBeInTheDocument();
+    expect((await card('Leche')).queryByText(/Ahorra hasta/)).not.toBeInTheDocument();
   });
 
   it('dice cuántas tiendas tienen precios y el criterio del orden', async () => {
