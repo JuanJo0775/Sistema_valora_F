@@ -1,8 +1,11 @@
 import { type SyntheticEvent, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { api, call } from '../../shared/api';
+import { ErrorState } from '../../shared/ui/ErrorState';
 import { POLICY_VERSION } from '../legal/policy';
 import { Field } from './Field';
 import { nameProblem, POLICY_REQUIRED, useFocusFirstInvalid } from './formErrors';
+import { useSession } from './session';
 import './auth.css';
 
 type Problems = { name?: string; accepted?: string };
@@ -15,7 +18,11 @@ export function Welcome() {
   const [accepted, setAccepted] = useState(false);
   const [problems, setProblems] = useState<Problems>({});
   const [attempt, setAttempt] = useState(0);
+  const [error, setError] = useState<unknown>(null);
+  const [sending, setSending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const navigate = useNavigate();
+  const { reload } = useSession();
   useFocusFirstInvalid(formRef, attempt);
 
   const submit = (event: SyntheticEvent) => {
@@ -25,7 +32,27 @@ export function Welcome() {
       accepted: accepted ? undefined : POLICY_REQUIRED,
     };
     setProblems(found);
-    if (found.name || found.accepted) setAttempt((n) => n + 1);
+    if (found.name || found.accepted) {
+      setAttempt((n) => n + 1);
+      return;
+    }
+    setError(null);
+    setSending(true);
+    // El correo no viaja en el cuerpo: el servidor lo toma de la cookie firmada que dejó Google.
+    call(
+      api.POST('/auth/google/complete', {
+        body: { displayName: name.trim(), acceptedPolicyVersion: POLICY_VERSION },
+      }),
+    )
+      .then(() => {
+        // La sesión ya quedó abierta en la cookie: se vuelve a leer para saludar y mostrar el rol.
+        reload();
+        void navigate('/', { replace: true });
+      })
+      .catch((failure: unknown) => {
+        setError(failure);
+        setSending(false);
+      });
   };
 
   return (
@@ -34,6 +61,7 @@ export function Welcome() {
       <p>
         Entraste con Google. Para terminar, dinos cómo te llamamos y acepta la política de datos.
       </p>
+      {error !== null && <ErrorState error={error} />}
       <Field
         label="Tu nombre"
         autoComplete="given-name"
@@ -74,8 +102,8 @@ export function Welcome() {
           {problems.accepted}
         </p>
       )}
-      <button type="submit" className="btn">
-        Crear mi cuenta
+      <button type="submit" className="btn" disabled={sending}>
+        {sending ? 'Creando cuenta…' : 'Crear mi cuenta'}
       </button>
     </form>
   );
