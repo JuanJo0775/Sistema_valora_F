@@ -4,6 +4,7 @@ import { api, ApiError, call } from '../../shared/api';
 import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
+import { GoogleSignIn } from './GoogleSignIn';
 import { emailProblem, useFocusFirstInvalid } from './formErrors';
 import { safeReturn, withReturn } from './safeReturn';
 import { POLICY_VERSION } from '../legal/policy';
@@ -179,6 +180,7 @@ export function SignUp() {
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Creando cuenta…' : 'Crear cuenta'}
       </button>
+      <GoogleSignIn />
       <p className="muted">
         ¿Ya tienes cuenta? <Link to={withReturn('/entrar', volver)}>Inicia sesión</Link>
       </p>
