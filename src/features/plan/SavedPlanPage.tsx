@@ -165,9 +165,11 @@ export function SavedPlanPage() {
           <ul className="plan-lines">
             {unpriced.map((l) => (
               <li key={l.presentationId}>
-                <span>{`${String(l.quantity)} × `}</span>
-                <span>{l.productName}</span>
-                <span className="muted">{` ${l.presentationLabel}`}</span>
+                <span>
+                  {`${String(l.quantity)} × `}
+                  <span>{l.productName}</span>
+                  <span className="muted">{` ${l.presentationLabel}`}</span>
+                </span>
               </li>
             ))}
           </ul>

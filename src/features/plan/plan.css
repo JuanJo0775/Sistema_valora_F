@@ -150,7 +150,8 @@
   button,
   .btn,
   .no-print,
-  .saved-plans {
+  .saved-plans,
+  .cookie-notice {
     display: none !important;
   }
 
