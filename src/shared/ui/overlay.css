@@ -1,0 +1,228 @@
+/* Popover (tablet y escritorio) y hoja inferior (celular) para elegir algo: el «¿Dónde?» y los campos
+   de lista. Por encima de la barra inferior (z 10), la barra de compra (9 y 20), el aviso de cookies
+   y la franja de instalar; la hoja los cubre porque es modal. Colores solo de los tokens. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.overlay-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+
+.overlay-panel:focus {
+  outline: none;
+}
+
+.overlay-popover .overlay-panel {
+  position: fixed;
+  border-radius: var(--r-l);
+}
+
+.overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 50%, transparent);
+  pointer-events: auto;
+}
+
+.overlay-sheet .overlay-panel {
+  position: absolute;
+  inset: auto 0 0;
+  max-height: min(88dvh, 640px);
+  border-width: 1px 0 0;
+  border-radius: var(--r-l) var(--r-l) 0 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: overlay-up 0.2s ease-out;
+}
+
+@keyframes overlay-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+.overlay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 6px 0 16px;
+}
+
+.overlay-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.overlay-close {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--touch);
+  height: var(--touch);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.overlay-close svg {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.overlay-close:hover {
+  background: var(--bg-2);
+}
+
+.overlay-body {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  padding: 8px 16px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Campo de lista (SelectField): el disparador ocupa el lugar del <select>. */
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 0 14px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.select-trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+.select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chevron,
+.where-chevron {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.select-trigger[aria-expanded='true'] .select-chevron,
+.where-trigger[aria-expanded='true'] .where-chevron {
+  transform: rotate(180deg);
+}
+
+/* La lista de opciones. */
+.option-list {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+}
+
+.option-search {
+  width: 100%;
+  min-height: var(--touch);
+  padding: 0 14px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.option-items {
+  display: grid;
+  gap: 2px;
+  max-height: min(46dvh, 288px);
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--touch);
+  padding: 0 12px;
+  border-radius: var(--r-s);
+  color: var(--ink);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.option.active {
+  background: var(--bg-2);
+}
+
+.option[aria-selected='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.option-check {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* El foco de la lista se ve en la opción activa y en el contorno de la lista. */
+.option-items:focus-visible,
+.option-search:focus-visible,
+.select-trigger:focus-visible,
+.overlay-close:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.option-empty {
+  margin: 0;
+  padding: 8px 4px;
+  color: var(--ink-2);
+}

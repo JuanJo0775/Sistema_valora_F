@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { choose } from '../../test/choose';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -129,9 +130,7 @@ describe('precios en revisión', () => {
     });
     await screen.findByText('Arroz Diana · 500 g');
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Motivo' }), {
-      target: { value: 'apelacion' },
-    });
+    await choose('Motivo', 'Apelación');
 
     await vi.waitFor(() => {
       expect(api.requested.at(-1)?.searchParams.get('reason')).toBe('apelacion');

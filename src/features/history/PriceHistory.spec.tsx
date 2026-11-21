@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { choose } from '../../test/choose';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -131,9 +132,7 @@ describe('historial de precios', () => {
     renderHistory();
     await screen.findByRole('table', { name: 'Precio por día · 500 g' });
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Presentación' }), {
-      target: { value: 'p1kg' },
-    });
+    await choose('Presentación', '1 kg');
 
     expect(screen.getByRole('table', { name: 'Precio por día · 1 kg' })).toHaveTextContent(
       '$4.400',

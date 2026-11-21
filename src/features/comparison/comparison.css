@@ -17,44 +17,127 @@
   gap: 8px;
 }
 
-/* El chip de dónde se busca y su panel. */
+/* El «¿Dónde?»: un botón con borde y flecha, que dice dónde se busca y abre la elección. */
 .where {
   display: grid;
   gap: 8px;
   justify-items: end;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.where-chip {
+.stores-main .where,
+.plan-where .where {
+  justify-items: start;
+}
+
+.where-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
   min-height: var(--touch);
-  padding: 0 14px;
-  border: 0;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--field-line);
   border-radius: 999px;
-  background: var(--bg-2);
-  color: var(--ink-2);
+  background: var(--bg);
+  color: var(--ink);
   font: inherit;
+  font-weight: 600;
   cursor: pointer;
 }
 
+.where-trigger:hover {
+  background: var(--bg-2);
+}
+
+.where-trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+.where-trigger:focus-visible,
+.where-near:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.where-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .where-icon {
-  width: 18px;
-  height: 18px;
+  flex: none;
+  width: 20px;
+  height: 20px;
   fill: none;
   stroke: currentcolor;
   stroke-width: 2;
+  stroke-linecap: round;
 }
 
-.where-panel {
+.where-trigger .where-icon {
+  color: var(--accent-ink);
+}
+
+.where-panel,
+.where-section {
   display: grid;
-  gap: 10px;
-  width: min(100%, 320px);
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-l);
+  gap: 12px;
+}
+
+/* «Usar mi ubicación»: una fila grande con su explicación de privacidad. */
+.where-near {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 12px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-m);
   background: var(--bg);
-  box-shadow: var(--shadow);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.where-near.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.where-near:disabled {
+  cursor: progress;
+}
+
+.where-near > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.where-hint {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+.where-problem {
+  display: grid;
+  gap: 6px;
+}
+
+.where-problem p {
+  margin: 0;
+}
+
+.where-alert {
+  margin: 0;
+  max-width: 100%;
 }
 
 /* Orden en un control segmentado: la opción elegida se levanta en blanco. */
@@ -493,4 +576,11 @@
 .product-card-top .pill {
   max-width: 60%;
   text-align: right;
+}
+
+/* En la hoja, «Listo» queda a la vista aunque haya que desplazar el contenido. */
+.where-panel > .btn {
+  position: sticky;
+  bottom: 0;
+  box-shadow: 0 -8px 8px var(--bg);
 }
