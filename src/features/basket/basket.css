@@ -30,6 +30,7 @@
   gap: 2px;
   min-width: 0;
   color: inherit;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 
@@ -60,6 +61,40 @@
 
 .basket-name .muted {
   font-size: 0.9rem;
+}
+
+/* En el celular no cabe todo en una línea: el nombre usa el ancho completo y el contador − N + y la
+   papelera bajan a una segunda línea, para que el selector no pise el nombre. */
+@media (width < 600px) {
+  .basket-row {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'check thumb name name'
+      'check thumb stepper trash';
+    gap: 8px 12px;
+  }
+
+  .basket-row .basket-check {
+    grid-area: check;
+  }
+
+  .basket-row .basket-thumb {
+    grid-area: thumb;
+    align-self: center;
+  }
+
+  .basket-row .basket-name {
+    grid-area: name;
+  }
+
+  .basket-row .stepper {
+    grid-area: stepper;
+    justify-self: start;
+  }
+
+  .basket-row .trash {
+    grid-area: trash;
+  }
 }
 
 /* Lo comprado se tacha y se apaga, para ir marcando en la tienda. */
@@ -325,4 +360,11 @@
   color: var(--ink-2);
   font-size: 0.7rem;
   font-weight: 500;
+}
+
+/* La casilla de «comprado» mide 28 px (WCAG 2.5.8 pide 24 como mínimo); su zona táctil, con la
+   etiqueta, es de 44 px. */
+.basket-check input {
+  width: 28px;
+  height: 28px;
 }
