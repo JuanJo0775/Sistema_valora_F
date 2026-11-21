@@ -25,14 +25,19 @@ export type Session =
 export interface SessionState {
   session: Session;
   signIn: (credentials: { email: string; password: string }) => Promise<void>;
+  restoreAccount: (credentials: { email: string; password: string }) => Promise<void>;
   signOut: () => Promise<void>;
+  // La cuenta ya no existe: la sesión local se da por cerrada sin llamar a /auth/logout.
+  endSession: () => void;
   reload: () => void;
 }
 
 export const SessionContext = createContext<SessionState>({
   session: { status: 'loading' },
   signIn: () => Promise.resolve(),
+  restoreAccount: () => Promise.resolve(),
   signOut: () => Promise.resolve(),
+  endSession: () => undefined,
   reload: () => undefined,
 });
 

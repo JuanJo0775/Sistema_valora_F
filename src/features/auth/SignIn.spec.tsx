@@ -107,6 +107,83 @@ describe('iniciar sesión', () => {
   });
 });
 
+describe('cuenta en período de gracia', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  const pending: FakeReply = {
+    status: 403,
+    body: {
+      code: 'ACCOUNT_PENDING_DELETION',
+      message: 'Tu cuenta está programada para eliminarse.',
+      scheduledFor: '2026-12-01T15:30:00.000Z',
+    },
+  };
+
+  it('muestra el panel de restauración, no un error de credenciales', async () => {
+    stubLogin(pending);
+    renderSignIn('/entrar');
+
+    signIn('ana@correo.co', 'una clave larga');
+
+    const heading = await screen.findByRole('heading', {
+      name: /Tu cuenta está programada para eliminarse el .*2026/,
+    });
+    expect(heading).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Restaurar mi cuenta' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('«Restaurar mi cuenta» envía lo escrito, entra y vuelve a donde iba', async () => {
+    const api = stubApi({
+      'GET /v1/auth/session': [NO_SESSION, sessionAs('reportante')],
+      'POST /v1/auth/login': pending,
+      'POST /v1/auth/restore-account': { status: 204 },
+    });
+    renderSignIn('/entrar?volver=/yo');
+    signIn('ana@correo.co', 'una clave larga');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Restaurar mi cuenta' }));
+
+    expect(await screen.findByRole('heading', { name: 'Hola' })).toBeInTheDocument();
+    const restore = api.calls.find(({ path }) => path === '/v1/auth/restore-account');
+    expect(JSON.parse(restore?.body ?? '{}')).toEqual({
+      email: 'ana@correo.co',
+      password: 'una clave larga',
+    });
+  });
+
+  it('si restaurar falla (429) lo dice y deja reintentar', async () => {
+    stubApi({
+      'GET /v1/auth/session': NO_SESSION,
+      'POST /v1/auth/login': pending,
+      'POST /v1/auth/restore-account': {
+        status: 429,
+        body: { code: 'TOO_MANY_REQUESTS', message: 'Demasiados intentos. Espera 60 segundos.' },
+      },
+    });
+    renderSignIn('/entrar');
+    signIn('ana@correo.co', 'una clave larga');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Restaurar mi cuenta' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Demasiados intentos');
+    expect(screen.getByRole('button', { name: 'Restaurar mi cuenta' })).toBeEnabled();
+  });
+
+  it('«Dejar que se elimine» vuelve al formulario sin llamar a nada más', async () => {
+    const api = stubLogin(pending);
+    renderSignIn('/entrar');
+    signIn('ana@correo.co', 'una clave larga');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Dejar que se elimine' }));
+
+    expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Contraseña')).toHaveValue('');
+    expect(api.calls.some(({ path }) => path.includes('restore'))).toBe(false);
+  });
+});
+
 describe('volver desde iniciar sesión', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

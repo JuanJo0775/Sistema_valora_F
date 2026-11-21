@@ -1,42 +1,72 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { choose } from '../../test/choose';
 import { MemoryRouter } from 'react-router';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NO_SESSION, sessionAs, stubApi } from '../../test/fakeApi';
+import { SessionProvider } from './SessionProvider';
 import { Settings } from './Settings';
 
 const renderSettings = () =>
   render(
-    <MemoryRouter>
-      <Settings />
-    </MemoryRouter>,
+    <SessionProvider>
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>
+    </SessionProvider>,
   );
 
 describe('ajustes', () => {
   afterEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
+    vi.unstubAllGlobals();
   });
 
-  it('tiene el enlace «Volver» y cinco bloques con título', () => {
+  it('tiene el enlace «Volver» y los bloques con título', () => {
     renderSettings();
 
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
     expect(screen.getByRole('heading', { level: 1, name: 'Ajustes' })).toBeInTheDocument();
     const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(titles).toEqual([
-      'Apariencia',
-      'Accesibilidad',
-      'Búsqueda',
-      'La app',
-      'Pruebas del equipo',
-    ]);
+    expect(titles).toEqual(['Apariencia', 'Accesibilidad', 'Búsqueda', 'Pruebas del equipo']);
   });
-  it('enlaza a la guía para desinstalar la app', () => {
+  it('«Opciones avanzadas» empieza plegada y sin aspecto de alerta', () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
     renderSettings();
+    const details = screen.getByText('Opciones avanzadas').closest('details');
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute('open');
+    expect(details?.querySelector('summary')?.className).not.toMatch(/danger|bad|warn/);
+    expect(screen.queryByRole('heading', { name: 'La app' })).toBeNull();
+  });
+
+  it('al abrirla ofrece desinstalar la app y, con sesión, eliminar la cuenta', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+    renderSettings();
+    const details = screen.getByText('Opciones avanzadas').closest('details') as HTMLDetailsElement;
+    details.open = true;
+
     expect(screen.getByRole('link', { name: /Desinstalar la app/ })).toHaveAttribute(
       'href',
       '/yo/app',
     );
+    expect(await screen.findByRole('link', { name: /Eliminar mi cuenta/ })).toHaveAttribute(
+      'href',
+      '/yo/eliminar-cuenta',
+    );
+  });
+
+  it('sin sesión no muestra «Eliminar mi cuenta»', async () => {
+    const api = stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSettings();
+    await waitFor(() => {
+      expect(api.calls.length).toBeGreaterThan(0);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByRole('link', { name: /Desinstalar la app/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Eliminar mi cuenta/ })).toBeNull();
   });
 
   it('el tema se elige y queda recordado', () => {
