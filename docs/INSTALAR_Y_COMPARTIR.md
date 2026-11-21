@@ -141,7 +141,7 @@ sola mostraría siempre la vista previa general. Solución sin servidor propio:
 La dirección vive en **un solo lugar**: `DEFAULT_SITE_URL` en `src/site.ts`. El build la pone en
 `index.html` (`canonical`, `og:url`, `og:image`, `twitter:image`), en `robots.txt` y en `sitemap.xml`.
 
-1. Cuando llegue el dominio, cambiar `DEFAULT_SITE_URL` en `src/site.ts`, **o** definir la variable de
+1. El dominio actual es `https://www.valoora.app` (ya está en `DEFAULT_SITE_URL`). Para cambiarlo, editar `DEFAULT_SITE_URL` en `src/site.ts`, **o** definir la variable de
    entorno `SITE_URL` en Vercel (Settings > Environment Variables), sin tocar código. Debe ser
    `https://dominio` sin ruta ni barra final.
 2. Volver a desplegar.
