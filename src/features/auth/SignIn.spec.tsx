@@ -189,6 +189,17 @@ describe('volver desde iniciar sesión', () => {
     vi.unstubAllGlobals();
   });
 
+  // ADR-029, fase 2 (F#154): un enlace normal, sin el JavaScript de Google; el servidor hace el resto.
+  it('ofrece continuar con Google con un enlace al inicio del flujo en el servidor', () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    renderSignIn('/entrar');
+
+    expect(screen.getByRole('link', { name: 'Continuar con Google' })).toHaveAttribute(
+      'href',
+      '/v1/auth/google/start',
+    );
+  });
+
   it('trae un enlace de volver con respaldo en Yo', () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     renderSignIn('/entrar');
