@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, NO_SESSION, sessionAs, stubApi } from '../../test/fakeApi';
+import { POLICY_VERSION } from '../legal/policy';
 import { DeleteAccount } from './DeleteAccount';
 import { SessionProvider } from './SessionProvider';
 
@@ -162,5 +163,45 @@ describe('eliminar mi cuenta', () => {
     stub({ status: 202 }, sessionAs('moderador'));
     renderAt();
     expect(await screen.findByText(/Tu cuenta es de moderación/)).toBeInTheDocument();
+  });
+
+  it('«Mi cuenta usa Google» quita la contraseña y envía {}', async () => {
+    const api = stub({ status: 202, body: { scheduledFor: '2026-12-01T15:30:00.000Z' } });
+    renderAt();
+    fireEvent.click(await screen.findByRole('button', { name: 'Mi cuenta usa Google' }));
+    expect(screen.queryByLabelText('Tu contraseña')).toBeNull();
+    expect(submitButton()).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(submitButton()).toBeEnabled();
+    fireEvent.click(submitButton());
+
+    await screen.findByRole('heading', { name: 'Tu cuenta quedó programada para eliminarse' });
+    const sent = api.calls.find(({ path }) => path === '/v1/me/account-deletion');
+    expect(JSON.parse(sent?.body ?? '{}')).toEqual({});
+  });
+
+  it('REAUTH_REQUIRED ofrece «Confirmar con Google» y vuelve a esta pantalla', async () => {
+    stub({ status: 403, body: { code: 'REAUTH_REQUIRED', message: 'x' } });
+    renderAt();
+    fireEvent.click(await screen.findByRole('button', { name: 'Mi cuenta usa Google' }));
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(submitButton());
+
+    const confirm = await screen.findByRole('link', { name: 'Confirmar con Google' });
+    const url = new URL(confirm.getAttribute('href') ?? '', 'http://valora.test');
+    expect(url.pathname).toBe('/v1/auth/google/start');
+    expect(url.searchParams.get('returnTo')).toBe('/yo/eliminar-cuenta');
+    expect(url.searchParams.get('acceptPolicy')).toBe(POLICY_VERSION);
+    expect(screen.getByText(/volviendo a entrar con Google/)).toBeInTheDocument();
+  });
+
+  it('REAUTH_REQUIRED con contraseña también pasa al modo Google', async () => {
+    stub({ status: 403, body: { code: 'REAUTH_REQUIRED', message: 'x' } });
+    renderAt();
+    await fill();
+    fireEvent.click(submitButton());
+
+    expect(await screen.findByRole('link', { name: 'Confirmar con Google' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Tu contraseña')).toBeNull();
   });
 });

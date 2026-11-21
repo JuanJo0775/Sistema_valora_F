@@ -465,6 +465,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    // TODO(regenerar): a mano hasta que el servidor publique el contrato (pnpm api:types).
+    "/auth/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Qué proveedores de identidad externos están activos (Google) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Proveedores disponibles */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            google: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/session": {
         parameters: {
             query?: never;
@@ -1861,7 +1900,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    password: string;
+                    /** TODO(regenerar): opcional a mano; una cuenta de Google no tiene contraseña y envía {} (403 REAUTH_REQUIRED: volver a entrar con Google). */
+                    password?: string;
                 };
             };
         };
