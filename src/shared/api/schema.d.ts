@@ -339,7 +339,7 @@ export interface paths {
         put?: never;
         /**
          * Eliminar la propia cuenta, con 10 días de gracia (Ley 1581, art. 8; ADR-032)
-         * @description Derecho de supresión. Cualquier rol, también una cuenta suspendida. Pide la contraseña. No borra todavía: marca la cuenta como pendiente de eliminación para dentro de 10 días, revoca todas sus sesiones y limpia la cookie. Pedirla otra vez no mueve la fecha. Durante la gracia la persona no puede iniciar sesión (403 ACCOUNT_PENDING_DELETION) salvo para restaurarla con POST /auth/restore-account. Pasada la fecha, un trabajo interno (cada hora y al arrancar el servidor; puede retrasarse unas horas, nunca se adelanta) borra la cuenta y todo lo que cuelga de ella. Los reportes de precios, las propuestas y las marcas se conservan sin ningún dato personal.
+         * @description Derecho de supresión. Cualquier rol, también una cuenta suspendida. Pide la contraseña; una cuenta creada con Google no tiene contraseña y confirma escribiendo su correo (confirmEmail, #179). No borra todavía: marca la cuenta como pendiente de eliminación para dentro de 10 días, revoca todas sus sesiones y limpia la cookie. Pedirla otra vez no mueve la fecha. Durante la gracia la persona no puede iniciar sesión (403 ACCOUNT_PENDING_DELETION) salvo para restaurarla con POST /auth/restore-account. Pasada la fecha, un trabajo interno (cada hora y al arrancar el servidor; puede retrasarse unas horas, nunca se adelanta) borra la cuenta y todo lo que cuelga de ella. Los reportes de precios, las propuestas y las marcas se conservan sin ningún dato personal.
          */
         post: operations["requestAccountDeletion"];
         delete?: never;
@@ -516,6 +516,66 @@ export interface paths {
          * @description Sin cuerpo: el correo sale a la cuenta de la sesión, nunca a una dirección recibida, así que no revela qué correos existen (EC-08). Un enlace nuevo deja sin efecto los anteriores sin usar. Responde 202 igual si la cuenta ya estaba verificada (no se envía nada) o si el envío se encola. Una cuenta suspendida también puede usarla.
          */
         post: operations["resendVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Empezar a entrar con Google (ADR-029, fase 2)
+         * @description La persona llega aquí por el navegador (un enlace, no fetch). Responde 302 a Google con PKCE (S256), state, nonce y los alcances openid email profile, y guarda state, nonce y el verificador en la cookie valora_google, firmada y con 10 minutos de vida. No guarda nada en la base. 404 si el servidor no tiene configurado Google (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y GOOGLE_REDIRECT_URI).
+         */
+        get: operations["startGoogleSignIn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vuelta desde Google; abre la sesión o pide aceptar la política (ADR-029, fase 2)
+         * @description Siempre responde 302 hacia la PWA (la persona llega por el navegador) y borra valora_google. Con una cuenta vinculada o cuyo correo coincide, abre la misma sesión que POST /auth/login y lleva a /. Con un correo sin cuenta no crea nada: guarda en la cookie firmada valora_google_signup (10 minutos) el sub, el correo y el nombre que da Google, y lleva a /bienvenida para aceptar la política (RF-001). Si algo falla lleva a /entrar?error=, con uno de google (state distinto o ausente, código o id_token inválido), google-correo-sin-verificar, eliminacion-pendiente; si la persona canceló en Google, a /entrar sin error. Nunca pone el correo, el sub ni tokens en la URL (EC-08).
+         */
+        get: operations["googleSignInCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear la cuenta de quien entró con Google al aceptar la política (RF-001, ADR-029)
+         * @description Exige la cookie valora_google_signup vigente que dejó el callback; sin ella o vencida responde 401. Crea una cuenta reportante sin contraseña, con el correo ya verificado y vinculada a Google, abre la sesión (como POST /auth/login) y borra valora_google_signup. Si mientras tanto alguien creó una cuenta con ese correo, se vincula a ella. El correo nunca viaja en el cuerpo: sale de la cookie firmada. Sin token CSRF: aún no hay sesión, y SameSite=Lax impide que otro sitio envíe la cookie en un POST.
+         */
+        post: operations["completeGoogleSignUp"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1862,6 +1922,9 @@ export interface operations {
             content: {
                 "application/json": {
                     password: string;
+                } | {
+                    /** @description El correo de la cuenta; se compara sin espacios y en minúsculas. */
+                    confirmEmail: string;
                 };
             };
         };
@@ -1886,7 +1949,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            /** @description code INVALID_PASSWORD (la contraseña no coincide; no se programa nada), code LAST_MODERATOR_CANNOT_DELETE (es el único moderador activo) o code CSRF_TOKEN_INVALID. */
+            /** @description code INVALID_PASSWORD (la contraseña no coincide, o una cuenta con contraseña envió confirmEmail; no se programa nada), code INVALID_CONFIRMATION (una cuenta sin contraseña escribió un correo que no es el suyo), code LAST_MODERATOR_CANNOT_DELETE (es el único moderador activo) o code CSRF_TOKEN_INVALID. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1895,7 +1958,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Más de 5 contraseñas incorrectas por cuenta o 20 intentos por IP en 15 minutos. */
+            /** @description Más de 5 confirmaciones incorrectas por cuenta o 20 intentos por IP en 15 minutos. */
             429: {
                 headers: {
                     "Retry-After": components["headers"]["RetryAfter"];
@@ -2095,7 +2158,7 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["BadRequest"];
-            /** @description code UNAUTHORIZED con «Correo o contraseña incorrectos.», exista o no la cuenta. */
+            /** @description code UNAUTHORIZED con «Correo o contraseña incorrectos.», exista o no la cuenta. Una cuenta creada con Google no tiene contraseña y recibe este mismo error (no revela cómo se creó, EC-08). */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2296,6 +2359,106 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description Más de 3 reenvíos por cuenta en una hora (valores provisionales). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    startGoogleSignIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirige a accounts.google.com */
+            302: {
+                headers: {
+                    /** @description https://accounts.google.com/o/oauth2/v2/auth con los parámetros del flujo. */
+                    Location?: string;
+                    /** @description valora_google con HttpOnly, Secure, SameSite=Lax, Path=/v1/auth/google y Max-Age de 600 s. */
+                    "Set-Cookie"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    googleSignInCallback: {
+        parameters: {
+            query?: {
+                /** @description Código de autorización que envía Google. */
+                code?: string;
+                /** @description Debe ser igual al guardado en valora_google. */
+                state?: string;
+                /** @description Lo envía Google si la persona canceló (access_denied) u otro fallo. */
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirige a /, /bienvenida o /entrar (con o sin error) */
+            302: {
+                headers: {
+                    /** @description Una ruta de la PWA en el mismo origen. */
+                    Location?: string;
+                    /** @description Borra valora_google y, según el caso, entrega valora_session (como POST /auth/login) o valora_google_signup (HttpOnly, Secure, SameSite=Lax, Path=/v1/auth/google, Max-Age de 600 s). */
+                    "Set-Cookie"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    completeGoogleSignUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Mismas reglas que en POST /auth/register. */
+                    displayName: string;
+                    /**
+                     * @description Versión vigente de la política de datos.
+                     * @enum {string}
+                     */
+                    acceptedPolicyVersion: "2026-11";
+                };
+            };
+        };
+        responses: {
+            /** @description Cuenta creada (o vinculada) y sesión iniciada */
+            204: {
+                headers: {
+                    /** @description valora_session como en POST /auth/login, y valora_google_signup vacía y vencida. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Más de 10 registros por IP en 15 minutos (el mismo límite de POST /auth/register). */
             429: {
                 headers: {
                     "Retry-After": components["headers"]["RetryAfter"];
