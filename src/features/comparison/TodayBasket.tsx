@@ -200,7 +200,13 @@ function ProductCard({ item }: { item: Item }) {
         <div className="product-card-top">
           <ProductThumb image={item.image} size="card" category={item.category.code} />
           {item.savingsPercent !== undefined && (
-            <span className="pill ok">{`Hasta −${String(item.savingsPercent)} % frente a la tienda más cara`}</span>
+            <span
+              className="pill ok savings"
+              title={`Ahorra hasta ${String(item.savingsPercent)} % frente a la tienda más cara`}
+            >
+              <span>{`Ahorra hasta ${String(item.savingsPercent)} %`}</span>
+              <span className="sr-only">frente a la tienda más cara</span>
+            </span>
           )}
         </div>
         <h2>{item.name}</h2>

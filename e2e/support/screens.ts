@@ -49,3 +49,10 @@ export async function eventually(page: Page, check: () => Promise<void>) {
     await check();
   }).toPass({ timeout: 30_000 });
 }
+
+// Elige una opción de una lista propia (SelectField): abre el campo por su etiqueta y toca la opción
+// (en celular se abre como hoja inferior; el rol de las opciones es el mismo).
+export async function chooseOption(page: Page, field: string, option: string) {
+  await page.getByRole('button', { name: new RegExp(`^${field}`) }).click();
+  await page.getByRole('option', { name: option }).click();
+}

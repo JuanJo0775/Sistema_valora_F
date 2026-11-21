@@ -572,10 +572,13 @@
   background: var(--bg-2);
 }
 
-/* H-19: el ahorro dice contra qué compara; el texto largo cabe en dos líneas junto a la miniatura. */
-.product-card-top .pill {
-  max-width: 60%;
-  text-align: right;
+/* El ahorro va en una sola línea junto a la miniatura; contra qué compara (H-19) lo dicen el texto
+   oculto y la ayuda al pasar el ratón. */
+.product-card-top .pill.savings {
+  align-self: flex-start;
+  padding: 4px 10px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 /* En la hoja, «Listo» queda a la vista aunque haya que desplazar el contenido. */
