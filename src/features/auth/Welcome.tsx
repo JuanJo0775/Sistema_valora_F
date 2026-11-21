@@ -1,9 +1,10 @@
 import { type SyntheticEvent, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { api, call } from '../../shared/api';
+import { api, ApiError, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { POLICY_VERSION } from '../legal/policy';
 import { Field } from './Field';
+import { GoogleSignIn } from './GoogleSignIn';
 import { nameProblem, POLICY_REQUIRED, useFocusFirstInvalid } from './formErrors';
 import { useSession } from './session';
 import './auth.css';
@@ -19,6 +20,8 @@ export function Welcome() {
   const [problems, setProblems] = useState<Problems>({});
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<unknown>(null);
+  // 401: el registro pendiente (10 minutos, en una cookie de este navegador) ya no sirve.
+  const [expired, setExpired] = useState(false);
   const [sending, setSending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const navigate = useNavigate();
@@ -50,10 +53,23 @@ export function Welcome() {
         void navigate('/', { replace: true });
       })
       .catch((failure: unknown) => {
-        setError(failure);
+        if (failure instanceof ApiError && failure.status === 401) setExpired(true);
+        else setError(failure);
         setSending(false);
       });
   };
+
+  if (expired) {
+    return (
+      <section className="form">
+        <h1>Vuelve a entrar con Google</h1>
+        <p role="alert" className="banner warn">
+          Tu ingreso con Google venció o empezó en otro navegador. Vuelve a intentarlo.
+        </p>
+        <GoogleSignIn />
+      </section>
+    );
+  }
 
   return (
     <form className="form" onSubmit={submit} noValidate ref={formRef}>
