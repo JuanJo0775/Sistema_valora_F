@@ -3,3 +3,10 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
+/* La atribución del mapa (Leaflet y OpenStreetMap) es obligatoria y se queda; sus enlaces suman 24 px
+   de alto con relleno para poder tocarlos. */
+.proposal .leaflet-control-attribution a {
+  display: inline-block;
+  padding-block: 5px;
+}

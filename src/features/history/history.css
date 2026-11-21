@@ -34,8 +34,15 @@
 
 .history-chart {
   width: 100%;
-  max-width: 560px;
+  max-width: 480px;
   height: auto;
+  /* Tablet y PC: no crece sin límite (el texto del eje se agrandaría con ella). */
+  max-height: 220px;
+}
+
+.history-single {
+  margin: 0;
+  color: var(--ink-2);
 }
 
 .history-chart .axis {
