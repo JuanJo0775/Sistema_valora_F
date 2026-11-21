@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NO_SESSION, stubApi } from '../../test/fakeApi';
+import { NO_SESSION, sessionAs, stubApi } from '../../test/fakeApi';
 import { SessionProvider } from './SessionProvider';
 import { Welcome } from './Welcome';
 
@@ -58,5 +58,25 @@ describe('bienvenida de quien entró con Google', () => {
       await screen.findByText('Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.'),
     ).toBeInTheDocument();
     expect(api.calls.some(({ path }) => path === '/v1/auth/google/complete')).toBe(false);
+  });
+
+  it('con nombre y política crea la cuenta, entra y lleva al inicio', async () => {
+    const api = stubApi({
+      'GET /v1/auth/session': [NO_SESSION, sessionAs('reportante')],
+      'POST /v1/auth/google/complete': { status: 204 },
+    });
+    renderWelcome();
+
+    writeName('  Ana María ');
+    fireEvent.click(screen.getByRole('checkbox'));
+    create();
+
+    expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
+    const complete = api.calls.find(({ path }) => path === '/v1/auth/google/complete');
+    // El correo no viaja en el cuerpo: lo pone el servidor desde la cookie firmada.
+    expect(JSON.parse(complete?.body ?? '{}')).toEqual({
+      displayName: 'Ana María',
+      acceptedPolicyVersion: '2026-11',
+    });
   });
 });
