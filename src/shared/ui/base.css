@@ -391,3 +391,33 @@ button {
     transition: none !important;
   }
 }
+
+/* WCAG 2.5.8 (AA): los enlaces dentro de un párrafo, un formulario o un aviso miden 24 px o más de
+   alto. El relleno vertical de un elemento en línea agranda el área que se toca sin mover las líneas
+   del texto. */
+.form p a,
+.form label a,
+.banner a,
+.cookie-notice a,
+.legal p a,
+.legal li a {
+  padding-block: 5px;
+}
+
+/* Tableta vertical (600 a 959 px): las pantallas de una columna no se estiran a todo el ancho; se
+   centran con un ancho de lectura, como los formularios. El mapa y el detalle del producto tienen su
+   propio diseño. */
+@media (600px <= width < 960px) {
+  .profile,
+  .plan,
+  .legal,
+  .contributions,
+  .moderation,
+  .pending,
+  .history,
+  .with-side:has(> .basket) {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+  }
+}
