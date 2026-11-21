@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { choose } from '../../test/choose';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { seriousViolations } from '../../test/axe';
 import { stubApi } from '../../test/fakeApi';
@@ -149,9 +150,7 @@ describe('plan de compra', () => {
     expect(travel()).toHaveTextContent(/min a pie/);
     expect(travel()).not.toHaveTextContent('$');
 
-    fireEvent.change(screen.getByLabelText('Cómo cuentas el traslado'), {
-      target: { value: 'perKm' },
-    });
+    await choose('Cómo cuentas el traslado', 'Costo por km');
     fireEvent.change(screen.getByLabelText('Costo por km (COP)'), { target: { value: '800' } });
 
     expect(travel()).toHaveTextContent('$');
@@ -218,9 +217,7 @@ describe('plan de compra', () => {
     await waitFor(() => {
       expect(two.getByText(/Traslado extra estimado/)).toBeInTheDocument();
     });
-    fireEvent.change(screen.getByLabelText('Cómo cuentas el traslado'), {
-      target: { value: 'fare' },
-    });
+    await choose('Cómo cuentas el traslado', 'Pasaje');
     fireEvent.change(screen.getByLabelText('Pasaje por tramo (COP)'), {
       target: { value: '2500' },
     });

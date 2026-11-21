@@ -59,30 +59,40 @@ function check(report: {
   return { priceCop: price.pesos };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // EC-01: una sola pantalla con lo que ya se sabe lleno, para reportar en 15 segundos o menos.
 export function ReportPrice() {
   const [params] = useSearchParams();
   const productId = params.get('producto') ?? '';
+  // `?tienda=<id>` deja la tienda elegida de antemano (por ejemplo desde la página de una tienda).
+  // Si no es un UUID se ignora; si la tienda no existe, ReportForm también la ignora.
+  const wantedStore = params.get('tienda') ?? '';
+  const storeId = UUID.test(wantedStore) ? wantedStore : '';
   if (!productId) {
     return (
       <>
         <h1>¿Qué precio viste?</h1>
         <p className="muted">Busca el producto por su nombre o su código de barras.</p>
-        <ProductSearch linkTo={(id) => `/registrar?producto=${id}`} />
-        <RecentProducts />
+        <ProductSearch
+          linkTo={(id) => `/registrar?producto=${id}${storeId ? `&tienda=${storeId}` : ''}`}
+        />
+        <RecentProducts storeId={storeId} />
       </>
     );
   }
   // Cada producto empieza un reporte nuevo: su propia clave, su hora y nada del anterior.
-  return <ReportForm key={productId} productId={productId} />;
+  return <ReportForm key={productId} productId={productId} storeId={storeId} />;
 }
 
-function ReportForm({ productId }: { productId: string }) {
+function ReportForm({ productId, storeId }: { productId: string; storeId: string }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [presentationId, setPresentationId] = useState('');
   const [store, setStore] = useState<Store | null>(readLastStore);
+  // Si la persona ya eligió una tienda, la de la dirección llega tarde y no la pisa.
+  const pickedStore = useRef(false);
   const [price, setPrice] = useState('');
   const [onSale, setOnSale] = useState(false);
   // EC-07: la clave nace con el reporte y un reintento del mismo reporte usa la misma. Si el reporte
@@ -120,6 +130,24 @@ function ReportForm({ productId }: { productId: string }) {
         setLoadError(failure);
       });
   }, [productId, loadAttempt]);
+
+  useEffect(() => {
+    if (!storeId) return;
+    let current = true;
+    call(
+      api.GET('/establishments/{establishmentId}/prices', {
+        params: { path: { establishmentId: storeId } },
+      }),
+    )
+      .then(({ establishment }) => {
+        if (current && !pickedStore.current) setStore(establishment);
+      })
+      // Una tienda que no existe (o que no carga) se ignora: queda la última elegida.
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [storeId]);
 
   useEffect(() => {
     let current = true;
@@ -293,6 +321,7 @@ function ReportForm({ productId }: { productId: string }) {
       <StorePicker
         value={store}
         onChange={(chosen) => {
+          pickedStore.current = true;
           setStore(chosen);
           clear('store');
         }}
@@ -435,7 +464,7 @@ function FieldProblem({
 }
 
 // Con el campo de búsqueda vacío, un atajo: los últimos productos para los que se registró un precio.
-function RecentProducts() {
+function RecentProducts({ storeId }: { storeId: string }) {
   const [recent] = useState(readRecentProducts);
   if (recent.length === 0) return null;
   return (
@@ -444,7 +473,10 @@ function RecentProducts() {
       <ul className="actions">
         {recent.map(({ id, name }) => (
           <li key={id}>
-            <Link to={`/registrar?producto=${id}`} className="btn ghost">
+            <Link
+              to={`/registrar?producto=${id}${storeId ? `&tienda=${storeId}` : ''}`}
+              className="btn ghost"
+            >
               {name}
             </Link>
           </li>

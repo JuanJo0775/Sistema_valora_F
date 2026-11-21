@@ -19,7 +19,7 @@ export interface Install {
   platform: Platform;
   /** La persona dijo «ahora no» hace menos de 14 días. */
   hidden: boolean;
-  /** Celular o tableta: ahí vale la pena mostrar la franja sin que nadie la pida. */
+  /** Celular o tableta: ahí el aviso habla del celular. */
   mobile: boolean;
   install: () => Promise<void>;
   hide: () => void;

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { choose } from '../../test/choose';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Settings } from './Settings';
@@ -16,13 +17,26 @@ describe('ajustes', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('tiene el enlace «Volver» y cuatro bloques con título', () => {
+  it('tiene el enlace «Volver» y cinco bloques con título', () => {
     renderSettings();
 
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/yo');
     expect(screen.getByRole('heading', { level: 1, name: 'Ajustes' })).toBeInTheDocument();
     const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(titles).toEqual(['Apariencia', 'Accesibilidad', 'Búsqueda', 'Pruebas del equipo']);
+    expect(titles).toEqual([
+      'Apariencia',
+      'Accesibilidad',
+      'Búsqueda',
+      'La app',
+      'Pruebas del equipo',
+    ]);
+  });
+  it('enlaza a la guía para desinstalar la app', () => {
+    renderSettings();
+    expect(screen.getByRole('link', { name: /Desinstalar la app/ })).toHaveAttribute(
+      'href',
+      '/yo/app',
+    );
   });
 
   it('el tema se elige y queda recordado', () => {
@@ -74,12 +88,12 @@ describe('ajustes', () => {
     expect(screen.getByText('2,4 km', { selector: '.radius-value' })).toBeInTheDocument();
   });
 
-  it('el municipio se elige y queda recordado', () => {
+  it('el municipio se elige y queda recordado', async () => {
     renderSettings();
 
-    fireEvent.change(screen.getByLabelText('Municipio'), { target: { value: 'calarca' } });
+    await choose('Municipio', 'Calarcá');
 
-    expect(screen.getByLabelText('Municipio')).toHaveValue('calarca');
+    expect(screen.getByRole('button', { name: /^Municipio/ })).toHaveTextContent('Calarcá');
     expect(localStorage.getItem('valora:municipio')).toBe('calarca');
   });
 

@@ -75,7 +75,10 @@
   max-width: 1080px;
   margin: 0 auto;
   padding: 16px 16px
-    calc(96px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h) + var(--cookie-h));
+    calc(
+      96px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h) + var(--cookie-h) +
+        var(--install-h)
+    );
 }
 
 /* Alturas de lo fijo abajo, para que la página y el aviso de cookies no queden tapados: la barra de
@@ -84,11 +87,16 @@
   --tabbar-h: 65px;
   --action-bar-h: 0px;
   --cookie-h: 0px;
+  --install-h: 0px;
 }
 
 /* Franja del aviso de cookies: solo cuenta mientras exista, para que no tape el botón de enviar. */
 :root:has(.cookie-notice) {
   --cookie-h: 64px;
+}
+
+:root:has(.install-prompt) {
+  --install-h: 120px;
 }
 
 :root:has(.action-bar) {
@@ -99,7 +107,7 @@
 html {
   scroll-padding-bottom: calc(
     var(--tabbar-h) + 16px + env(safe-area-inset-bottom, 0px) + var(--action-bar-h) +
-      var(--cookie-h)
+      var(--cookie-h) + var(--install-h)
   );
 }
 

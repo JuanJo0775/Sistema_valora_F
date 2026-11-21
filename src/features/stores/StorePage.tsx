@@ -105,8 +105,7 @@ export function StorePage() {
               <Icon name="map" />
               Cómo llegar
             </a>
-            {/* Aún no hay una tienda preseleccionada en /registrar (ReportPrice solo lee ?producto). */}
-            <Link to="/registrar" className="btn ghost">
+            <Link to={`/registrar?tienda=${store.id}`} className="btn ghost">
               <Icon name="plus" />
               Registrar un precio aquí
             </Link>
@@ -141,7 +140,7 @@ export function StorePage() {
           )}
         </div>
         {count === 0 ? (
-          <NoPrices onlyCurrent={onlyCurrent} />
+          <NoPrices onlyCurrent={onlyCurrent} storeId={store.id} />
         ) : (
           <ul className="offers store-offers">
             {prices.map((price) => (
@@ -170,7 +169,7 @@ export function StorePage() {
 }
 
 // Una tienda sin precios invita a poner el primero; con el filtro puesto, a quitarlo.
-function NoPrices({ onlyCurrent }: { onlyCurrent: boolean }) {
+function NoPrices({ onlyCurrent, storeId }: { onlyCurrent: boolean; storeId: string }) {
   return (
     <div className="store-empty">
       <svg
@@ -197,7 +196,7 @@ function NoPrices({ onlyCurrent }: { onlyCurrent: boolean }) {
         <>
           <h3>Aún no hay precios aquí</h3>
           <p className="muted">Nadie ha reportado un precio en esta tienda todavía.</p>
-          <Link to="/registrar" className="btn">
+          <Link to={`/registrar?tienda=${storeId}`} className="btn">
             <Icon name="plus" />
             Sé el primero en registrar un precio
           </Link>
