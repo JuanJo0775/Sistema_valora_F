@@ -44,6 +44,14 @@ export function HistoryChart({
   const [first] = points;
   const last = points.at(-1);
   if (!first || !last) return null;
+  // Con un solo precio no hay tendencia que dibujar: una tarjeta compacta dice cuál es.
+  if (points.length < 2) {
+    return (
+      <p className="history-single">
+        {`Hasta ahora hay un solo precio registrado: ${formatCop(last.minPriceCop)} el ${shortDay(last.date)}.`}
+      </p>
+    );
+  }
   const prices = points.map(({ minPriceCop }) => minPriceCop);
   const low = Math.min(...prices);
   const high = Math.max(...prices);

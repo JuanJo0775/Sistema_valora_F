@@ -229,6 +229,52 @@
   }
 }
 
+/* Tableta vertical (600 a 959 px): la columna del celular no se estira a 770 px. El detalle se centra con
+   un ancho de lectura y, desde 768 px, el panel de compra pasa a dos columnas: el más barato y registrar
+   a la izquierda, agregar a la canasta a la derecha, y el historial debajo a todo el ancho. */
+@media (600px <= width < 960px) {
+  .with-side.product {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+  }
+
+  .side > .btn,
+  .side .add-to-basket .btn {
+    max-width: 480px;
+    justify-self: center;
+  }
+}
+
+@media (768px <= width < 960px) {
+  .with-side.product > .side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 16px;
+  }
+
+  .with-side.product > .side > .cheapest-card {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .with-side.product > .side > .add-to-basket {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .with-side.product > .side > .btn {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+    max-width: none;
+  }
+
+  .with-side.product > .side > .history-summary {
+    grid-column: 1 / -1;
+  }
+}
+
 /* #83: las sugerencias del buscador, una lista que flota bajo el campo. */
 .suggest {
   position: relative;

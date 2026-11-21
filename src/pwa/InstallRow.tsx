@@ -5,51 +5,17 @@ import { useInstall } from './useInstall';
 import './install.css';
 
 // Fila de «Yo»: la instalación siempre queda a mano, aunque el aviso de instalar se haya cerrado.
+// Los pasos para quitar la app no se anuncian aquí: están en Ajustes › Opciones avanzadas.
 export function InstallRow() {
-  return (
-    <>
-      <InstallOrGuide />
-      <UninstallLink />
-    </>
-  );
-}
-
-// Los pasos para quitar la app viven en su propia pantalla, enlazada también desde Ajustes.
-export function UninstallLink() {
-  const { installed } = useInstall();
-  return (
-    <li>
-      <Link to="/yo/app" className="nav-row">
-        <span className="settings-text">
-          <strong>Desinstalar la app</strong>
-          <span className="muted">
-            {installed
-              ? 'Estás usando la app instalada: mira cómo quitarla'
-              : 'Pasos para quitarla del celular o del computador'}
-          </span>
-        </span>
-        <span className="nav-arrow" aria-hidden="true">
-          ›
-        </span>
-      </Link>
-    </li>
-  );
+  return <InstallOrGuide />;
 }
 
 function InstallOrGuide() {
   const { installed, canPrompt, platform, install } = useInstall();
   const [open, setOpen] = useState(false);
   const guideId = useId();
-  if (installed) {
-    return (
-      <li className="install-row">
-        <span className="settings-text">
-          <strong>Instalar la app</strong>
-          <span className="muted">Valora ya está instalada en este dispositivo.</span>
-        </span>
-      </li>
-    );
-  }
+  // Ya instalada no hay nada que instalar: la fila se va en vez de quedar como un texto suelto sin flecha.
+  if (installed) return null;
   return (
     <li className="install-row">
       <button
@@ -75,6 +41,9 @@ function InstallOrGuide() {
         </span>
       </button>
       {!canPrompt && open && <InstallGuide platform={platform} id={guideId} />}
+      <Link to="/yo/app" className="settings-link install-more">
+        Ver la guía completa
+      </Link>
     </li>
   );
 }

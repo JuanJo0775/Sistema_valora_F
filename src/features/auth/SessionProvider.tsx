@@ -61,8 +61,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setSession({ status: 'loading' });
         setAttempt((current) => current + 1);
       },
+      // Restaurar una cuenta en período de gracia: igual que iniciar sesión.
+      restoreAccount: async (credentials: { email: string; password: string }) => {
+        await call(api.POST('/auth/restore-account', { body: credentials }));
+        setSession({ status: 'loading' });
+        setAttempt((current) => current + 1);
+      },
       signOut: async () => {
         await call(api.POST('/auth/logout'));
+        saveLastRole(null);
+        setSession({ status: 'anonymous' });
+      },
+      endSession: () => {
         saveLastRole(null);
         setSession({ status: 'anonymous' });
       },

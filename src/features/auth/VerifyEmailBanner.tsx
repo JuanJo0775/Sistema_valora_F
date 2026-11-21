@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ResendVerification } from './ResendVerification';
 import { useSession } from './session';
+import './auth.css';
 
 const DISMISSED = 'valora.verify-notice-dismissed';
 
