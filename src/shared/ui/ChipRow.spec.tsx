@@ -92,11 +92,9 @@ describe('renglón de chips', () => {
     const rect = (left: number, right: number) => () =>
       ({ left, right, top: 0, bottom: 0, width: right - left, height: 0 }) as DOMRect;
     group.getBoundingClientRect = rect(100, 400);
-    const [left, right, center] = [...group.querySelectorAll('label')] as [
-      HTMLElement,
-      HTMLElement,
-      HTMLElement,
-    ];
+    const left = screen.getByText('Bebidas');
+    const right = screen.getByText('Lácteos');
+    const center = screen.getByText('Panadería');
     left.getBoundingClientRect = rect(110, 190);
     right.getBoundingClientRect = rect(330, 395);
     center.getBoundingClientRect = rect(200, 280);
