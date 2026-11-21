@@ -222,7 +222,7 @@ src/
   features/history/     # historial y gráfica de los últimos 30 días
   features/moderation/  # panel del moderador: precios en revisión (tiendas, productos y roles en camino)
   features/proposals/   # proponer un producto o sugerir una tienda que no existe
-  features/reports/     # registrar un precio: producto, tienda cercana, precio y hora
+  features/reports/     # registrar un precio: producto, tienda cercana, precio y hora (acepta ?producto= y ?tienda=)
   features/stores/      # mapa de tiendas (Leaflet + OpenStreetMap) y página de cada tienda
   pwa/                  # cola sin conexión (IndexedDB), reportes pendientes y aviso de versión nueva
   shared/api/           # cliente de la API con los tipos del contrato
@@ -246,6 +246,7 @@ Cada carpeta aparece cuando tiene su primer archivo (YAGNI). La organización pr
 - [UX y flujos](docs/UX.md)
 - [Offline-first](docs/OFFLINE_FIRST.md)
 - [Integración API](docs/API_INTEGRATION.md)
+- [Instalar la app y compartir enlaces](docs/INSTALAR_Y_COMPARTIR.md)
 - [Épicas](docs/EPICS.md)
 - [Contribución](CONTRIBUTING.md)
 - Backend: [README](https://github.com/JuanJo0775/Sistema_valora_B#readme), [contrato `openapi.yaml`](https://github.com/JuanJo0775/Sistema_valora_B/blob/dev/docs/openapi.yaml) y [decisiones](https://github.com/JuanJo0775/Sistema_valora_B/blob/dev/docs/DECISIONS.md)

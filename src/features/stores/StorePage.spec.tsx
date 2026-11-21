@@ -57,26 +57,71 @@ describe('página de una tienda', () => {
     vi.unstubAllGlobals();
   });
 
-  it('muestra la tienda, dónde queda y todos sus precios', async () => {
+  it('muestra la tienda en una tarjeta con su tipo, dirección, municipio y acciones', async () => {
     stubStore(storeReply([banana]));
 
     renderStore();
 
-    expect(await screen.findByRole('heading', { name: 'Ara' })).toBeInTheDocument();
-    expect(screen.getByText('Descuento · Calle 21 # 15-30 · Armenia')).toBeInTheDocument();
-    expect(screen.getByText('Mapa con: Ara')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Cómo llegar a Ara' })).toBeInTheDocument();
+    const head = await screen.findByRole('banner');
+    expect(within(head).getByRole('heading', { level: 1, name: 'Ara' })).toBeInTheDocument();
+    const chip = within(head).getByText('Descuento');
+    expect(chip).toHaveClass('type-descuento');
+    expect(chip.querySelector('.pin-dot')).not.toBeNull();
+    expect(within(head).getByText('Calle 21 # 15-30')).toBeInTheDocument();
+    expect(within(head).getByText('Armenia')).toBeInTheDocument();
+    expect(within(head).getByRole('link', { name: 'Cómo llegar a Ara' })).toBeInTheDocument();
+    expect(within(head).getByRole('link', { name: 'Registrar un precio aquí' })).toHaveAttribute(
+      'href',
+      `/registrar?tienda=${ARA}`,
+    );
+  });
+
+  it('sin dirección dice «Sin dirección registrada»; con barrio lo suma al municipio', async () => {
+    const reply = storeReply([banana]);
+    (reply.body as { establishment: Record<string, unknown> }).establishment = {
+      ...ara,
+      address: undefined,
+      neighborhood: 'Centro',
+    };
+    stubStore(reply);
+
+    renderStore();
+
+    expect(await screen.findByText('Sin dirección registrada')).toBeInTheDocument();
+    expect(screen.getByText('Armenia · Centro')).toBeInTheDocument();
+  });
+
+  it('con precios: ubicación con su mapa, conteo y tarjetas de oferta', async () => {
+    stubStore(storeReply([banana, price('Arroz', 3000)]));
+
+    renderStore();
+
+    await screen.findByRole('heading', { level: 1, name: 'Ara' });
+    const place = screen.getByRole('complementary', { name: 'Ubicación' });
+    expect(within(place).getByRole('heading', { level: 2, name: 'Ubicación' })).toBeVisible();
+    expect(within(place).getByText('Mapa con: Ara')).toBeInTheDocument();
+    const prices = screen.getByRole('region', { name: 'Precios' });
+    expect(within(prices).getByText('2 productos con precio')).toBeInTheDocument();
     const row = within(screen.getByRole('link', { name: /Banano/ }).closest('li') as HTMLElement);
     expect(screen.getByRole('link', { name: /Banano/ })).toHaveAttribute(
       'href',
       `/productos/${banana.productId}`,
     );
+    expect(row.getByRole('heading', { level: 3 })).toBeInTheDocument();
     expect(row.getByText('$4.500')).toBeInTheDocument();
     expect(row.getByText('$450 por 100 g')).toBeInTheDocument();
     expect(row.getByText('Confiabilidad alta')).toBeInTheDocument();
+    expect(screen.queryByText(/Sé el primero/)).not.toBeInTheDocument();
   });
 
-  it('«Cómo llegar» queda arriba, antes del filtro y de la lista de precios', async () => {
+  it('con un solo precio el conteo va en singular', async () => {
+    stubStore(storeReply([banana]));
+    renderStore();
+
+    expect(await screen.findByText('1 producto con precio')).toBeInTheDocument();
+  });
+
+  it('el encabezado va antes que el filtro y los precios', async () => {
     stubStore(storeReply([banana]));
     renderStore();
 
@@ -99,12 +144,31 @@ describe('página de una tienda', () => {
     });
   });
 
-  it('sin precios lo dice', async () => {
+  it('sin precios invita a registrar el primero y no muestra el filtro ni el conteo', async () => {
     stubStore(storeReply([]));
 
     renderStore();
 
-    expect(await screen.findByText('Todavía no hay precios en esta tienda.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Aún no hay precios aquí' })).toBeVisible();
+    expect(screen.getByText('Nadie ha reportado un precio en esta tienda todavía.')).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: 'Sé el primero en registrar un precio' }),
+    ).toHaveAttribute('href', `/registrar?tienda=${ARA}`);
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByText(/con precio/)).not.toBeInTheDocument();
+    expect(screen.getByText('Mapa con: Ara')).toBeInTheDocument();
+  });
+
+  it('si el filtro deja la lista vacía, el filtro sigue para quitarlo', async () => {
+    stubStore([storeReply([banana]), storeReply([])]);
+    renderStore();
+    await screen.findByRole('heading', { name: 'Ara' });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Solo precios vigentes' }));
+
+    expect(await screen.findByRole('heading', { name: 'No hay precios vigentes' })).toBeVisible();
+    expect(screen.getByRole('checkbox', { name: 'Solo precios vigentes' })).toBeChecked();
+    expect(screen.queryByText(/Sé el primero/)).not.toBeInTheDocument();
   });
 
   it('si la tienda no existe lo dice y lleva al mapa', async () => {
@@ -127,6 +191,7 @@ describe('página de una tienda', () => {
     renderStore();
 
     expect(screen.getByRole('status')).toHaveTextContent('Cargando…');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
   });
 
   it('si falla muestra el error y permite reintentar', async () => {
@@ -139,5 +204,16 @@ describe('página de una tienda', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
 
     expect(await screen.findByRole('heading', { name: 'Ara' })).toBeInTheDocument();
+  });
+
+  it('el pin de la tienda respeta la preferencia de forma', async () => {
+    stubStore(storeReply([]));
+    localStorage.setItem('valora:pines-forma', '1');
+    renderStore();
+
+    const chip = await screen.findByText('Descuento');
+    expect(chip.querySelector('.pin-shape')).not.toBeNull();
+    expect(chip.querySelector('.pin-dot')).toBeNull();
+    localStorage.clear();
   });
 });

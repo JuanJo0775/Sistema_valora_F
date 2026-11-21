@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 interface Rewrite {
   source: string;
   destination: string;
+  has?: { type: string; key: string; value: string }[];
 }
 
 // ADR-012: Vercel sirve la PWA y reenvía /v1/* a Render, para que el navegador vea un solo origen
@@ -15,11 +16,16 @@ const { rewrites } = JSON.parse(readFileSync(resolve(process.cwd(), 'vercel.json
 
 // Vercel convierte la ruta de origen en una expresión regular que debe cubrir toda la ruta.
 const matches = (source: string, path: string): boolean => {
-  const pattern = source.replace(/:path\*/, '.*');
+  const pattern = source.replace(/:path\*/, '.*').replace(/:id/, '[^/]+');
   return new RegExp(`^${pattern}$`).test(path);
 };
-const firstRewrite = (path: string): Rewrite | undefined =>
-  rewrites.find((rule) => matches(rule.source, path));
+// Una regla con `has` solo aplica si la cabecera pedida coincide.
+const applies = (rule: Rewrite, userAgent: string): boolean =>
+  (rule.has ?? []).every(
+    ({ key, value }) => key === 'user-agent' && new RegExp(value).test(userAgent),
+  );
+const firstRewrite = (path: string, userAgent = 'Mozilla/5.0 (Linux; Android 14)') =>
+  rewrites.find((rule) => matches(rule.source, path) && applies(rule, userAgent));
 
 describe('vercel.json (ADR-012)', () => {
   it('reenvía /v1/* a la API en Render conservando la ruta', () => {
@@ -36,5 +42,26 @@ describe('vercel.json (ADR-012)', () => {
   it('las rutas de la app caen en index.html para que el router funcione al recargar', () => {
     expect(firstRewrite('/producto/abc')?.destination).toBe('/index.html');
     expect(firstRewrite('/moderacion')?.destination).toBe('/index.html');
+  });
+
+  it('no deja caer ninguna ruta de la función de vista previa en index.html', () => {
+    expect(firstRewrite('/api/og-producto')?.destination).not.toBe('/index.html');
+  });
+
+  it('los rastreadores de enlaces reciben la vista previa del producto; las personas, la app', () => {
+    const id = '2dd98cfa-359f-56aa-8282-bc9f454fe079';
+    for (const bot of [
+      'WhatsApp/2.23.20.0 A',
+      'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+      'Twitterbot/1.0',
+      'TelegramBot (like TwitterBot)',
+      'LinkedInBot/1.0 (compatible; Mozilla/5.0)',
+    ]) {
+      expect(firstRewrite(`/productos/${id}`, bot)?.destination).toBe('/api/og-producto?id=:id');
+    }
+    expect(firstRewrite(`/productos/${id}`)?.destination).toBe('/index.html');
+    expect(firstRewrite(`/productos/${id}/historial`, 'WhatsApp/2.23')?.destination).toBe(
+      '/index.html',
+    );
   });
 });

@@ -1,5 +1,8 @@
-// #73: cada tipo de tienda tiene su forma y su color, así no se distinguen solo por el color.
-// El mismo dibujo sirve para el pin del mapa (texto SVG para Leaflet) y para la leyenda (React).
+import { usePinShapes } from './pinShapePref';
+
+// Por defecto cada tipo de tienda es un círculo de su color. Quien lo pide en Ajustes › Accesibilidad
+// (#73) ve además una forma por tipo, así no depende solo del color. El mismo dibujo sirve al pin del
+// mapa (texto para el divIcon de Leaflet) y a la leyenda y las tarjetas (React): siempre coinciden.
 const SHAPES: Record<string, string> = {
   // Círculo.
   barrio: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z',
@@ -14,12 +17,17 @@ const FALLBACK = SHAPES.barrio ?? '';
 
 export const shapeOf = (type?: string): string => (type && SHAPES[type]) || FALLBACK;
 
-// Texto SVG del pin de una tienda (lo pone Leaflet dentro de un divIcon; solo lleva datos propios).
-export const pinSvg = (type?: string): string =>
-  `<svg class="pin-shape" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false"><path d="${shapeOf(type)}"/></svg>`;
+// Texto HTML del pin de una tienda (lo pone Leaflet dentro de un divIcon; solo lleva datos propios).
+export const pinHtml = (type: string | undefined, shaped: boolean): string =>
+  shaped
+    ? `<svg class="pin-shape" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false"><path d="${shapeOf(type)}"/></svg>`
+    : '<span class="pin-dot" aria-hidden="true"></span>';
 
-// La misma figura en la leyenda.
+// El mismo pin en la leyenda, el chip y las tarjetas. El color viene de la clase `type-*` de un
+// ancestro (o del propio elemento) que define `--pin`.
 export function PinShape({ type }: { type?: string }) {
+  const shaped = usePinShapes();
+  if (!shaped) return <span className="pin-dot" aria-hidden="true" />;
   return (
     <svg
       className="pin-shape"

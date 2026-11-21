@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router';
+import { InstallRow } from '../../pwa/InstallRow';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
@@ -47,7 +48,10 @@ function Group({ id, title, children }: { id: string; title: string; children: R
 }
 
 const SETTINGS_ROW = (
-  <NavRow to="/yo/ajustes" label="Ajustes" text="Tema, municipio, radio y pruebas" />
+  <>
+    <NavRow to="/yo/ajustes" label="Ajustes" text="Tema, municipio, radio y pruebas" />
+    <InstallRow />
+  </>
 );
 const PRIVACY_ROW = (
   <NavRow
