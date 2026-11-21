@@ -14,16 +14,8 @@ function InstallOrGuide() {
   const { installed, canPrompt, platform, install } = useInstall();
   const [open, setOpen] = useState(false);
   const guideId = useId();
-  if (installed) {
-    return (
-      <li className="install-row">
-        <span className="settings-text">
-          <strong>Instalar la app</strong>
-          <span className="muted">Valora ya está instalada en este dispositivo.</span>
-        </span>
-      </li>
-    );
-  }
+  // Ya instalada no hay nada que instalar: la fila se va en vez de quedar como un texto suelto sin flecha.
+  if (installed) return null;
   return (
     <li className="install-row">
       <button

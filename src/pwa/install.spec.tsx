@@ -401,10 +401,10 @@ describe('fila «Instalar la app» de Yo', () => {
     expect(document.querySelector('ol.install-steps')).not.toBeNull();
   });
 
-  it('ya instalada dice que lo está y no ofrece botón', () => {
+  it('ya instalada no muestra la fila de instalar', () => {
     setStandalone(true);
     inList();
-    expect(screen.getByText('Valora ya está instalada en este dispositivo.')).toBeInTheDocument();
+    expect(screen.queryByText('Instalar la app')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
   });
 

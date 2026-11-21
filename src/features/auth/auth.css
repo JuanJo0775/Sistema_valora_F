@@ -10,6 +10,8 @@
   display: grid;
   gap: 24px;
   max-width: 720px;
+  /* Centrada en la página: sin esto en PC quedaba pegada a la izquierda y su título se veía descentrado. */
+  margin-inline: auto;
   min-width: 0;
 }
 
