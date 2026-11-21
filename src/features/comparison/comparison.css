@@ -368,16 +368,6 @@
   scrollbar-width: none;
 }
 
-/* Con ratón (puntero preciso) no hay forma cómoda de deslizar un renglón: la rueda solo mueve la página
-   hacia arriba y abajo. Ahí los chips pasan a varias líneas y se ven todos; con el dedo se sigue
-   deslizando. */
-@media (pointer: fine) {
-  .category-chips {
-    flex-wrap: wrap;
-    overflow-x: visible;
-  }
-}
-
 .category-chip {
   /* El radio oculto es absoluto: sin un padre posicionado se sale del renglón deslizable y
      ensancha la página (se veía a 1200 px en el celular). */
@@ -582,10 +572,13 @@
   background: var(--bg-2);
 }
 
-/* H-19: el ahorro dice contra qué compara; el texto largo cabe en dos líneas junto a la miniatura. */
-.product-card-top .pill {
-  max-width: 60%;
-  text-align: right;
+/* El ahorro va en una sola línea junto a la miniatura; contra qué compara (H-19) lo dicen el texto
+   oculto y la ayuda al pasar el ratón. */
+.product-card-top .pill.savings {
+  align-self: flex-start;
+  padding: 4px 10px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 /* En la hoja, «Listo» queda a la vista aunque haya que desplazar el contenido. */

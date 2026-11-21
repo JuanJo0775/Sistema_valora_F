@@ -4,6 +4,7 @@ import { api, call } from '../../shared/api';
 import type { components, operations } from '../../shared/api/schema';
 import { formatDistance } from '../../shared/location';
 import { formatCop } from '../../shared/money';
+import { ChipRow } from '../../shared/ui/ChipRow';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { SkeletonCard, SkeletonList } from '../../shared/ui/Skeleton';
 import { useBasket } from '../basket/basketContext';
@@ -112,8 +113,7 @@ export function TodayBasket() {
         />
       </div>
       {categories.length > 0 && (
-        <fieldset role="radiogroup" className="category-chips">
-          <legend className="sr-only">Categoría</legend>
+        <ChipRow legend="Categoría">
           {[{ code: '', name: 'Todo' }, ...categories].map((option) => (
             <label key={option.code} className="category-chip">
               <input
@@ -129,7 +129,7 @@ export function TodayBasket() {
               {option.name}
             </label>
           ))}
-        </fieldset>
+        </ChipRow>
       )}
       <p className="muted small">Primero los productos con precio en más tiendas.</p>
       {!result && !featured && <SkeletonList kind="card" count={4} />}
@@ -200,7 +200,13 @@ function ProductCard({ item }: { item: Item }) {
         <div className="product-card-top">
           <ProductThumb image={item.image} size="card" category={item.category.code} />
           {item.savingsPercent !== undefined && (
-            <span className="pill ok">{`Hasta −${String(item.savingsPercent)} % frente a la tienda más cara`}</span>
+            <span
+              className="pill ok savings"
+              title={`Ahorra hasta ${String(item.savingsPercent)} % frente a la tienda más cara`}
+            >
+              <span>{`Ahorra hasta ${String(item.savingsPercent)} %`}</span>
+              <span className="sr-only">frente a la tienda más cara</span>
+            </span>
           )}
         </div>
         <h2>{item.name}</h2>
