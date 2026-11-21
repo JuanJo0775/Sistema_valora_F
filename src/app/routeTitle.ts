@@ -11,10 +11,13 @@ const FIXED: Record<string, string> = {
   '/yo': 'Tu cuenta',
   '/yo/ajustes': 'Ajustes',
   '/yo/app': 'Instalar y desinstalar la app',
+  '/yo/eliminar-cuenta': 'Eliminar mi cuenta',
   '/entrar': 'Entrar',
   '/crear-cuenta': 'Crear cuenta',
   '/privacidad': 'Privacidad',
   '/verificar-correo': 'Verificar correo',
+  // F#154: quien entró con Google y aún no tiene cuenta.
+  '/bienvenida': 'Bienvenida',
   '/pendientes': 'Pendientes',
   '/mis-aportes': 'Mis aportes',
   '/moderacion': 'Moderación',

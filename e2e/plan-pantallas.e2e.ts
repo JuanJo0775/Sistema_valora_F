@@ -131,6 +131,114 @@ for (const size of SIZES) {
       await check(page, 'plan-ubicacion', size.name, ['Mis planes guardados']);
     });
 
+    test('/canasta/plan: dos columnas en computador, una en tableta y celular', async ({
+      page,
+    }) => {
+      await fakeApi(page);
+      await page.goto('/canasta/plan');
+      await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
+      const assumptions = page.getByRole('region', { name: 'Supuestos del traslado' });
+      const option = page.getByRole('region', { name: '1 tienda' });
+      const title = page.getByRole('heading', { name: 'Plan de compra', level: 1 });
+      const [side, first, head] = await Promise.all([
+        assumptions.boundingBox(),
+        option.boundingBox(),
+        title.boundingBox(),
+      ]);
+      if (!side || !first || !head) throw new Error('Falta un bloque del plan en pantalla');
+      if (size.width >= 960) {
+        // Panel de supuestos a la derecha de las opciones, sin solaparse.
+        expect(side.x, 'el panel va a la derecha de las opciones').toBeGreaterThanOrEqual(
+          first.x + first.width,
+        );
+        // El contenido usa al menos ~80 % del ancho (del borde izquierdo del título al derecho del panel).
+        const used = side.x + side.width - head.x;
+        expect(used / size.width, 'ancho aprovechado').toBeGreaterThanOrEqual(0.8);
+        // El panel lateral sigue a la vista al bajar (sticky).
+        await page.getByText('Probar con 3 tiendas').click();
+        await page.evaluate(() => {
+          window.scrollTo(0, document.documentElement.scrollHeight);
+        });
+        const after = await assumptions.boundingBox();
+        expect(after?.y ?? -1, 'el panel se queda a la vista').toBeGreaterThanOrEqual(0);
+        expect(after?.y ?? 9999, 'el panel se queda a la vista').toBeLessThan(size.height / 2);
+      } else {
+        // Una columna, como hoy: los supuestos arriba de la primera opción y a su mismo ancho.
+        expect(side.y + side.height, 'supuestos arriba de la primera opción').toBeLessThanOrEqual(
+          first.y,
+        );
+        expect(Math.abs(side.x - first.x), 'misma columna').toBeLessThan(2);
+      }
+      const { overflow, small } = await audit(page, 'main');
+      expect(overflow).toEqual([]);
+      expect(small).toEqual([]);
+    });
+
+    test('/canasta/plan: orden del foco = orden visual y panel lateral solo en computador', async ({
+      page,
+    }) => {
+      await fakeApi(page);
+      await page.goto('/canasta/plan');
+      await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
+      const panel = page.getByRole('complementary', {
+        name: 'Supuestos del traslado y planes guardados',
+      });
+      if (size.width >= 960) {
+        await expect(panel).toBeVisible();
+        return;
+      }
+      await expect(panel).toHaveCount(0);
+      // Se recorre con Tab lo enfocable de <main>: nombre y posición vertical en la página.
+      const stops: { name: string; top: number }[] = [];
+      for (let i = 0; i < 80; i++) {
+        await page.keyboard.press('Tab');
+        const stop = await page.evaluate(() => {
+          const el = document.activeElement;
+          if (!el || !el.closest('main')) return null;
+          const labels = (el as HTMLInputElement).labels;
+          const name =
+            el.getAttribute('aria-label') ??
+            (labels?.[0]?.textContent || el.textContent || el.id).trim();
+          return { name: name.slice(0, 40), top: el.getBoundingClientRect().top + window.scrollY };
+        });
+        if (stop) stops.push(stop);
+        else if (stops.length > 0) break; // salió de la lista (o dio la vuelta)
+      }
+      const names = stops.map(({ name }) => name);
+      expect(names.length, 'se recorrió algo').toBeGreaterThan(5);
+      const firstField = stops.findIndex(({ name }) => /rodeo/i.test(name));
+      const firstSave = stops.findIndex(({ name }) => name === 'Guardar plan');
+      expect(firstField, `Factor de rodeo en el recorrido: ${names.join(' | ')}`).toBeGreaterThan(
+        -1,
+      );
+      expect(firstField, 'los supuestos antes de «Guardar plan»').toBeLessThan(firstSave);
+      for (let i = 1; i < stops.length; i++) {
+        const prev = stops[i - 1];
+        const cur = stops[i];
+        if (!prev || !cur) continue;
+        expect(
+          cur.top,
+          `«${cur.name}» después de «${prev.name}» no debe estar más arriba`,
+        ).toBeGreaterThanOrEqual(prev.top - 8);
+      }
+    });
+
+    test('/canasta/plan: cambiar de ancho conserva los supuestos', async ({ page }) => {
+      test.skip(size.width < 960 || size.onlyPlan, 'Se parte de computador y se pasa a celular');
+      await fakeApi(page);
+      await page.goto('/canasta/plan');
+      await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
+      await page.getByLabel('Factor de rodeo').fill('1.5');
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(page.getByLabel('Factor de rodeo')).toHaveValue('1.5');
+      await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
+      await expect(
+        page.getByRole('complementary', { name: 'Supuestos del traslado y planes guardados' }),
+      ).toHaveCount(0);
+      const { overflow } = await audit(page, 'main');
+      expect(overflow).toEqual([]);
+    });
+
     test('/canasta/plan: sin precio vigente cerca y con error', async ({ page }) => {
       await fakeApi(page, 'empty');
       await page.goto('/canasta/plan');

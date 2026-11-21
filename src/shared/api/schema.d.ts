@@ -242,6 +242,19 @@ export interface paths {
          *     que nunca sale en respuestas ni eventos (EC-08). La misma Idempotency-Key usada por otra cuenta
          *     responde 409.
          *
+         *     Plausibilidad (ADR-030, EC-03): un precio fuera del piso y el techo absolutos se rechaza con 422
+         *     IMPLAUSIBLE_PRICE. Uno dentro de ellos pero muy lejos de lo habitual (menos del 40 % o más del
+         *     250 % de la mediana de las cuentas, de otras tiendas del municipio o, si no hay, del mayorista
+         *     SIPSA; valores provisionales) se recibe igual con 201 y estado recibido, pero reliability lo deja
+         *     en_revision: no es el precio vigente, no entra al orden ni a «Más barato» y va a la cola de
+         *     moderación. El estado final se lee en GET /me/reports (status en_revision), no en esta respuesta.
+         *
+         *     Reintentos (EC-07): la Idempotency-Key se reconoce antes que la regla de duplicados. Si el primer
+         *     envío se aplicó pero el cliente no recibió la respuesta (corte de red), repetir la MISMA clave con
+         *     el MISMO cuerpo devuelve 200 con el recibo original, sin importar cuánto tiempo pase, y nunca
+         *     409 DUPLICATE_REPORT. El cliente debe guardar la clave con el reporte en la cola y reutilizarla;
+         *     si genera una clave nueva al reintentar, el mismo precio responde 409 DUPLICATE_REPORT.
+         *
          *     Cola sin conexión (ADR-010, #30): la PWA manda cada reporte de la cola por esta misma ruta, con
          *     su clave. Qué hacer con cada respuesta: 201 o 200, confirmado (sale de la cola); 400, 409 o 422,
          *     final (sale de la cola y avisa); 429 de un reporte que ya estaba en la cola, final (su hora de
@@ -266,7 +279,7 @@ export interface paths {
         put?: never;
         /**
          * Marcar un precio como dudoso (RF-013)
-         * @description Solo el rol reportante. Una marca por cuenta y reporte (RN1); el reporte entra a la cola de moderación con el motivo marcado. Quién marca no se muestra a nadie (EC-08).
+         * @description Solo el rol reportante. Una marca por cuenta y reporte (RN1); el reporte entra a la cola de moderación con el motivo marcado. Quién marca no se muestra a nadie (EC-08). Si el reporte era el precio vigente de esa tienda, pasa a en_revision (EC-03, ADR-030): deja de ser el precio mostrado y de ser «Más barato» hasta que un moderador lo apruebe (vuelve a vigente) o lo descarte.
          */
         post: operations["flagReport"];
         delete?: never;
@@ -309,6 +322,26 @@ export interface paths {
         get: operations["getMyReportStatus"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/account-deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar la propia cuenta, con 10 días de gracia (Ley 1581, art. 8; ADR-032)
+         * @description Derecho de supresión. Cualquier rol, también una cuenta suspendida. Pide la contraseña; una cuenta creada con Google no tiene contraseña y confirma escribiendo su correo (confirmEmail, #179). No borra todavía: marca la cuenta como pendiente de eliminación para dentro de 10 días, revoca todas sus sesiones y limpia la cookie. Pedirla otra vez no mueve la fecha. Durante la gracia la persona no puede iniciar sesión (403 ACCOUNT_PENDING_DELETION) salvo para restaurarla con POST /auth/restore-account. Pasada la fecha, un trabajo interno (cada hora y al arrancar el servidor; puede retrasarse unas horas, nunca se adelanta) borra la cuenta y todo lo que cuelga de ella. Los reportes de precios, las propuestas y las marcas se conservan sin ningún dato personal.
+         */
+        post: operations["requestAccountDeletion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -395,6 +428,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/restore-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restaurar una cuenta con la eliminación pendiente e iniciar sesión (ADR-032)
+         * @description Pública, sin sesión (como el login, no lleva token CSRF). Si la cuenta tiene la eliminación pendiente y la contraseña es correcta, cancela la eliminación y deja la sesión iniciada con la misma respuesta y cookie que POST /auth/login. Si el correo no existe, la contraseña es mala o la cuenta no estaba pendiente, responde el mismo 401 genérico del login. Comparte con el login el límite de intentos.
+         */
+        post: operations["restoreAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -463,6 +516,66 @@ export interface paths {
          * @description Sin cuerpo: el correo sale a la cuenta de la sesión, nunca a una dirección recibida, así que no revela qué correos existen (EC-08). Un enlace nuevo deja sin efecto los anteriores sin usar. Responde 202 igual si la cuenta ya estaba verificada (no se envía nada) o si el envío se encola. Una cuenta suspendida también puede usarla.
          */
         post: operations["resendVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Empezar a entrar con Google (ADR-029, fase 2)
+         * @description La persona llega aquí por el navegador (un enlace, no fetch). Responde 302 a Google con PKCE (S256), state, nonce y los alcances openid email profile, y guarda state, nonce y el verificador en la cookie valora_google, firmada y con 10 minutos de vida. No guarda nada en la base. 404 si el servidor no tiene configurado Google (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y GOOGLE_REDIRECT_URI).
+         */
+        get: operations["startGoogleSignIn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vuelta desde Google; abre la sesión o pide aceptar la política (ADR-029, fase 2)
+         * @description Siempre responde 302 hacia la PWA (la persona llega por el navegador) y borra valora_google. Con una cuenta vinculada o cuyo correo coincide, abre la misma sesión que POST /auth/login y lleva a /. Con un correo sin cuenta no crea nada: guarda en la cookie firmada valora_google_signup (10 minutos) el sub, el correo y el nombre que da Google, y lleva a /bienvenida para aceptar la política (RF-001). Si algo falla lleva a /entrar?error=, con uno de google (state distinto o ausente, código o id_token inválido), google-correo-sin-verificar, eliminacion-pendiente; si la persona canceló en Google, a /entrar sin error. Nunca pone el correo, el sub ni tokens en la URL (EC-08).
+         */
+        get: operations["googleSignInCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear la cuenta de quien entró con Google al aceptar la política (RF-001, ADR-029)
+         * @description Exige la cookie valora_google_signup vigente que dejó el callback; sin ella o vencida responde 401. Crea una cuenta reportante sin contraseña, con el correo ya verificado y vinculada a Google, abre la sesión (como POST /auth/login) y borra valora_google_signup. Si mientras tanto alguien creó una cuenta con ese correo, se vincula a ella. El correo nunca viaja en el cuerpo: sale de la cookie firmada. Sin token CSRF: aún no hay sesión, y SameSite=Lax impide que otro sitio envíe la cookie en un POST.
+         */
+        post: operations["completeGoogleSignUp"];
         delete?: never;
         options?: never;
         head?: never;
@@ -712,7 +825,18 @@ export interface components {
              */
             availableFrom?: string;
         };
-        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), NOT_FOUND (404), CONFLICT (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, INVALID_TTL, INVALID_VERIFICATION_TOKEN y los que agreguen las reglas futuras. */
+        /** @description Error con scheduledFor, solo en el 403 ACCOUNT_PENDING_DELETION de POST /auth/login (ADR-032). */
+        PendingDeletionError: {
+            /** @example ACCOUNT_PENDING_DELETION */
+            code: string;
+            message: string;
+            /**
+             * Format: date-time
+             * @description Cuándo se borra la cuenta de forma definitiva si no se restaura.
+             */
+            scheduledFor: string;
+        };
+        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84) y scheduledFor en el 403 ACCOUNT_PENDING_DELETION (PendingDeletionError, ADR-032). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), INVALID_PASSWORD (403), LAST_MODERATOR_CANNOT_DELETE (403), ACCOUNT_PENDING_DELETION (403), NOT_FOUND (404), CONFLICT (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, IMPLAUSIBLE_PRICE, INVALID_TTL, INVALID_VERIFICATION_TOKEN y los que agreguen las reglas futuras. */
         Error: {
             /** @example INVALID_QUANTITY */
             code: string;
@@ -769,6 +893,8 @@ export interface components {
             type: "barrio" | "minimercado" | "supermercado" | "descuento";
             /** @description Opcional; muchas tiendas no tienen dirección formal. */
             address?: string;
+            /** @description Opcional (H-06): barrio de la tienda, cuando el directorio lo tiene. Junto con address distingue tiendas de la misma cadena. Dato público de la tienda, no del usuario. */
+            neighborhood?: string;
             /** @description Latitud de la tienda (nunca la del usuario */
             lat: number;
             /** @description Longitud de la tienda. */
@@ -786,6 +912,8 @@ export interface components {
             type: "barrio" | "minimercado" | "supermercado" | "descuento";
             /** @description Opcional; muchas tiendas no tienen dirección formal. */
             address?: string;
+            /** @description Opcional (H-06): barrio de la tienda, cuando el directorio lo tiene. Junto con address distingue tiendas de la misma cadena. Dato público de la tienda, no del usuario. */
+            neighborhood?: string;
             /** @description Latitud de la tienda (nunca la del usuario */
             lat: number;
             /** @description Longitud de la tienda. */
@@ -913,6 +1041,10 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 name: string;
+                /** @description Opcional; dirección de la tienda cuando el directorio la tiene (H-06). */
+                address?: string;
+                /** @description Opcional; barrio de la tienda cuando el directorio lo tiene (H-06). */
+                neighborhood?: string;
                 /** @description Metros desde la ubicación consultada; solo si se envió la ubicación. */
                 distanceM?: number;
             };
@@ -922,6 +1054,7 @@ export interface components {
             presentationId: string;
             /** Format: uuid */
             establishmentId: string;
+            /** @description Precio total en pesos. Menos de $100 o más de $5.000.000 se rechaza con 422 IMPLAUSIBLE_PRICE (ADR-030, valores provisionales). */
             priceCop: number;
             /**
              * @description combo queda fuera hasta definir qué significa (grill de la
@@ -938,7 +1071,10 @@ export interface components {
         ReportReceipt: {
             /** Format: uuid */
             id: string;
-            /** @enum {string} */
+            /**
+             * @description Hoy siempre recibido: el veredicto llega después (ADR-004). Un precio atípico (ADR-030) aparece como en_revision en GET /me/reports.
+             * @enum {string}
+             */
             status: "recibido" | "en_revision" | "vigente" | "descartado";
             /** Format: date-time */
             receivedAt: string;
@@ -988,7 +1124,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description code FORBIDDEN: el rol no tiene permiso. code CSRF_TOKEN_INVALID: falta la cabecera X-CSRF-Token o no coincide con la sesión. code ACCOUNT_SUSPENDED: la cuenta está suspendida y su sesión solo sirve para ver el estado de sus reportes, apelar y cerrar sesión (#71). code EMAIL_NOT_VERIFIED: solo en POST /reports, la cuenta aún no verificó su correo (ADR-029). */
+        /** @description code FORBIDDEN: el rol no tiene permiso. code CSRF_TOKEN_INVALID: falta la cabecera X-CSRF-Token o no coincide con la sesión. code ACCOUNT_SUSPENDED: la cuenta está suspendida y su sesión solo sirve para ver el estado de sus reportes, apelar y cerrar sesión (#71). code EMAIL_NOT_VERIFIED: solo en POST /reports, la cuenta aún no verificó su correo (ADR-029). INVALID_PASSWORD y LAST_MODERATOR_CANNOT_DELETE: solo en POST /me/account-deletion (ADR-032). */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1043,6 +1179,7 @@ export interface components {
     };
     requestBodies: never;
     headers: {
+        /** @description Caché del navegador (max-age) y de las cachés compartidas (s-maxage). Con ubicación, sesión o error, no-store (ADR-031). */
         CacheControl: string;
         /** @description Segundos que faltan para poder intentar de nuevo. */
         RetryAfter: number;
@@ -1063,6 +1200,7 @@ export interface operations {
             /** @description La API responde */
             200: {
                 headers: {
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1092,7 +1230,10 @@ export interface operations {
             /** @description Productos encontrados, del más parecido al menos parecido */
             200: {
                 headers: {
+                    /** @description Caché del navegador 30 s; caché compartida (CDN) 60 s (ADR-031). */
                     "Cache-Control"?: string;
+                    /** @description Accept-Encoding; la respuesta se comprime con gzip o brotli si pesa más de 1 kB (ADR-031). */
+                    Vary?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1141,6 +1282,7 @@ export interface operations {
             /** @description Producto con su categoría y sus presentaciones */
             200: {
                 headers: {
+                    /** @description Caché compartida de 5 minutos (ADR-031). */
                     "Cache-Control"?: string;
                     ETag?: string;
                     [name: string]: unknown;
@@ -1187,7 +1329,9 @@ export interface operations {
             /** @description Resultados y promociones separadas */
             200: {
                 headers: {
+                    /** @description no-store si la URL lleva lat o lng; con solo el municipio, caché compartida de 60 s como máximo (ADR-031) y ETag. */
                     "Cache-Control"?: string;
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1224,6 +1368,7 @@ export interface operations {
             /** @description Serie diaria por presentación */
             200: {
                 headers: {
+                    /** @description Caché del navegador 5 minutos; caché compartida 60 s, porque trae precios (ADR-031). */
                     "Cache-Control"?: string;
                     ETag?: string;
                     [name: string]: unknown;
@@ -1297,7 +1442,7 @@ export interface operations {
             /** @description Los productos de la canasta, en el orden declarado */
             200: {
                 headers: {
-                    /** @description public, max-age=60 sin ubicación; no-store con ubicación. */
+                    /** @description Sin ubicación, caché compartida de 60 s (ADR-031); no-store con ubicación. */
                     "Cache-Control"?: string;
                     ETag?: string;
                     [name: string]: unknown;
@@ -1418,6 +1563,7 @@ export interface operations {
             /** @description La tienda y sus precios */
             200: {
                 headers: {
+                    /** @description Caché compartida de 60 s como máximo, porque trae precios (ADR-031). */
                     "Cache-Control"?: string;
                     ETag?: string;
                     [name: string]: unknown;
@@ -1431,6 +1577,8 @@ export interface operations {
                             /** @enum {string} */
                             type: "barrio" | "minimercado" | "supermercado" | "descuento";
                             address?: string;
+                            /** @description Opcional; barrio de la tienda (H-06). */
+                            neighborhood?: string;
                             lat: number;
                             lng: number;
                             municipality: components["schemas"]["Municipality"];
@@ -1593,7 +1741,7 @@ export interface operations {
                     "application/json": components["schemas"]["ConflictError"];
                 };
             };
-            /** @description Regla de negocio incumplida. code INVALID_OBSERVATION_DATE: observedAt está más de 5 minutos en el futuro o es de hace más de 24 horas, aunque venga de la cola sin conexión (#29). code UNKNOWN_PRESENTATION o UNKNOWN_ESTABLISHMENT: la presentación o el establecimiento no existen. */
+            /** @description Regla de negocio incumplida. code INVALID_OBSERVATION_DATE: observedAt está más de 5 minutos en el futuro o es de hace más de 24 horas, aunque venga de la cola sin conexión (#29). code UNKNOWN_PRESENTATION o UNKNOWN_ESTABLISHMENT: la presentación o el establecimiento no existen. code IMPLAUSIBLE_PRICE (ADR-030, EC-03): el precio es menor que $100 o mayor que $5.000.000 (valores provisionales); no se guarda nada. El mensaje viene en español, por ejemplo «El precio parece incompleto: ningún producto cuesta menos de $100. Revisa si faltan ceros». */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1763,6 +1911,65 @@ export interface operations {
             };
         };
     };
+    requestAccountDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    password: string;
+                } | {
+                    /** @description El correo de la cuenta; se compara sin espacios y en minúsculas. */
+                    confirmEmail: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Eliminación programada; la cookie de sesión se borra */
+            202: {
+                headers: {
+                    /** @description valora_session vacía y vencida (Max-Age=0). */
+                    "Set-Cookie"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date-time
+                         * @description Momento desde el que la cuenta se puede borrar de forma definitiva (ahora más 10 días).
+                         */
+                        scheduledFor: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description code INVALID_PASSWORD (la contraseña no coincide, o una cuenta con contraseña envió confirmEmail; no se programa nada), code INVALID_CONFIRMATION (una cuenta sin contraseña escribió un correo que no es el suyo), code LAST_MODERATOR_CANNOT_DELETE (es el único moderador activo) o code CSRF_TOKEN_INVALID. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Más de 5 confirmaciones incorrectas por cuenta o 20 intentos por IP en 15 minutos. */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     listMyReports: {
         parameters: {
             query?: {
@@ -1788,7 +1995,7 @@ export interface operations {
                             reportId: string;
                             /**
                              * Format: uuid
-                             * @description Ausente en aportes de cuentas antiguas.
+                             * @description El producto del aporte, para enlazar a /productos/{id}. Falta solo si la presentación ya no existe en el catálogo (entonces productName es «Sin nombre»).
                              */
                             productId?: string;
                             productName: string;
@@ -1951,7 +2158,7 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["BadRequest"];
-            /** @description code UNAUTHORIZED con «Correo o contraseña incorrectos.», exista o no la cuenta. */
+            /** @description code UNAUTHORIZED con «Correo o contraseña incorrectos.», exista o no la cuenta. Una cuenta creada con Google no tiene contraseña y recibe este mismo error (no revela cómo se creó, EC-08). */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1960,7 +2167,64 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description code ACCOUNT_PENDING_DELETION: la contraseña es correcta, pero la cuenta tiene la eliminación pendiente (ADR-032). No se crea sesión; scheduledFor dice cuándo se borra y POST /auth/restore-account la restaura. Con una contraseña incorrecta el error es el 401 genérico: no revela que la cuenta existe ni su estado. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingDeletionError"];
+                };
+            };
             /** @description Más de 5 fallos por correo o 20 intentos por IP en 15 minutos (valores provisionales). No revela si la cuenta existe. */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    restoreAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Eliminación cancelada y sesión iniciada */
+            204: {
+                headers: {
+                    /** @description valora_session con HttpOnly, Secure, SameSite=Lax, Path=/ y Max-Age de 30 días. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description code UNAUTHORIZED con «Correo o contraseña incorrectos.», exista o no la cuenta y esté o no pendiente. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Mismo límite que el login (5 fallos por correo o 20 intentos por IP en 15 minutos). */
             429: {
                 headers: {
                     "Retry-After": components["headers"]["RetryAfter"];
@@ -2004,6 +2268,8 @@ export interface operations {
             /** @description Sesión activa */
             200: {
                 headers: {
+                    /** @description Lleva el token CSRF; nunca se guarda en caché. */
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2093,6 +2359,106 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description Más de 3 reenvíos por cuenta en una hora (valores provisionales). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    startGoogleSignIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirige a accounts.google.com */
+            302: {
+                headers: {
+                    /** @description https://accounts.google.com/o/oauth2/v2/auth con los parámetros del flujo. */
+                    Location?: string;
+                    /** @description valora_google con HttpOnly, Secure, SameSite=Lax, Path=/v1/auth/google y Max-Age de 600 s. */
+                    "Set-Cookie"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    googleSignInCallback: {
+        parameters: {
+            query?: {
+                /** @description Código de autorización que envía Google. */
+                code?: string;
+                /** @description Debe ser igual al guardado en valora_google. */
+                state?: string;
+                /** @description Lo envía Google si la persona canceló (access_denied) u otro fallo. */
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirige a /, /bienvenida o /entrar (con o sin error) */
+            302: {
+                headers: {
+                    /** @description Una ruta de la PWA en el mismo origen. */
+                    Location?: string;
+                    /** @description Borra valora_google y, según el caso, entrega valora_session (como POST /auth/login) o valora_google_signup (HttpOnly, Secure, SameSite=Lax, Path=/v1/auth/google, Max-Age de 600 s). */
+                    "Set-Cookie"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    completeGoogleSignUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Mismas reglas que en POST /auth/register. */
+                    displayName: string;
+                    /**
+                     * @description Versión vigente de la política de datos.
+                     * @enum {string}
+                     */
+                    acceptedPolicyVersion: "2026-11";
+                };
+            };
+        };
+        responses: {
+            /** @description Cuenta creada (o vinculada) y sesión iniciada */
+            204: {
+                headers: {
+                    /** @description valora_session como en POST /auth/login, y valora_google_signup vacía y vencida. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Más de 10 registros por IP en 15 minutos (el mismo límite de POST /auth/register). */
             429: {
                 headers: {
                     "Retry-After": components["headers"]["RetryAfter"];

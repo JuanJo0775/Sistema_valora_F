@@ -401,16 +401,17 @@ describe('fila «Instalar la app» de Yo', () => {
     expect(document.querySelector('ol.install-steps')).not.toBeNull();
   });
 
-  it('ya instalada dice que lo está y no ofrece botón', () => {
+  it('ya instalada no muestra la fila de instalar', () => {
     setStandalone(true);
     inList();
-    expect(screen.getByText('Valora ya está instalada en este dispositivo.')).toBeInTheDocument();
+    expect(screen.queryByText('Instalar la app')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('enlaza a la pantalla de desinstalar, instalada o no', () => {
+  it('no anuncia «Desinstalar» en Yo: la guía se llama desde la fila de instalar', () => {
     inList();
-    expect(screen.getByRole('link', { name: /Desinstalar la app/ })).toHaveAttribute(
+    expect(screen.queryByText(/Desinstalar la app/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Ver la guía completa' })).toHaveAttribute(
       'href',
       '/yo/app',
     );

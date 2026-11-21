@@ -42,8 +42,10 @@ pantalla que abra la persona y no solo en el Inicio. La antigua franja del Inici
 ## Desinstalar la app
 
 Los navegadores no dejan desinstalar una app por código, así que la app solo guía. La pantalla
-**Yo > Instalar y desinstalar la app** (`/yo/app`) está enlazada desde la fila **Desinstalar la app** de Yo
-y desde **Ajustes > La app**. Si se abre instalada, muestra «Estás usando la app instalada» y pone primero,
+**Yo > Instalar y desinstalar la app** (`/yo/app`) se abre desde el enlace «Ver la guía completa» de la fila
+**Instalar la app** de Yo y desde **Ajustes > Opciones avanzadas > Desinstalar la app**. Desinstalar no se
+anuncia en Yo a propósito: «Opciones avanzadas» es una sección plegada al final de Ajustes, con texto neutro,
+que agrupa lo que casi nadie necesita (desinstalar y, con sesión, **Eliminar mi cuenta**). Si se abre instalada, muestra «Estás usando la app instalada» y pone primero,
 abiertos, los pasos del dispositivo detectado (computador, Android o iPhone/iPad); los demás quedan plegados.
 
 - **Computador, Chrome o Edge, con la app en su ventana:** menú de tres puntos de la ventana (arriba a la
@@ -57,6 +59,22 @@ abiertos, los pasos del dispositivo detectado (computador, Android o iPhone/iPad
 - **iPhone y iPad:** mantener pulsado el ícono > **Eliminar app** > **Eliminar de la pantalla de inicio**.
 - Desinstalar no borra la cuenta ni los aportes. La canasta y las preferencias guardadas en el dispositivo
   se borran desde el navegador (borrar los datos del sitio).
+
+## Eliminar la cuenta
+
+Con sesión iniciada, **Ajustes > Opciones avanzadas > Eliminar mi cuenta** abre `/yo/eliminar-cuenta` (sin
+sesión lleva a entrar y vuelve). La pantalla explica qué se borra (cuenta, correo, sesiones, datos de acceso) y
+qué se conserva (los precios reportados, sin nombre ni correo), y avisa que hay 10 días de gracia. Pide la
+contraseña y la casilla «Entiendo que pasado el plazo no se puede deshacer»; el botón sigue deshabilitado
+hasta tener ambas. Usa `POST /v1/me/account-deletion` (sesión + CSRF, `{ password }`) que responde 202 con
+`scheduledFor` y cierra todas las sesiones; la app cierra también la sesión local y muestra la fecha. Errores:
+403 `INVALID_PASSWORD` (en el campo), 403 `LAST_MODERATOR_CANNOT_DELETE` / `MODERATOR_CANNOT_DELETE` (traspasar
+el rol primero), 429 (esperar), 401 (entrar de nuevo), sin red o 5xx (la cuenta sigue activa).
+
+Durante los 10 días, entrar con el correo y la contraseña responde 403 `ACCOUNT_PENDING_DELETION` con
+`scheduledFor`: `/entrar` muestra «Tu cuenta está programada para eliminarse el …» con **Restaurar mi cuenta**
+(`POST /v1/auth/restore-account`, `{ email, password }`, entra y vuelve a donde iba) y **Dejar que se
+elimine**. Los tipos de estas dos rutas están escritos a mano en `schema.d.ts` y deben regenerarse.
 
 ## Registrar un precio con la tienda elegida
 
@@ -123,7 +141,7 @@ sola mostraría siempre la vista previa general. Solución sin servidor propio:
 La dirección vive en **un solo lugar**: `DEFAULT_SITE_URL` en `src/site.ts`. El build la pone en
 `index.html` (`canonical`, `og:url`, `og:image`, `twitter:image`), en `robots.txt` y en `sitemap.xml`.
 
-1. Cuando llegue el dominio, cambiar `DEFAULT_SITE_URL` en `src/site.ts`, **o** definir la variable de
+1. El dominio actual es `https://www.valoora.app` (ya está en `DEFAULT_SITE_URL`). Para cambiarlo, editar `DEFAULT_SITE_URL` en `src/site.ts`, **o** definir la variable de
    entorno `SITE_URL` en Vercel (Settings > Environment Variables), sin tocar código. Debe ser
    `https://dominio` sin ruta ni barra final.
 2. Volver a desplegar.
