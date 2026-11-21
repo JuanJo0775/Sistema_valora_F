@@ -7,7 +7,6 @@ import { BasketProvider } from '../features/basket/BasketProvider';
 import { BasketSummary } from '../features/basket/BasketSummary';
 import { ProductDetail } from '../features/catalog/ProductDetail';
 import { TodayBasket } from '../features/comparison/TodayBasket';
-import { InstallStrip } from '../pwa/InstallStrip';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportInvite } from '../features/reports/ReportInvite';
 import { Layout } from './Layout';
@@ -25,6 +24,10 @@ const BasketPage = screen(() => import('../features/basket/BasketPage'), 'Basket
 const PlanPage = screen(() => import('../features/plan/PlanPage'), 'PlanPage');
 const SavedPlanPage = screen(() => import('../features/plan/SavedPlanPage'), 'SavedPlanPage');
 const ReportPrice = screen(() => import('../features/reports/ReportPrice'), 'ReportPrice');
+const InstallAndUninstall = screen(
+  () => import('../pwa/InstallAndUninstall'),
+  'InstallAndUninstall',
+);
 const Settings = screen(() => import('../features/auth/Settings'), 'Settings');
 const SignIn = screen(() => import('../features/auth/SignIn'), 'SignIn');
 const SignUp = screen(() => import('../features/auth/SignUp'), 'SignUp');
@@ -59,7 +62,6 @@ function Home() {
   return (
     <div className="with-side home">
       <div className="home-main">
-        <InstallStrip />
         {search}
         <TodayBasket />
       </div>
@@ -137,6 +139,7 @@ export function App() {
                 <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
                 <Route path="/yo" element={<Profile />} />
                 <Route path="/yo/ajustes" element={<Settings />} />
+                <Route path="/yo/app" element={<InstallAndUninstall />} />
                 <Route path="/entrar" element={<SignIn />} />
                 <Route path="/crear-cuenta" element={<SignUp />} />
                 <Route path="/privacidad" element={<PrivacyPolicy />} />

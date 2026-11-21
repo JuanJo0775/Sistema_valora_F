@@ -11,8 +11,8 @@ import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, MUNICIPALITIES } from './criteria';
 import { ago, comparisonKey, readComparison, saveComparison } from './lastComparison';
 import { Offer } from './Offer';
-import { useWhere } from './WhereChooser';
-import { WhereChip } from './WhereChip';
+import { useWhere } from './useWhere';
+import { WherePicker } from './WherePicker';
 import { WholesaleReference } from './WholesaleReference';
 import './comparison.css';
 
@@ -139,9 +139,8 @@ export function AllStores({
         <h2 id="todas-las-tiendas" className="eyebrow">
           Todas las tiendas
         </h2>
-        <WhereChip
+        <WherePicker
           where={where}
-          backLabel="Comparar por municipio"
           onLeaveLocation={() => {
             // Sin ubicación no hay distancia: el backend responde 400 a sort=distance.
             setWantsDistance(false);

@@ -10,7 +10,8 @@ import { useWide } from '../../shared/useWide';
 import { type BasketItem, useBasket } from '../basket/basketContext';
 import { type Area, useStoreTotals } from '../basket/useStoreTotals';
 import type { BasketLine } from '../basket/totals';
-import { useWhere, WhereChooser } from '../comparison/WhereChooser';
+import { useWhere } from '../comparison/useWhere';
+import { WherePicker } from '../comparison/WherePicker';
 import { AssumptionsForm } from './AssumptionsForm';
 import { readAssumptions, saveAssumptions } from './assumptions';
 import { type Delivery, PlanStoreSection } from './PlanStoreSection';
@@ -114,7 +115,7 @@ export function PlanPage({
         <h1>Plan de compra</h1>
         <p className="muted">Repartimos tu canasta entre una, dos o tres tiendas cercanas.</p>
         <div className="plan-where">
-          <WhereChooser where={where} backLabel="Buscar por municipio" />
+          <WherePicker where={where} />
         </div>
         {where.ready ? (
           <PlanContent

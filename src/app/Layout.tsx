@@ -5,6 +5,7 @@ import logoLight from '../assets/logo-horizontal-claro.png';
 import { useBasket } from '../features/basket/basketContext';
 import { VerifyEmailBanner } from '../features/auth/VerifyEmailBanner';
 import { BasketToast } from '../features/basket/BasketToast';
+import { InstallPrompt } from '../pwa/InstallPrompt';
 import { PendingBanner } from '../pwa/PendingBanner';
 import { UpdateBanner } from '../pwa/UpdateBanner';
 import { OfflineBanner } from '../shared/ui/OfflineBanner';
@@ -104,6 +105,7 @@ export function Layout() {
       </p>
       <BasketToast />
       <CookieNotice />
+      <InstallPrompt />
     </div>
   );
 }

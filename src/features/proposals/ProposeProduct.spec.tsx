@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { choose } from '../../test/choose';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, sessionAs, stubApi } from '../../test/fakeApi';
@@ -33,12 +34,10 @@ const renderPropose = (
 };
 
 const fill = async () => {
-  fireEvent.change(await screen.findByRole('combobox', { name: 'Categoría' }), {
-    target: { value: 'grains-groceries' },
-  });
+  await choose('Categoría', 'Granos y abarrotes');
   fireEvent.change(screen.getByLabelText('Marca (opcional)'), { target: { value: 'Diana' } });
   fireEvent.change(screen.getByLabelText('Cantidad'), { target: { value: '500' } });
-  fireEvent.change(screen.getByRole('combobox', { name: 'Unidad' }), { target: { value: 'g' } });
+  await choose('Unidad', 'gramos (g)');
 };
 
 describe('proponer un producto', () => {
@@ -75,9 +74,7 @@ describe('proponer un producto', () => {
     const api = renderPropose();
     await fill();
     if (missing === 'category') {
-      fireEvent.change(screen.getByRole('combobox', { name: 'Categoría' }), {
-        target: { value: '' },
-      });
+      await choose('Categoría', 'Elige la categoría');
     } else {
       fireEvent.change(screen.getByLabelText('Cantidad'), { target: { value: '' } });
     }

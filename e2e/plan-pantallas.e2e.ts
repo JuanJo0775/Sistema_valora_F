@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { basketOf, fakeApi, PRODUCTS, savedPlan, seed } from './support/planFake';
+import { chooseOption } from './support/screens';
 
 // Pantallas del plan de compra (/canasta, /canasta/plan, /canasta/plan/:id) en computador, tableta
 // y celular: sin desbordamiento horizontal, objetivos táctiles de 24 px o más (WCAG 2.5.8) y textos
@@ -106,7 +107,7 @@ for (const size of SIZES) {
       await page.getByText('Probar con 3 tiendas').click();
       await page.getByRole('switch', { name: 'Me lo llevan a casa' }).first().check();
       await page.getByLabel('¿Cuánto cobra el domicilio?').first().fill('1234567');
-      await page.getByLabel('Cómo cuentas el traslado').selectOption('fare');
+      await chooseOption(page, 'Cómo cuentas el traslado', 'Pasaje');
       await page.getByLabel('Pasaje por tramo (COP)').fill('1500');
       await expect(page.getByRole('button', { name: 'Guardar plan' }).first()).toBeVisible();
       await check(page, 'plan-municipio', size.name, ['Plan de compra', 'Supuestos del traslado']);
@@ -122,7 +123,12 @@ for (const size of SIZES) {
       await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
       await page.getByRole('button', { name: 'Guardar plan' }).first().click();
       await expect(page.getByText('Plan guardado', { exact: true })).toBeVisible();
-      await check(page, 'plan-ubicacion', size.name, ['Radio', 'Mis planes guardados']);
+      // El radio vive dentro del «¿Dónde?»: se abre (popover, o hoja inferior en celular) para verlo.
+      await page.getByRole('button', { name: /^Dónde buscar: Cerca de mí/ }).click();
+      await expect(page.getByText('Radio').first()).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await check(page, 'plan-ubicacion', size.name, ['Mis planes guardados']);
     });
 
     test('/canasta/plan: dos columnas en computador, una en tableta y celular', async ({
