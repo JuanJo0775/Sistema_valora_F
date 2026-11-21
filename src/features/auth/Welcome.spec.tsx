@@ -79,4 +79,30 @@ describe('bienvenida de quien entró con Google', () => {
       acceptedPolicyVersion: '2026-11',
     });
   });
+
+  // El registro pendiente dura 10 minutos y vive en una cookie de este navegador (B#181).
+  it('si el ingreso con Google venció, lo explica y ofrece volver a intentarlo', async () => {
+    stubApi({
+      'GET /v1/auth/session': NO_SESSION,
+      'POST /v1/auth/google/complete': {
+        status: 401,
+        body: { code: 'UNAUTHORIZED', message: 'Se requiere iniciar sesión.' },
+      },
+    });
+    renderWelcome();
+
+    writeName('Ana María');
+    fireEvent.click(screen.getByRole('checkbox'));
+    create();
+
+    expect(
+      await screen.findByText(
+        'Tu ingreso con Google venció o empezó en otro navegador. Vuelve a intentarlo.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Continuar con Google' })).toHaveAttribute(
+      'href',
+      '/v1/auth/google/start',
+    );
+  });
 });
