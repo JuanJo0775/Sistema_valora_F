@@ -11,6 +11,8 @@ export class ApiError extends Error {
   readonly retryAfterSeconds: number | undefined;
   // Solo en 409 DUPLICATE_REPORT: hora de observación desde la que se acepta otro reporte (#84).
   readonly availableFrom: string | undefined;
+  // Solo en 403 ACCOUNT_PENDING_DELETION: cuándo se elimina la cuenta si no se restaura.
+  readonly scheduledFor: string | undefined;
 
   constructor(details: {
     status: number;
@@ -18,6 +20,7 @@ export class ApiError extends Error {
     message: string;
     retryAfterSeconds?: number;
     availableFrom?: string;
+    scheduledFor?: string;
   }) {
     super(details.message);
     this.name = 'ApiError';
@@ -25,6 +28,7 @@ export class ApiError extends Error {
     this.code = details.code;
     this.retryAfterSeconds = details.retryAfterSeconds;
     this.availableFrom = details.availableFrom;
+    this.scheduledFor = details.scheduledFor;
   }
 }
 
@@ -69,7 +73,12 @@ export function createApiClient(options: { fetch?: Fetch } = {}) {
 }
 
 const WITHOUT_SESSION = new Set(['/auth/login', '/auth/register']);
-const SESSION_CHANGES = new Set(['/auth/login', '/auth/logout']);
+const SESSION_CHANGES = new Set([
+  '/auth/login',
+  '/auth/logout',
+  '/me/account-deletion',
+  '/auth/restore-account',
+]);
 
 async function errorCodeOf(response: Response): Promise<unknown> {
   try {
@@ -92,6 +101,7 @@ interface ErrorBody {
   code?: unknown;
   message?: unknown;
   availableFrom?: unknown;
+  scheduledFor?: unknown;
 }
 
 export async function call<T>(
@@ -118,6 +128,7 @@ export async function call<T>(
       message: typeof body.message === 'string' ? body.message : 'La API respondió con un error.',
       ...(retryAfter > 0 ? { retryAfterSeconds: retryAfter } : {}),
       ...(typeof body.availableFrom === 'string' ? { availableFrom: body.availableFrom } : {}),
+      ...(typeof body.scheduledFor === 'string' ? { scheduledFor: body.scheduledFor } : {}),
     });
   }
   // 204 (por ejemplo, iniciar o cerrar sesión): no hay cuerpo.
