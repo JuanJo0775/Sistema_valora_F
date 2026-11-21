@@ -1,7 +1,7 @@
 // Dirección pública del sitio: el único lugar que cambia con el dominio propio.
 // Se puede sobreescribir sin tocar el código con la variable de entorno SITE_URL (en Vercel:
 // Settings > Environment Variables). Ver docs/INSTALAR_Y_COMPARTIR.md.
-export const DEFAULT_SITE_URL = 'https://sistema-valora-f.vercel.app';
+export const DEFAULT_SITE_URL = 'https://www.valoora.app';
 
 // Marca que usa index.html donde va la dirección del sitio; el build la reemplaza.
 export const SITE_URL_TOKEN = '__SITE_URL__';
