@@ -1,0 +1,87 @@
+/* «Continuar con Google»: pautas de marca (fondo neutro, borde fino, «G» a color, texto legible). */
+.google-block {
+  display: grid;
+  gap: 10px;
+}
+
+.google-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.google-or::before,
+.google-or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--line-2);
+}
+
+.google-note {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.google-btn {
+  --google-bg: #ffffff;
+  --google-hover: #f1f3f4;
+  --google-line: #747775;
+  --google-ink: #1f1f1f;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 0 16px;
+  border: 1px solid var(--google-line);
+  border-radius: var(--r-m);
+  background: var(--google-bg);
+  color: var(--google-ink);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.google-logo {
+  flex: none;
+}
+
+.google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .google-btn:not(:disabled):hover {
+    background: var(--google-hover);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .google-btn {
+    --google-bg: #131314;
+    --google-hover: #28292a;
+    --google-line: #8e918f;
+    --google-ink: #e3e3e3;
+  }
+}
+
+:root[data-theme='dark'] .google-btn {
+  --google-bg: #131314;
+  --google-hover: #28292a;
+  --google-line: #8e918f;
+  --google-ink: #e3e3e3;
+}
+
+/* La casilla de la política resaltada cuando Google pidió el consentimiento. */
+.check.attention {
+  padding: 8px;
+  border: 2px solid var(--bad);
+  border-radius: var(--r-s);
+}

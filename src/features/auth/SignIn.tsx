@@ -4,6 +4,8 @@ import { ApiError } from '../../shared/api';
 import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
+import { GoogleButton } from './GoogleButton';
+import { GoogleNotice, useGoogleNotice } from './GoogleNotice';
 import { emailProblem, useFocusFirstInvalid } from './formErrors';
 import { safeReturn, withReturn } from './safeReturn';
 import { longDate } from './scheduledDate';
@@ -28,7 +30,17 @@ export function SignIn() {
   const panelRef = useRef<HTMLHeadingElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const volver = safeReturn(params.get('volver'));
+  const googleCode = useGoogleNotice();
   useFocusFirstInvalid(formRef, attempt);
+
+  // Google pide aceptar la política antes de crear una cuenta nueva: eso se hace en /crear-cuenta.
+  useEffect(() => {
+    if (googleCode === 'consentimiento') {
+      void navigate(`${withReturn('/crear-cuenta', volver)}&google=consentimiento`, {
+        replace: true,
+      });
+    }
+  }, [googleCode, navigate, volver]);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -121,6 +133,7 @@ export function SignIn() {
           evitan abusos. Al entrar vuelves a registrar tu precio.
         </p>
       )}
+      {googleCode !== null && googleCode !== 'consentimiento' && <GoogleNotice code={googleCode} />}
       {/* 401, 429 y sin red: el servidor y el cliente ya traen el mensaje en español. */}
       {error !== null && <ErrorState error={error} />}
       <Field
@@ -142,6 +155,7 @@ export function SignIn() {
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Entrando…' : 'Entrar'}
       </button>
+      <GoogleButton returnTo={volver} />
       <p className="muted">
         ¿No tienes cuenta? <Link to={withReturn('/crear-cuenta', volver)}>Crea una cuenta</Link>
       </p>

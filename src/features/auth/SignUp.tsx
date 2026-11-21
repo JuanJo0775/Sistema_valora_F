@@ -4,6 +4,8 @@ import { api, ApiError, call } from '../../shared/api';
 import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
+import { GoogleButton } from './GoogleButton';
+import { GoogleNotice, useGoogleNotice } from './GoogleNotice';
 import { emailProblem, useFocusFirstInvalid } from './formErrors';
 import { safeReturn, withReturn } from './safeReturn';
 import { POLICY_VERSION } from '../legal/policy';
@@ -64,6 +66,8 @@ export function SignUp() {
   const [existing, setExisting] = useState(false);
   const [sending, setSending] = useState(false);
   const volver = safeReturn(params.get('volver'));
+  const googleCode = useGoogleNotice();
+  const needsConsent = googleCode === 'consentimiento' && !accepted;
   useFocusFirstInvalid(formRef, attempt);
 
   const submit = (event: SyntheticEvent) => {
@@ -112,6 +116,7 @@ export function SignUp() {
           evitan abusos.
         </p>
       )}
+      {googleCode !== null && <GoogleNotice code={googleCode} id="aviso-google" />}
       {error !== null && <ErrorState error={error} />}
       {existing && (
         <p role="alert" className="banner warn">
@@ -153,12 +158,14 @@ export function SignUp() {
         publicamos tus datos ni los usamos para publicidad. Puedes conocerlos, corregirlos, pedir su
         supresión o revocar tu autorización cuando quieras.
       </p>
-      <label className="check">
+      <label className={needsConsent ? 'check attention' : 'check'}>
         <input
           type="checkbox"
           checked={accepted}
-          aria-invalid={problems.accepted ? true : undefined}
-          aria-describedby={problems.accepted ? 'error-politica' : undefined}
+          aria-invalid={problems.accepted || needsConsent ? true : undefined}
+          aria-describedby={
+            problems.accepted ? 'error-politica' : needsConsent ? 'aviso-google' : undefined
+          }
           onChange={(event) => {
             setAccepted(event.target.checked);
           }}
@@ -179,6 +186,12 @@ export function SignUp() {
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Creando cuenta…' : 'Crear cuenta'}
       </button>
+      <GoogleButton
+        returnTo={volver}
+        disabled={!accepted}
+        note="Al continuar con Google aceptas la política de tratamiento de datos. Marca la casilla para continuar."
+        noteId="nota-google"
+      />
       <p className="muted">
         ¿Ya tienes cuenta? <Link to={withReturn('/entrar', volver)}>Inicia sesión</Link>
       </p>

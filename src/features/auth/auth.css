@@ -439,3 +439,15 @@
 .pending-deletion p {
   margin: 0;
 }
+
+/* Eliminar cuenta con Google: aviso de reautenticación y modo sin contraseña. */
+.delete-reauth,
+.delete-google {
+  display: grid;
+  gap: 8px;
+}
+
+.delete-reauth p,
+.delete-google p {
+  margin: 0;
+}

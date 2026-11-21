@@ -5,12 +5,13 @@ import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { Field } from './Field';
+import { GoogleLink } from './GoogleButton';
 import { withReturn } from './safeReturn';
 import { longDate } from './scheduledDate';
 import { useSession } from './session';
 import './auth.css';
 
-type Problem = { kind: 'password' } | { kind: 'other'; message: string };
+type Problem = { kind: 'password' } | { kind: 'reauth' } | { kind: 'other'; message: string };
 
 function waitText(seconds: number | undefined): string {
   if (!seconds) return 'Espera unos minutos.';
@@ -24,6 +25,8 @@ export function problemOf(error: unknown): Problem {
     return { kind: 'other', message: 'Algo salió mal. Inténtalo de nuevo.' };
   }
   if (error.status === 403 && error.code === 'INVALID_PASSWORD') return { kind: 'password' };
+  // Cuenta de Google: el servidor pide volver a entrar con Google antes de borrar.
+  if (error.status === 403 && error.code === 'REAUTH_REQUIRED') return { kind: 'reauth' };
   if (error.status === 403 && error.code === 'LAST_MODERATOR_CANNOT_DELETE') {
     return {
       kind: 'other',
@@ -65,6 +68,8 @@ export function DeleteAccount() {
   const { pathname, search } = useLocation();
   const [password, setPassword] = useState('');
   const [understood, setUnderstood] = useState(false);
+  // Una cuenta de Google no tiene contraseña: se confirma sin ella (o volviendo a entrar con Google).
+  const [withGoogle, setWithGoogle] = useState(false);
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -117,17 +122,19 @@ export function DeleteAccount() {
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    if (!password || !understood || sending) return;
+    if ((!withGoogle && !password) || !understood || sending) return;
     setProblem(null);
     setSending(true);
-    call(api.POST('/me/account-deletion', { body: { password } }))
+    call(api.POST('/me/account-deletion', { body: withGoogle ? {} : { password } }))
       .then((result) => {
         setScheduledFor(result.scheduledFor);
         // El servidor cerró todas las sesiones: la local también.
         endSession();
       })
       .catch((failure: unknown) => {
-        setProblem(problemOf(failure));
+        const found = problemOf(failure);
+        if (found.kind === 'reauth') setWithGoogle(true);
+        setProblem(found);
         setAttempt((n) => n + 1);
         setSending(false);
       });
@@ -171,21 +178,56 @@ export function DeleteAccount() {
       <div ref={alertRef} tabIndex={-1} role="alert" className="delete-alert">
         {problem?.kind === 'other' && <p className="field-error">{problem.message}</p>}
       </div>
-      <Field
-        label="Tu contraseña"
-        type="password"
-        autoComplete="current-password"
-        value={password}
-        onValue={(value) => {
-          setPassword(value);
-          if (problem?.kind === 'password') setProblem(null);
-        }}
-        error={
-          problem?.kind === 'password'
-            ? 'La contraseña no es correcta. Revísala e inténtalo de nuevo.'
-            : undefined
-        }
-      />
+      {problem?.kind === 'reauth' && (
+        <div className="delete-reauth">
+          <p>Por seguridad, confirma que eres tú volviendo a entrar con Google.</p>
+          <GoogleLink returnTo="/yo/eliminar-cuenta" label="Confirmar con Google" />
+        </div>
+      )}
+      {withGoogle ? (
+        <div className="delete-google">
+          <p className="muted">Tu cuenta usa Google y no tiene contraseña.</p>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => {
+              setWithGoogle(false);
+              setProblem(null);
+            }}
+          >
+            Mi cuenta usa contraseña
+          </button>
+        </div>
+      ) : (
+        <>
+          <Field
+            label="Tu contraseña"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onValue={(value) => {
+              setPassword(value);
+              if (problem?.kind === 'password') setProblem(null);
+            }}
+            error={
+              problem?.kind === 'password'
+                ? 'La contraseña no es correcta. Revísala e inténtalo de nuevo.'
+                : undefined
+            }
+          />
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => {
+              setWithGoogle(true);
+              setProblem(null);
+              setPassword('');
+            }}
+          >
+            Mi cuenta usa Google
+          </button>
+        </>
+      )}
       <label className="delete-confirm" htmlFor={checkId}>
         <input
           id={checkId}
@@ -201,7 +243,7 @@ export function DeleteAccount() {
         <button
           type="submit"
           className="btn danger"
-          disabled={!password || !understood || sending}
+          disabled={(!withGoogle && !password) || !understood || sending}
           aria-busy={sending || undefined}
         >
           {sending ? 'Programando…' : 'Eliminar mi cuenta definitivamente'}

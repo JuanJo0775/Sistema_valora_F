@@ -171,6 +171,16 @@ export function PrivacyPolicy() {
           productos a Open Food Facts: tu navegador se conecta con ellos para descargarlos, y pueden
           ver tu dirección IP.
         </p>
+        <p>
+          Google es un proveedor de identidad opcional: solo interviene si eliges «Continuar con
+          Google». En ese caso recibimos tu identificador de Google, tu correo y tu nombre, para
+          crear o abrir tu cuenta. Si no usas Google, no recibimos nada de él. Google trata tus
+          datos según su propia política:{' '}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+            policies.google.com/privacy
+          </a>
+          .
+        </p>
         <p>No entregamos tus datos a otras personas, salvo orden de autoridad competente.</p>
       </section>
 
