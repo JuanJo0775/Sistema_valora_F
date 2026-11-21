@@ -3,6 +3,7 @@ import { choose } from '../../test/choose';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { seriousViolations } from '../../test/axe';
 import { stubApi } from '../../test/fakeApi';
+import { stubMatchMedia } from '../../test/matchMedia';
 import { directionsTo } from '../../shared/directions';
 import {
   comparisonOf,
@@ -107,6 +108,28 @@ describe('plan de compra', () => {
       'href',
       '/canasta',
     );
+  });
+
+  it('en computador, los supuestos y los planes guardados van en el panel lateral', async () => {
+    stubApi(routesFor(far));
+    stubMatchMedia(true);
+    renderPlan(rice, milk);
+
+    const aside = await screen.findByRole('complementary', {
+      name: 'Supuestos del traslado y planes guardados',
+    });
+    expect(within(aside).getByText('Supuestos del traslado')).toBeInTheDocument();
+  });
+
+  it('en tableta y celular no hay panel lateral: los supuestos van en el mismo bloque', async () => {
+    stubApi(routesFor(far));
+    stubMatchMedia(false);
+    renderPlan(rice, milk);
+
+    expect(await screen.findByText('Supuestos del traslado')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('complementary', { name: 'Supuestos del traslado y planes guardados' }),
+    ).not.toBeInTheDocument();
   });
 
   it('con la canasta vacía invita a buscar productos', () => {
