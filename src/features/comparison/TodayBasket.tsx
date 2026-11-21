@@ -11,8 +11,8 @@ import { useBasket } from '../basket/basketContext';
 import { ProductThumb } from '../catalog/ProductThumb';
 import '../catalog/catalog.css';
 import { MUNICIPALITIES } from './criteria';
-import { useWhere } from './WhereChooser';
-import { WhereChip } from './WhereChip';
+import { useWhere } from './useWhere';
+import { WherePicker } from './WherePicker';
 import './comparison.css';
 
 type Featured = operations['listFeaturedProducts']['responses'][200]['content']['application/json'];
@@ -105,9 +105,8 @@ export function TodayBasket() {
     <section className="today-basket" aria-label="Canasta básica de hoy">
       <div className="today-head">
         <p className="muted">{featured ? area(featured) : ' '}</p>
-        <WhereChip
+        <WherePicker
           where={where}
-          backLabel="Ver por municipio"
           onLeaveLocation={() => {
             setLimit(FEW);
           }}

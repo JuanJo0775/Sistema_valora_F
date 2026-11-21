@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { askLocation, type Point } from '../../shared/location';
 import { readStored, writeStored } from '../../shared/storage';
-import { SelectField } from '../../shared/ui/SelectField';
-import { RadiusControl } from './RadiusControl';
 import { readRadius, saveRadius } from './radius';
-import { type Municipality, MUNICIPALITY_OPTIONS } from './criteria';
+import type { Municipality } from './criteria';
 import { readMunicipality, saveMunicipality } from './lastMunicipality';
 
 // #73: el teléfono recuerda si se eligió «usar mi ubicación», nunca dónde está la persona (EC-08).
@@ -22,6 +20,8 @@ export function useWhere() {
   const [municipality, setMunicipality] = useState<Municipality>(readMunicipality);
   const [radiusKm, setRadius] = useState(readRadius);
   const [problem, setProblem] = useState('');
+  // Mientras el navegador responde a una petición de ubicación (la persona decide en el aviso).
+  const [asking, setAsking] = useState(false);
   // Un objeto estable mientras no cambie dónde: se usa como dependencia de las consultas.
   const query = useMemo(
     () => (point ? { ...point, radiusKm } : { municipality }),
@@ -39,6 +39,7 @@ export function useWhere() {
         setProblem('Activa la ubicación del navegador para ver las tiendas cercanas.');
       })
       .finally(() => {
+        setAsking(false);
         setLocating(false);
       });
   }, []);
@@ -55,6 +56,7 @@ export function useWhere() {
     municipality,
     radiusKm,
     problem,
+    asking: asking || locating,
     setRadiusKm: (km: number) => {
       saveRadius(km);
       setRadius(km);
@@ -68,6 +70,7 @@ export function useWhere() {
     },
     locateMe: () => {
       setProblem('');
+      setAsking(true);
       request();
     },
     leaveLocation: () => {
@@ -78,62 +81,3 @@ export function useWhere() {
 }
 
 export type Where = ReturnType<typeof useWhere>;
-
-export function WhereChooser({
-  where,
-  backLabel,
-  onLeaveLocation,
-  showRadius = true,
-  onPreviewRadius,
-}: {
-  where: Where;
-  backLabel: string;
-  onLeaveLocation?: () => void;
-  // Falso si la pantalla ya muestra el radio por su cuenta.
-  showRadius?: boolean;
-  // El radio mientras se arrastra la barra (el mapa redibuja su círculo al instante).
-  onPreviewRadius?: (radiusKm: number | null) => void;
-}) {
-  return (
-    <>
-      {where.point ? (
-        <>
-          {showRadius && (
-            <RadiusControl
-              radiusKm={where.radiusKm}
-              onChange={where.setRadiusKm}
-              onPreview={onPreviewRadius}
-            />
-          )}
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => {
-              where.leaveLocation();
-              onLeaveLocation?.();
-            }}
-          >
-            {backLabel}
-          </button>
-        </>
-      ) : (
-        <>
-          <SelectField
-            label="Municipio"
-            value={where.municipality}
-            options={MUNICIPALITY_OPTIONS}
-            onChange={where.chooseMunicipality}
-          />
-          <button type="button" className="btn ghost" onClick={where.locateMe}>
-            Usar mi ubicación
-          </button>
-        </>
-      )}
-      {where.problem && (
-        <p role="alert" className="banner warn">
-          {where.problem}
-        </p>
-      )}
-    </>
-  );
-}
