@@ -269,13 +269,16 @@
 
 /* #76: «Dónde te sale más barata» como la tarjeta naranja del prototipo. */
 .cheapest-store {
+  display: grid;
+  gap: 16px;
+  align-content: start;
   padding: 18px 20px;
   border: 1px solid var(--accent-line);
   border-radius: var(--r-l);
   background: var(--accent-soft);
 }
 
-.cheapest-store h2 {
+.cheapest-store h3 {
   margin: 0;
   color: var(--accent-ink);
   font-family: var(--f-body);

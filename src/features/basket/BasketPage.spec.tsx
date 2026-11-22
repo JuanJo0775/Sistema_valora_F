@@ -75,7 +75,7 @@ const comparisonOf = (productId: string, ...results: ReturnType<typeof offer>[])
   },
 });
 
-const where = () => screen.findByRole('complementary', { name: 'Dónde te sale más barata' });
+const where = () => screen.findByRole('complementary', { name: 'Dónde comprar' });
 
 const rowOf = (name: string) => within(screen.getByText(name).closest('li') as HTMLElement);
 

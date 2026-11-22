@@ -1,4 +1,3 @@
-import { Link } from 'react-router';
 import { formatCop } from '../../shared/money';
 import { Loading } from '../../shared/ui/Loading';
 import { MUNICIPALITIES } from '../comparison/criteria';
@@ -8,7 +7,8 @@ import type { BasketItem } from './basketContext';
 import type { StoreTotals } from './useStoreTotals';
 
 // #31 y #78 (prototipo): «Todo en una tienda», la tienda del municipio elegido con todo lo que
-// falta comprar, al menor total. Las cuentas las hace useStoreTotals en la página de la canasta.
+// falta comprar, al menor total. Las cuentas las hace useStoreTotals en la página de la canasta;
+// es la ficha «1 tienda» del panel «Dónde comprar» (WhereToBuy), que pone el título y el enlace al plan.
 export function CheapestStore({
   municipality,
   totals,
@@ -25,10 +25,10 @@ export function CheapestStore({
   const priciest = ready?.priciest;
 
   return (
-    <aside className="side cheapest-store" aria-label="Dónde te sale más barata">
-      <h2>
+    <div className="cheapest-store">
+      <h3>
         {best ? 'Compra todo en' : `Dónde te sale más barata en ${MUNICIPALITIES[municipality]}`}
-      </h2>
+      </h3>
       {totals.status === 'loading' && <Loading text="Buscando precios…" />}
       {totals.status === 'failed' && (
         <p className="muted">No pudimos calcular dónde te sale más barata.</p>
@@ -79,11 +79,6 @@ export function CheapestStore({
           </ul>
         </>
       )}
-      {ready && (
-        <Link to="/canasta/plan" className="btn ghost">
-          Armar plan de compra
-        </Link>
-      )}
-    </aside>
+    </div>
   );
 }

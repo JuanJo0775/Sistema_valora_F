@@ -1,0 +1,114 @@
+/* «Dónde comprar» en la canasta: el panel lateral con sus fichas. Solo tokens y clases de la app
+   (.side, .category-chip, .cheapest-store, .plan-option). */
+.where-buy h2,
+.where-buy h3,
+.where-buy h4,
+.where-buy p {
+  margin: 0;
+}
+
+.where-buy-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.where-buy-head h2 {
+  color: var(--ink-2);
+  font-family: var(--f-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Tres fichas parejas en una fila, en celular y en computador (como las del radio de búsqueda). */
+.where-buy .category-chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-bottom: 0;
+  overflow: visible;
+}
+
+.where-buy .category-chip {
+  justify-content: center;
+  padding: 0 8px;
+}
+
+/* El reparto usa la misma caja y el mismo aire que la tarjeta naranja de al lado. */
+.where-buy .plan-option {
+  padding: 18px 20px;
+  border-radius: var(--r-l);
+}
+
+.where-buy .plan-assumptions {
+  padding: 0;
+  border: 0;
+}
+
+.where-buy .check input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+/* «Traslado y domicilio (estimado)»: plegado, con su flecha y una línea que lo separa del resto. */
+.plan-fold {
+  border-top: 1px solid var(--line);
+}
+
+.plan-fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--touch);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.plan-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.plan-fold > summary::after {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--ink-2);
+  border-bottom: 2px solid var(--ink-2);
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.plan-fold[open] > summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+/* El contenido de un details no siempre admite cuadrícula: el aire va como margen. */
+.plan-fold[open] {
+  padding-bottom: 4px;
+}
+
+.plan-fold > :not(summary) + :not(summary) {
+  margin-top: 16px;
+}
+
+/* El neto va con borde, como en el plan, pero más liviano: ya está dentro de una caja. */
+.where-buy .plan-net {
+  border-width: 1px;
+  background: var(--bg-2);
+}
+
+/* El reparto es más alto que la pantalla: en computador el panel sigue a la lista con el resto de la
+   página, sin barra de desplazamiento propia (la tarjeta de 1 tienda sí queda fija, como siempre). */
+@media (width >= 960px) {
+  .where-buy-split {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
