@@ -15,6 +15,13 @@ export const haversineM = (a: Point, b: Point): number => {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
 };
 
+// Un punto con latitud y longitud numéricas y finitas; si no, no entra en ninguna ruta.
+export const hasLocation = (p: Point): boolean =>
+  typeof p.lat === 'number' &&
+  typeof p.lng === 'number' &&
+  Number.isFinite(p.lat) &&
+  Number.isFinite(p.lng);
+
 export interface TravelAssumptions {
   detour: number; // las calles no van en línea recta
   kmh: number; // velocidad a pie
@@ -46,10 +53,13 @@ function pathM(origin: Point | null, order: Point[]): number {
 }
 
 export function routeEstimate(
-  origin: Point | null,
-  stops: Point[],
+  rawOrigin: Point | null,
+  allStops: Point[],
   a: TravelAssumptions,
 ): TravelEstimate {
+  // Sin coordenadas válidas no hay con qué medir: la parada se omite (la pantalla lo dice).
+  const origin = rawOrigin && hasLocation(rawOrigin) ? rawOrigin : null;
+  const stops = allStops.filter(hasLocation);
   // Tramos: con origen, una ida a cada parada más la vuelta; sin origen, solo entre tiendas.
   const legs = stops.length === 0 ? 0 : origin ? stops.length + 1 : stops.length - 1;
   const meters = Math.min(...permutations(stops).map((order) => pathM(origin, order)));

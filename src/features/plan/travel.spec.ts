@@ -3,6 +3,7 @@ import {
   DEFAULT_ASSUMPTIONS,
   extraTravel,
   haversineM,
+  hasLocation,
   netEstimate,
   routeEstimate,
   type TravelAssumptions,
@@ -129,5 +130,37 @@ describe('netEstimate', () => {
         deliveryCop: 5000,
       }),
     ).toEqual({ savingsCop: 6200, netCop: 1200 });
+  });
+});
+
+describe('coordenadas no finitas', () => {
+  const bad = [
+    { lat: NaN, lng: 0 },
+    { lat: 0, lng: Infinity },
+    { lat: 'x', lng: 0 } as unknown as typeof A,
+  ];
+
+  it('hasLocation solo acepta números finitos', () => {
+    expect(hasLocation(A)).toBe(true);
+    for (const point of bad) expect(hasLocation(point)).toBe(false);
+  });
+
+  it('una parada sin coordenadas válidas se omite y la ruta no da NaN', () => {
+    const clean = routeEstimate(O, [A], DEFAULT_ASSUMPTIONS);
+    for (const point of bad) {
+      const r = routeEstimate(O, [A, point], DEFAULT_ASSUMPTIONS);
+      expect(r).toEqual(clean);
+    }
+  });
+
+  it('si ninguna parada se puede ubicar, el traslado es 0 y no NaN', () => {
+    const r = routeEstimate(O, bad, DEFAULT_ASSUMPTIONS);
+    expect(r.km).toBe(0);
+    expect(r.minutes).toBe(0);
+  });
+
+  it('un origen no finito se trata como sin origen', () => {
+    const r = routeEstimate({ lat: NaN, lng: 0 }, [A, B], DEFAULT_ASSUMPTIONS);
+    expect(r).toEqual(routeEstimate(null, [A, B], DEFAULT_ASSUMPTIONS));
   });
 });

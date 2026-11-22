@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  applyPriceUpdate,
   deletePlan,
+  diffPrices,
+  type PriceOffer,
   migrate,
   readPlans,
   savePlan,
+  savePlanOnce,
   toggleBought,
   toSavedPlan,
   type PlanDraft,
@@ -229,5 +233,185 @@ describe('toggleBought y deletePlan', () => {
     savePlan(make('b'));
     deletePlan('a');
     expect(readPlans().map((p) => p.id)).toEqual(['b']);
+  });
+});
+
+describe('supuestos guardados inválidos', () => {
+  const withAssumptions = (assumptions: unknown) => {
+    const plan = structuredClone(make('a')) as unknown as {
+      summary: { travel: { assumptions: unknown } };
+    };
+    plan.summary.travel.assumptions = assumptions;
+    return { v: 1, plans: [plan] };
+  };
+
+  it('acepta los supuestos con números y modo válidos', () => {
+    expect(
+      migrate(withAssumptions({ detour: 1.3, kmh: 4.5, mode: 'fare', fareCop: 2500 })),
+    ).toHaveLength(1);
+  });
+
+  it.each([
+    ['rodeo de texto', { detour: '1.3', kmh: 4.5, mode: 'none' }],
+    ['velocidad ausente', { detour: 1.3, mode: 'none' }],
+    ['modo desconocido', { detour: 1.3, kmh: 4.5, mode: 'taxi' }],
+    ['pasaje de texto', { detour: 1.3, kmh: 4.5, mode: 'fare', fareCop: 'mucho' }],
+    ['costo por km de texto', { detour: 1.3, kmh: 4.5, mode: 'perKm', perKmCop: {} }],
+    ['velocidad 0 (dividiría por cero)', { detour: 1.3, kmh: 0, mode: 'none' }],
+  ])('descarta el plan con %s', (_name, assumptions) => {
+    expect(migrate(withAssumptions(assumptions))).toEqual([]);
+  });
+});
+
+describe('guardar sin repetir', () => {
+  it('un plan nuevo se guarda; el mismo contenido solo refresca savedAt y no gasta cupo', () => {
+    const first = make('a');
+    expect(savePlanOnce(first)).toEqual({ outcome: 'saved', id: 'a' });
+    toggleBought('a', 'pr1');
+    const again = { ...make('b'), savedAt: '2026-11-20T10:00:00.000Z' };
+    expect(savePlanOnce(again)).toEqual({ outcome: 'same', id: 'a' });
+    const plans = readPlans();
+    expect(plans).toHaveLength(1);
+    expect(plans[0]?.savedAt).toBe('2026-11-20T10:00:00.000Z');
+    expect(plans[0]?.lines[0]?.bought).toBe(true);
+  });
+
+  it('con otro precio, otra cantidad o otra área es un plan distinto', () => {
+    savePlanOnce(make('a'));
+    const price = make('b');
+    price.lines[0] = { ...price.lines[0], priceCop: 1 } as SavedPlan['lines'][number];
+    const qty = make('c');
+    qty.lines[0] = { ...qty.lines[0], quantity: 9 } as SavedPlan['lines'][number];
+    const area = { ...make('d'), area: { kind: 'municipio', municipality: 'armenia' } as const };
+    for (const plan of [price, qty, area]) expect(savePlanOnce(plan).outcome).toBe('saved');
+    expect(readPlans().map((p) => p.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('con el cupo lleno, un plan igual a uno guardado se refresca en vez de dar full', () => {
+    for (const id of ['a', 'b', 'c', 'd'])
+      savePlan({ ...make(id), area: { kind: 'ubicacion', radiusKm: id.charCodeAt(0) } });
+    savePlan(make('e'));
+    expect(savePlanOnce(make('z')).outcome).toBe('same');
+    expect(savePlanOnce({ ...make('y'), area: { kind: 'ubicacion', radiusKm: 5.5 } }).outcome).toBe(
+      'full',
+    );
+  });
+});
+
+describe('comparar y aplicar precios nuevos', () => {
+  // make('a'): arroz pr1 en s1 a 2190 (×2), aceite pr2 en s2 a 9000, sal sin precio.
+  const at = (
+    storeId: string,
+    presentationId: string,
+    priceCop: number,
+    day = '2026-11-19',
+  ): PriceOffer => ({
+    establishment: {
+      id: storeId,
+      name: storeId === 's1' ? 'D1 Calle 50' : storeId === 's2' ? 'Tienda Don Pepe' : 'Otra',
+    },
+    presentationId,
+    priceCop,
+    source: 'oficial',
+    freshness: 'vigente',
+    observedAt: `${day}T15:00:00Z`,
+  });
+  const byProduct = (...offers: [string, PriceOffer[]][]) => new Map(offers);
+  const diff = (offers: Map<string, PriceOffer[]>) => diffPrices(make('a'), offers);
+
+  it('solo compara las líneas con tienda y precio, en la misma tienda y presentación', () => {
+    const result = diff(
+      byProduct(
+        ['p1', [at('s1', 'pr1', 2190), at('s1', 'otra-presentacion', 1)]],
+        ['p2', [at('s2', 'pr2', 9000)]],
+      ),
+    );
+    expect(result.map((d) => [d.productId, d.kind])).toEqual([
+      ['p1', 'same'],
+      ['p2', 'same'],
+    ]);
+  });
+
+  it('precio que subió o bajó, con lo de antes y lo de ahora', () => {
+    const [up, down] = diff(
+      byProduct(['p1', [at('s1', 'pr1', 2350)]], ['p2', [at('s2', 'pr2', 8500)]]),
+    );
+    expect(up).toMatchObject({
+      kind: 'up',
+      storeName: 'D1 Calle 50',
+      beforeCop: 2190,
+      beforeAt: '2026-11-16T15:00:00Z',
+      now: {
+        priceCop: 2350,
+        observedAt: '2026-11-19T15:00:00Z',
+        source: 'oficial',
+        freshness: 'vigente',
+      },
+    });
+    expect(down?.kind).toBe('down');
+  });
+
+  it('con varias ofertas en la misma tienda toma la más barata', () => {
+    const [d] = diff(byProduct(['p1', [at('s1', 'pr1', 3000), at('s1', 'pr1', 2400)]]));
+    expect(d?.now?.priceCop).toBe(2400);
+  });
+
+  it('sin oferta vigente en esa tienda: gone, y avisa si otra tienda es más barata que antes', () => {
+    const [gone, other] = diff(
+      byProduct(['p1', [at('s9', 'pr1', 2000)]], ['p2', [at('s9', 'pr2', 9500)]]),
+    );
+    expect(gone).toMatchObject({
+      kind: 'gone',
+      now: null,
+      cheaper: { storeName: 'Otra', priceCop: 2000 },
+    });
+    expect(other).toMatchObject({ kind: 'gone', cheaper: null });
+  });
+
+  it('otra tienda más barata que el precio de ahora se anota sin cambiar el reparto', () => {
+    const [d] = diff(
+      byProduct(['p1', [at('s1', 'pr1', 2350), at('s9', 'pr1', 2100), at('s8', 'pr1', 2200)]]),
+    );
+    expect(d?.cheaper).toEqual({ storeName: 'Otra', priceCop: 2100 });
+    expect(
+      diff(byProduct(['p1', [at('s1', 'pr1', 2350), at('s9', 'pr1', 2350)]]))[0]?.cheaper,
+    ).toBeNull();
+  });
+
+  it('un producto que no vino en la respuesta cuenta como sin precio vigente', () => {
+    expect(diff(new Map())[0]?.kind).toBe('gone');
+  });
+
+  it('applyPriceUpdate cambia solo las líneas con otro precio y recalcula productsCop', () => {
+    const plan = make('a');
+    const next = applyPriceUpdate(
+      plan,
+      diff(byProduct(['p1', [at('s1', 'pr1', 2350)]], ['p2', []])),
+    );
+    expect(next.lines[0]).toMatchObject({
+      priceCop: 2350,
+      observedAt: '2026-11-19T15:00:00Z',
+      source: 'oficial',
+      freshness: 'vigente',
+      storeId: 's1',
+      bought: false,
+    });
+    // La línea que ya no tiene precio vigente no se toca.
+    expect(next.lines[1]).toEqual(plan.lines[1]);
+    expect(next.lines[2]).toEqual(plan.lines[2]);
+    expect(next.summary.productsCop).toBe(2350 * 2 + 9000);
+    expect(next.summary.baselineCop).toBeNull();
+    expect(next.summary.netCop).toBeNull();
+    expect(next.summary.pricesUpdatedAt).toBeDefined();
+    expect(next.stores).toEqual(plan.stores);
+    expect(next.summary.travel).toEqual(plan.summary.travel);
+    expect(next.summary.deliveryCop).toBe(plan.summary.deliveryCop);
+    expect(plan.summary.baselineCop).toBe(15000);
+    expect(migrate({ v: 1, plans: [next] })).toHaveLength(1);
+  });
+
+  it('sin cambios de precio devuelve el mismo plan', () => {
+    const plan = make('a');
+    expect(applyPriceUpdate(plan, diff(byProduct(['p1', [at('s1', 'pr1', 2190)]])))).toBe(plan);
   });
 });

@@ -267,4 +267,17 @@ describe('plan de compra', () => {
 
     expect(await seriousViolations()).toEqual([]);
   });
+
+  it('una tienda con coordenadas no válidas no da NaN: se omite del traslado y se avisa', async () => {
+    locate();
+    const broken = { ...near, b: { ...near.b, lat: 'x' as unknown as number } };
+    stubApi(routesFor(broken));
+    renderPlan(rice, milk);
+
+    const two = await option('2 tiendas');
+    expect(
+      two.getByText('No pudimos ubicar 1 tienda; el traslado no la cuenta.'),
+    ).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent('NaN');
+  });
 });

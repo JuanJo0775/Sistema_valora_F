@@ -215,7 +215,7 @@ describe('reparto de la canasta entre tiendas', () => {
     expect(options[0]?.shares[0]?.store.id).toBe('a');
   });
 
-  it('con 3 tiendas poda a 15 candidatas', () => {
+  it('con 3 tiendas y 40 tiendas es exacto y estable', () => {
     const stores = Array.from({ length: 40 }, (_, i) =>
       store(`s${String(i).padStart(2, '0')}`, `S${String(i)}`),
     );
@@ -302,4 +302,64 @@ describe('reparto de la canasta entre tiendas', () => {
       JSON.parse(JSON.stringify(r, (k, v: unknown) => (k === 'type' ? undefined : v))) as unknown;
     expect(strip(commercial)).toEqual(strip(plain));
   });
+});
+
+// Respaldo de la poda de candidatas (ahora 40): contra todas las combinaciones de 3 tiendas.
+describe('poda de candidatas con 3 tiendas', () => {
+  // Sin empates de precio en una línea: así la asignación a la tienda más barata no es ambigua.
+  const randomLines = (next: () => number): BasketLine[] => {
+    const stores = Array.from({ length: 20 + Math.floor(next() * 21) }, (_, i) =>
+      store(`s${String(i).padStart(2, '0')}`, `S${String(i)}`),
+    );
+    return Array.from({ length: 3 + Math.floor(next() * 6) }, (_, l) => ({
+      presentationId: `p${String(l)}`,
+      quantity: 1 + Math.floor(next() * 3),
+      offers: stores.flatMap((s, i) => {
+        // La tienda 0 es la más barata en todo: la tercera tienda del óptimo no es «barata en alguna línea».
+        if (i > 0 && next() < 0.2) return [];
+        const price = (i === 0 ? 1000 : 1500 + Math.floor(next() * 50) * 100) + i;
+        return [offer(s, `p${String(l)}`, price)];
+      }),
+    }));
+  };
+
+  // Mismo criterio que bestSplits: menos líneas sin precio, luego menor total; todas reciben algo.
+  const exhaustive = (lines: BasketLine[]) => {
+    const ids = [...new Set(lines.flatMap((l) => l.offers.map((o) => o.establishment.id)))];
+    const price = (id: string, l: BasketLine) =>
+      l.offers.find((o) => o.establishment.id === id)?.priceCop ?? Infinity;
+    let best: { missing: number; cop: number } | null = null;
+    for (let a = 0; a < ids.length; a += 1)
+      for (let b = a + 1; b < ids.length; b += 1)
+        for (let c = b + 1; c < ids.length; c += 1) {
+          const trio = [ids[a], ids[b], ids[c]] as string[];
+          const got = new Set<string>();
+          let missing = 0;
+          let cop = 0;
+          for (const l of lines) {
+            const [min, who] = trio
+              .map((id) => [price(id, l), id] as const)
+              .reduce((x, y) => (y[0] < x[0] ? y : x));
+            if (min === Infinity) missing += 1;
+            else {
+              got.add(who);
+              cop += min * l.quantity;
+            }
+          }
+          if (got.size < 3) continue;
+          if (!best || missing < best.missing || (missing === best.missing && cop < best.cop))
+            best = { missing, cop };
+        }
+    return best;
+  };
+
+  it('da el mismo total que la búsqueda exhaustiva (200 casos con semilla fija)', () => {
+    const next = rng(20261120);
+    for (let n = 0; n < 200; n += 1) {
+      const lines = randomLines(next);
+      const best = exhaustive(lines);
+      const three = bestSplits(lines, 3).options.find((o) => o.stores === 3);
+      expect(three?.productsCop, `caso ${String(n)}`).toBe(best?.cop);
+    }
+  }, 30_000);
 });

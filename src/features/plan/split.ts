@@ -32,7 +32,8 @@ export interface SplitResult {
   unpriced: string[];
 }
 
-const MAX_CANDIDATES = 15;
+// C(40,3) = 9.880 combinaciones: exacto hasta 40 tiendas; solo por encima se poda.
+const MAX_CANDIDATES = 40;
 
 // Comparación de textos carácter por carácter, sin depender del idioma del navegador.
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -177,7 +178,7 @@ export function bestSplits(lines: BasketLine[], maxStores: 1 | 2 | 3): SplitResu
     return ia.length - ib.length;
   };
 
-  // (c) k=3 sobre hasta 15 candidatas: las más baratas en alguna línea y, si sobra sitio, las de
+  // (c) k=3 sobre hasta 40 candidatas: las más baratas en alguna línea y, si sobra sitio, las de
   // mejor total individual.
   const pruned = (): Candidate[] => {
     if (unique.length <= MAX_CANDIDATES) return unique;

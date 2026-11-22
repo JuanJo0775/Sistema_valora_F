@@ -5,7 +5,17 @@ import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { isoDay, shortDay } from './planDates';
 import { planToText, travelLabel, travelQualifier } from './planText';
-import { deletePlan, readPlans, toggleBought, type SavedPlan } from './savedPlan';
+import { PriceUpdatePanel } from './PriceUpdatePanel';
+import {
+  applyPriceUpdate,
+  deletePlan,
+  readPlans,
+  savePlan,
+  toggleBought,
+  type LineDiff,
+  type SavedPlan,
+} from './savedPlan';
+import { usePriceUpdate } from './usePriceUpdate';
 import './plan.css';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -32,6 +42,8 @@ export function SavedPlanPage() {
   // Cuándo se abrió la pantalla, para saber si el plan ya venció.
   const [now] = useState(Date.now);
   const [copied, setCopied] = useState<'none' | 'copied' | 'manual'>('none');
+  const [notice, setNotice] = useState<string | null>(null);
+  const update = usePriceUpdate(plan);
 
   if (!plan) {
     return (
@@ -52,7 +64,7 @@ export function SavedPlanPage() {
 
   const text = planToText(plan);
   // Una fecha inválida no se puede dar por vigente: cuenta como desactualizado.
-  const age = now - new Date(plan.savedAt).getTime();
+  const age = now - new Date(plan.summary.pricesUpdatedAt ?? plan.savedAt).getTime();
   const stale = Number.isNaN(age) || age > WEEK_MS;
   const unpriced = plan.lines.filter((l) => l.storeId === null || l.priceCop === null);
   const s = plan.summary;
@@ -91,6 +103,24 @@ export function SavedPlanPage() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const check = () => {
+    setNotice(null);
+    void update.run();
+  };
+
+  const savePrices = (diffs: LineDiff[]) => {
+    const outcome = savePlan(applyPriceUpdate(plan, diffs));
+    if (outcome === 'saved') {
+      setPlan(readPlans().find((p) => p.id === plan.id));
+      update.reset();
+      setNotice('Precios actualizados');
+    } else {
+      setNotice(
+        'No se pudieron guardar los precios nuevos en este navegador. El plan sigue como estaba.',
+      );
+    }
   };
 
   const remove = () => {
@@ -191,6 +221,13 @@ export function SavedPlanPage() {
         )}
         {hasDelivery && <p>{`Domicilio (estimado): ${formatCop(s.deliveryCop)}`}</p>}
         {s.netCop !== null && <p>{`Ahorro neto (estimado): ${formatCop(s.netCop)}`}</p>}
+        {s.pricesUpdatedAt !== undefined && (
+          <p className="muted">
+            {`Precios actualizados el ${shortDay(s.pricesUpdatedAt) ?? ''}. `}
+            <span>Recalcula el plan para ver el ahorro</span>{' '}
+            <Link to="/canasta/plan">Recalcular en el plan de compra</Link>
+          </p>
+        )}
         {hasDelivery && (
           <p className="muted">
             Valora no hace pedidos ni domicilios. La tarifa es la que tú escribiste; confírmala con
@@ -232,6 +269,15 @@ export function SavedPlanPage() {
       </div>
 
       <div className="actions no-print">
+        <button
+          type="button"
+          className="btn"
+          disabled={!online || update.state.status === 'loading'}
+          aria-describedby={online ? undefined : 'sin-conexion'}
+          onClick={check}
+        >
+          Actualizar precios
+        </button>
         {online ? (
           <Link to="/canasta/plan" className="btn ghost">
             Armar de nuevo con precios de hoy
@@ -250,6 +296,13 @@ export function SavedPlanPage() {
           Borrar este plan
         </button>
       </div>
+      <PriceUpdatePanel
+        state={update.state}
+        notice={notice}
+        onSave={savePrices}
+        onDiscard={update.reset}
+        onRetry={check}
+      />
     </section>
   );
 }
