@@ -2412,10 +2412,6 @@ export interface operations {
                 "application/json": {
                     password: string;
                 } | {
-                    // TODO(regenerar): cuenta sin contraseña: cuerpo vacío; 403 REAUTH_REQUIRED si la sesión tiene más de 10 minutos.
-                    password?: never;
-                    confirmEmail?: never;
-                } | {
                     /** @description El correo de la cuenta; se compara sin espacios y en minúsculas. */
                     confirmEmail: string;
                 };

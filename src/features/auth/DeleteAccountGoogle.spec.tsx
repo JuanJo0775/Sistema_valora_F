@@ -32,23 +32,31 @@ describe('eliminar la cuenta creada con Google', () => {
     localStorage.clear();
   });
 
-  it('no pide contraseña: explica y exige solo la casilla', async () => {
+  it('no pide contraseña: explica, pide el correo y exige la casilla', async () => {
     stub({ status: 202 }, false);
     renderAt();
 
-    expect(await screen.findByText(/Tu cuenta usa Google\./)).toBeInTheDocument();
-    expect(screen.getByText(/confirma que eres tú/)).toBeInTheDocument();
+    expect(await screen.findByText(/Tu cuenta usa Google./)).toBeInTheDocument();
+    expect(screen.getByText(/Para eliminarla escribe tu correo/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Tu contraseña')).toBeNull();
     expect(screen.getByText(/Tienes 10 días para cambiar de opinión/)).toBeInTheDocument();
+    expect(screen.getByText(/vuelve a entrar con Google durante los 10 días/)).toBeInTheDocument();
+    expect(screen.queryByText(/correo y contraseña/)).toBeNull();
     expect(submitButton()).toBeDisabled();
     fireEvent.click(screen.getByRole('checkbox'));
+    expect(submitButton()).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Escribe tu correo para confirmar'), {
+      target: { value: 'ana@correo.co' },
+    });
     expect(submitButton()).toBeEnabled();
   });
 
-  it('envía un cuerpo vacío y muestra la pantalla final sin hablar de contraseña', async () => {
+  it('envía confirmEmail y muestra la pantalla final con la salida de Google', async () => {
     const api = stub({ status: 202, body: { scheduledFor: '2026-12-01T15:30:00.000Z' } }, false);
     renderAt();
-    await screen.findByText(/Tu cuenta usa Google\./);
+    fireEvent.change(await screen.findByLabelText('Escribe tu correo para confirmar'), {
+      target: { value: ' ana@correo.co ' },
+    });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(submitButton());
 
@@ -59,39 +67,47 @@ describe('eliminar la cuenta creada con Google', () => {
       expect(heading).toHaveFocus();
     });
     const sent = api.calls.find(({ path }) => path === '/v1/me/account-deletion');
-    expect(JSON.parse(sent?.body ?? 'null')).toEqual({});
-    expect(screen.getByRole('status')).toHaveTextContent(/tienes 10 días para cambiar de opinión/);
+    expect(JSON.parse(sent?.body ?? 'null')).toEqual({ confirmEmail: 'ana@correo.co' });
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Para restaurarla, vuelve a entrar con Google durante los 10 días.',
+    );
     expect(screen.getByRole('status')).not.toHaveTextContent(/contraseña/);
   });
 
-  it('REAUTH_REQUIRED ofrece confirmar con Google (vuelve aquí) o crear una contraseña', async () => {
-    stub({ status: 403, body: { code: 'REAUTH_REQUIRED', message: 'x' } }, false);
+  it('INVALID_CONFIRMATION marca el correo y enfoca el campo', async () => {
+    stub({ status: 403, body: { code: 'INVALID_CONFIRMATION', message: 'x' } }, false);
     renderAt();
-    await screen.findByText(/Tu cuenta usa Google\./);
+    fireEvent.change(await screen.findByLabelText('Escribe tu correo para confirmar'), {
+      target: { value: 'otro@correo.co' },
+    });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(submitButton());
 
-    const alert = await screen.findByText(/Confirma que eres tú\./);
+    expect(
+      await screen.findByText('Ese correo no coincide con el de tu cuenta.'),
+    ).toBeInTheDocument();
     await waitFor(() => {
-      expect(alert.closest('[role="alert"]')).toHaveFocus();
+      expect(screen.getByLabelText('Escribe tu correo para confirmar')).toHaveFocus();
     });
-    const google = screen.getByRole('link', { name: 'Confirmar con Google' });
-    const url = new URL(google.getAttribute('href') ?? '', 'http://valora.test');
-    expect(url.pathname).toBe('/v1/auth/google/start');
-    expect(url.searchParams.get('returnTo')).toBe('/yo/eliminar-cuenta');
-    expect(url.searchParams.get('acceptPolicy')).toBe('2026-11');
-    expect(screen.getByRole('link', { name: 'Crear una contraseña primero' })).toHaveAttribute(
-      'href',
-      '/yo/ajustes',
-    );
-    // La cuenta sigue activa: se puede reintentar.
     expect(submitButton()).toBeEnabled();
+  });
+
+  it('otros errores se explican igual que con contraseña', async () => {
+    stub({ status: 403, body: { code: 'MODERATOR_CANNOT_DELETE', message: 'x' } }, false);
+    renderAt();
+    fireEvent.change(await screen.findByLabelText('Escribe tu correo para confirmar'), {
+      target: { value: 'ana@correo.co' },
+    });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(submitButton());
+    expect(await screen.findByText(/moderación.*traspasa el rol/s)).toBeInTheDocument();
   });
 
   it('una cuenta con contraseña sigue pidiéndola y enviándola', async () => {
     const api = stub({ status: 202, body: { scheduledFor: '2026-12-01T15:30:00.000Z' } }, true);
     renderAt();
     expect(screen.queryByText(/Tu cuenta usa Google/)).toBeNull();
+    expect(screen.queryByLabelText('Escribe tu correo para confirmar')).toBeNull();
     fireEvent.change(await screen.findByLabelText('Tu contraseña'), { target: { value: 'clave' } });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(submitButton());

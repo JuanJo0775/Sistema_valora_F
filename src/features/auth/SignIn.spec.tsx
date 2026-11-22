@@ -210,7 +210,7 @@ describe('volver desde iniciar sesión', () => {
     ],
     [
       'eliminacion-pendiente',
-      'Tu cuenta está programada para eliminarse. Si tiene contraseña, entra con tu correo y contraseña para restaurarla.',
+      'Tu cuenta está programada para eliminarse. Si tiene contraseña, entra con tu correo y contraseña para restaurarla. Si no, vuelve a entrar con Google durante los 10 días.',
     ],
   ])('con error=%s explica qué pasó al entrar con Google', (code, message) => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });

@@ -5,14 +5,13 @@ import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { Field } from './Field';
-import { ReauthPanel } from './ReauthPanel';
 import { waitText } from './formErrors';
 import { withReturn } from './safeReturn';
 import { longDate } from './scheduledDate';
 import { useSession } from './session';
 import './auth.css';
 
-type Problem = { kind: 'password' } | { kind: 'reauth' } | { kind: 'other'; message: string };
+type Problem = { kind: 'password' } | { kind: 'email' } | { kind: 'other'; message: string };
 
 // Mensajes claros y con salida para cada error de POST /v1/me/account-deletion.
 export function problemOf(error: unknown): Problem {
@@ -20,7 +19,7 @@ export function problemOf(error: unknown): Problem {
     return { kind: 'other', message: 'Algo salió mal. Inténtalo de nuevo.' };
   }
   if (error.status === 403 && error.code === 'INVALID_PASSWORD') return { kind: 'password' };
-  if (error.status === 403 && error.code === 'REAUTH_REQUIRED') return { kind: 'reauth' };
+  if (error.status === 403 && error.code === 'INVALID_CONFIRMATION') return { kind: 'email' };
   if (error.status === 403 && error.code === 'LAST_MODERATOR_CANNOT_DELETE') {
     return {
       kind: 'other',
@@ -57,11 +56,12 @@ export function problemOf(error: unknown): Problem {
 
 // «Yo» › Ajustes › Eliminar mi cuenta. Pantalla propia, con contraseña y una confirmación
 // explícita. La contraseña vive solo en el estado del formulario. Una cuenta creada con Google no
-// tiene contraseña: confirma con la casilla y, si su sesión es vieja, volviendo a entrar con Google.
+// tiene contraseña: confirma escribiendo su correo (confirmEmail) y con la casilla.
 export function DeleteAccount() {
   const { session, endSession, reload } = useSession();
   const { pathname, search } = useLocation();
   const [password, setPassword] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [understood, setUnderstood] = useState(false);
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -77,8 +77,7 @@ export function DeleteAccount() {
   // Al aparecer un error el foco va a él (o a la contraseña, si fue la que falló).
   useEffect(() => {
     if (!problem) return;
-    if (problem.kind === 'reauth') return;
-    if (problem.kind === 'password') {
+    if (problem.kind === 'password' || problem.kind === 'email') {
       formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
     } else alertRef.current?.focus();
   }, [problem, attempt]);
@@ -97,7 +96,9 @@ export function DeleteAccount() {
           <p>
             Se eliminará el <strong>{longDate(scheduledFor)}</strong>, pero tienes 10 días para
             cambiar de opinión
-            {hadPassword ? ': inicia sesión con tu correo y contraseña y podrás restaurarla' : ''}.
+            {hadPassword
+              ? ': inicia sesión con tu correo y contraseña y podrás restaurarla. '
+              : '. Para restaurarla, vuelve a entrar con Google durante los 10 días. '}
             Pasado ese plazo se elimina de forma definitiva.
           </p>
           <p className="muted">
@@ -120,10 +121,14 @@ export function DeleteAccount() {
   const hasPassword = session.hasPassword;
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    if ((hasPassword && !password) || !understood || sending) return;
+    if (!(hasPassword ? password : confirmEmail.trim()) || !understood || sending) return;
     setProblem(null);
     setSending(true);
-    call(api.POST('/me/account-deletion', { body: hasPassword ? { password } : {} }))
+    call(
+      api.POST('/me/account-deletion', {
+        body: hasPassword ? { password } : { confirmEmail: confirmEmail.trim() },
+      }),
+    )
       .then((result) => {
         setHadPassword(hasPassword);
         setScheduledFor(result.scheduledFor);
@@ -161,9 +166,10 @@ export function DeleteAccount() {
       <section aria-labelledby="plazo" className="delete-list">
         <h2 id="plazo">Tienes 10 días para cambiar de opinión</h2>
         <p>
-          Al confirmar, cerramos tus sesiones y la cuenta queda programada para eliminarse. Durante
-          10 días puedes cambiar de opinión
-          {hasPassword ? ': inicia sesión con tu correo y contraseña para restaurarla' : ''}.{' '}
+          Al confirmar, cerramos tus sesiones y la cuenta queda programada para eliminarse.{' '}
+          {hasPassword
+            ? 'Durante 10 días puedes iniciar sesión con tu correo y contraseña para restaurarla.'
+            : 'Para restaurarla, vuelve a entrar con Google durante los 10 días.'}{' '}
           <strong>Pasado ese plazo se elimina de forma definitiva y no se puede deshacer.</strong>
         </p>
       </section>
@@ -176,13 +182,6 @@ export function DeleteAccount() {
       <div ref={alertRef} tabIndex={-1} role="alert" className="delete-alert">
         {problem?.kind === 'other' && <p className="field-error">{problem.message}</p>}
       </div>
-      {problem?.kind === 'reauth' && (
-        <ReauthPanel returnTo="/yo/eliminar-cuenta">
-          <Link to="/yo/ajustes" className="btn ghost">
-            Crear una contraseña primero
-          </Link>
-        </ReauthPanel>
-      )}
       {hasPassword ? (
         <Field
           label="Tu contraseña"
@@ -200,9 +199,24 @@ export function DeleteAccount() {
           }
         />
       ) : (
-        <p className="delete-google">
-          <strong>Tu cuenta usa Google.</strong> Para eliminarla confirma que eres tú.
-        </p>
+        <>
+          <p className="delete-google">
+            <strong>Tu cuenta usa Google.</strong> Para eliminarla escribe tu correo.
+          </p>
+          <Field
+            label="Escribe tu correo para confirmar"
+            type="email"
+            autoComplete="email"
+            value={confirmEmail}
+            onValue={(value) => {
+              setConfirmEmail(value);
+              if (problem?.kind === 'email') setProblem(null);
+            }}
+            error={
+              problem?.kind === 'email' ? 'Ese correo no coincide con el de tu cuenta.' : undefined
+            }
+          />
+        </>
       )}
       <label className="delete-confirm" htmlFor={checkId}>
         <input
@@ -219,7 +233,7 @@ export function DeleteAccount() {
         <button
           type="submit"
           className="btn danger"
-          disabled={(hasPassword && !password) || !understood || sending}
+          disabled={!(hasPassword ? password : confirmEmail.trim()) || !understood || sending}
           aria-busy={sending || undefined}
         >
           {sending ? 'Programando…' : 'Eliminar mi cuenta definitivamente'}
