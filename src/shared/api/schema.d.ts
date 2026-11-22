@@ -1432,6 +1432,8 @@ export interface operations {
                 category?: string;
                 /** @description Los mismos valores del parámetro común Limit, con 5 por defecto. */
                 limit?: number;
+                /** @description TODO(regenerar): paginación (≥ 0, 0 por defecto). Lo declara el servidor en desarrollo; se escribió a mano. Orden estable entre páginas. */
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -1462,6 +1464,10 @@ export interface operations {
                         };
                         /** @description Tiendas del área (municipio o radio) con al menos un precio vigente, de cualquier categoría. Para «Precios de 7 tiendas a menos de 1,5 km». */
                         storesWithPrices: number;
+                        /** @description TODO(regenerar): cuántos productos destacables hay con los mismos filtros (sin contar offset ni limit). Aún puede faltar. */
+                        total?: number;
+                        /** @description TODO(regenerar): hay más productos después de esta página. Aún puede faltar. */
+                        hasMore?: boolean;
                         /** @description Vacío si ninguna tienda del área tiene precios vigentes. */
                         items: {
                             /** Format: uuid */
