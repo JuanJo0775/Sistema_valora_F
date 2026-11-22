@@ -48,10 +48,6 @@
   cursor: pointer;
 }
 
-.where-trigger:hover {
-  background: var(--bg-2);
-}
-
 .where-trigger[aria-expanded='true'] {
   border-color: var(--accent);
 }

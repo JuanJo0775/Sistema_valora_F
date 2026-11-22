@@ -35,10 +35,6 @@
 }
 
 /* El nombre es un enlace al producto: se subraya al apuntarlo y tiene foco visible. */
-.basket-name:hover strong {
-  text-decoration: underline;
-}
-
 .basket-name:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -123,10 +119,6 @@
   cursor: pointer;
 }
 
-.stepper button:hover {
-  background: var(--bg-2);
-}
-
 .stepper button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -179,11 +171,6 @@
   background: transparent;
   color: var(--ink-3);
   cursor: pointer;
-}
-
-.trash:hover {
-  background: var(--bad-soft);
-  color: var(--bad);
 }
 
 .trash:focus-visible {
