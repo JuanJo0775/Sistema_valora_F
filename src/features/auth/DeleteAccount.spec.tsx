@@ -76,7 +76,10 @@ describe('eliminar mi cuenta', () => {
     const heading = await screen.findByRole('heading', {
       name: 'Tu cuenta quedó programada para eliminarse',
     });
-    expect(heading).toHaveFocus();
+    // El foco se coloca en un efecto, después de pintar el mensaje: se espera, no se mira de golpe.
+    await waitFor(() => {
+      expect(heading).toHaveFocus();
+    });
     expect(screen.getByRole('status')).toHaveTextContent(/Se eliminará el .*2026/);
     expect(screen.getByRole('status')).toHaveTextContent(/tienes 10 días para cambiar de opinión/);
     expect(screen.getByRole('link', { name: 'Ir al inicio' })).toHaveAttribute('href', '/');
@@ -125,7 +128,9 @@ describe('eliminar mi cuenta', () => {
     fireEvent.click(submitButton());
 
     const message = await screen.findByText(text);
-    expect(message.closest('[role="alert"]')).toHaveFocus();
+    await waitFor(() => {
+      expect(message.closest('[role="alert"]')).toHaveFocus();
+    });
   });
 
   it('sin red lo dice y deja reintentar', async () => {
