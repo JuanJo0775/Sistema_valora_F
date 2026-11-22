@@ -232,22 +232,131 @@ describe('canasta básica de hoy, en el Inicio', () => {
     expect(item.getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
   });
 
-  it('«Ver más» trae más productos', async () => {
-    const six = ['Arroz', 'Leche', 'Huevos', 'Azúcar', 'Aceite', 'Panela'].map((name) =>
-      featured(name),
-    );
-    const api = renderBasket({
-      'GET /v1/featured-products': [basket(six), basket([...six, featured('Café')])],
-    });
+  const NAMES = Array.from({ length: 30 }, (_, index) => `Producto ${String(index + 1)}`);
+  const CATALOG = NAMES.map((name) => featured(name));
 
+  // Un servidor que pagina de verdad (offset y limit) sobre CATALOG; «legacy» no trae total ni hasMore.
+  const paged = (
+    options: { legacy?: boolean; fail?: (offset: number) => boolean; all?: unknown[] } = {},
+  ) => {
+    const all = options.all ?? CATALOG;
+    const asks: URL[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) => {
+        const url = new URL(input.url);
+        const json = (status: number, body: unknown) =>
+          Promise.resolve(
+            new Response(JSON.stringify(body), {
+              status,
+              headers: { 'Content-Type': 'application/json' },
+            }),
+          );
+        if (url.pathname === '/v1/categories') return json(200, CATEGORIES.body);
+        asks.push(url);
+        const offset = Number(url.searchParams.get('offset') ?? 0);
+        const limit = Number(url.searchParams.get('limit'));
+        if (options.fail?.(offset)) {
+          return json(500, { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' });
+        }
+        return json(200, {
+          ...(basket(all.slice(offset, offset + limit)).body as object),
+          ...(options.legacy ? {} : { total: all.length, hasMore: offset + limit < all.length }),
+        });
+      }),
+    );
+    render(
+      <BasketProvider>
+        <MemoryRouter>
+          <TodayBasket />
+        </MemoryRouter>
+      </BasketProvider>,
+    );
+    return asks;
+  };
+  const shownCards = () => screen.getAllByRole('heading', { level: 2 });
+
+  it('la primera página trae 6 y dice cuántos hay en total', async () => {
+    const asks = paged();
+
+    expect(await screen.findByText('Mostrando 6 de 30')).toBeInTheDocument();
+    expect(shownCards()).toHaveLength(6);
+    expect(asks[0]?.searchParams.get('limit')).toBe('6');
+    expect(asks[0]?.searchParams.has('offset')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Ver más · quedan 24' })).toBeInTheDocument();
+  });
+
+  it('en pantalla ancha la primera página trae 12', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('900px'),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    const asks = paged();
+
+    await screen.findByText('Mostrando 12 de 30');
+    expect(asks[0]?.searchParams.get('limit')).toBe('12');
+  });
+
+  it('«Ver más» pide la página siguiente con offset y acumula sin repetir hasta el final', async () => {
+    const asks = paged();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver más · quedan 24' }));
+
+    expect(await screen.findByRole('heading', { name: 'Producto 18' })).toBeInTheDocument();
+    expect(asks[1]?.searchParams.get('offset')).toBe('6');
+    expect(asks[1]?.searchParams.get('limit')).toBe('12');
+    expect(shownCards()).toHaveLength(18);
+    expect(
+      await screen.findByText('Se cargaron 12 productos más. Mostrando 18 de 30'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver más · quedan 12' }));
+
+    expect(await screen.findByRole('heading', { name: 'Producto 30' })).toBeInTheDocument();
+    expect(asks[2]?.searchParams.get('offset')).toBe('18');
+    const names = shownCards().map((heading) => heading.textContent);
+    expect(new Set(names).size).toBe(30);
+    // Al final no hay botón y un mensaje discreto lo dice.
+    expect(screen.queryByRole('button', { name: /Ver más/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Estos son todos los productos con precio')).toBeInTheDocument();
+  });
+
+  it('no repite un producto que llega en dos páginas (por productId)', async () => {
+    const dup = [...CATALOG.slice(0, 8), CATALOG[5], ...CATALOG.slice(8, 14)];
+    paged({ all: dup });
+
+    fireEvent.click(await screen.findByRole('button', { name: /Ver más/ }));
+
+    await screen.findByRole('heading', { name: 'Producto 14' });
+    const names = shownCards().map((heading) => heading.textContent);
+    expect(names).toHaveLength(14);
+    expect(new Set(names).size).toBe(14);
+  });
+
+  it('con un servidor sin hasMore ni total deduce por la página llena', async () => {
+    const asks = paged({ legacy: true, all: CATALOG.slice(0, 15) });
+
+    // Sin total no hay progreso, pero sí «Ver más».
     fireEvent.click(await screen.findByRole('button', { name: 'Ver más' }));
 
-    expect(await screen.findByRole('heading', { name: 'Café' })).toBeInTheDocument();
-    expect(asked(api)?.get('limit')).toBe('20');
-    expect(screen.queryByRole('button', { name: 'Ver más' })).not.toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'Producto 15' });
+    expect(asks).toHaveLength(2);
+    // La segunda página (9 de 12) no está llena: no hay más.
+    expect(screen.queryByRole('button', { name: /Ver más/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Estos son todos los productos con precio')).toBeInTheDocument();
   });
 
   const SIX = ['Arroz', 'Leche', 'Huevos', 'Azúcar', 'Aceite', 'Panela'];
+
+  it('un servidor que ignora offset no se queda pidiendo lo mismo', async () => {
+    renderBasket({ 'GET /v1/featured-products': basket(SIX.map((name) => featured(name))) });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver más' }));
+
+    expect(await screen.findByText('Estos son todos los productos con precio')).toBeInTheDocument();
+    expect(shownCards()).toHaveLength(6);
+  });
 
   // Una respuesta que el test suelta cuando quiere, para mirar la pantalla mientras «llega».
   const gate = () => {
@@ -258,20 +367,19 @@ describe('canasta básica de hoy, en el Inicio', () => {
     return { reply, release };
   };
 
-  it('«Ver más» no vacía la lista: muestra esqueletos y «Cargando…» y agrega abajo', async () => {
+  it('«Ver más» no vacía la lista: muestra esqueletos y «Cargando…», agrega abajo, anuncia y deja el foco', async () => {
     const six = SIX.map((name) => featured(name));
     const next = gate();
-    const real = stubApi({
+    stubApi({
       'GET /v1/categories': CATEGORIES,
-      'GET /v1/featured-products': basket(six),
+      'GET /v1/featured-products': basket(six, { total: 8, hasMore: true }),
     });
     const original = globalThis.fetch;
     vi.stubGlobal('fetch', (input: Request) =>
-      new URL(input.url).searchParams.get('limit') === '20'
+      new URL(input.url).searchParams.get('offset') === '6'
         ? next.reply.then((r) => new Response(JSON.stringify(r.body), { status: r.status }))
         : original(input),
     );
-    expect(real).toBeDefined();
     render(
       <BasketProvider>
         <MemoryRouter>
@@ -280,42 +388,42 @@ describe('canasta básica de hoy, en el Inicio', () => {
       </BasketProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Ver más' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver más · quedan 2' }));
 
-    // Mientras llegan: las 6 siguen, hay 2 esqueletos y el botón no se movió.
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(6);
-    expect(document.querySelectorAll('.skeleton-card')).toHaveLength(2);
+    // Mientras llegan: las 6 siguen, hay esqueletos y el botón no se movió.
+    expect(shownCards()).toHaveLength(6);
+    expect(document.querySelectorAll('.skeleton-card').length).toBeGreaterThan(0);
     const busy = screen.getByRole('button', { name: 'Cargando…' });
     expect(busy).toBeDisabled();
     expect(busy).toHaveAttribute('aria-busy', 'true');
     const first = screen.getByRole('heading', { name: 'Arroz' });
 
     await act(async () => {
-      next.release(basket([...six, featured('Café'), featured('Pan')]));
+      next.release(basket([featured('Café'), featured('Pan')], { total: 8, hasMore: false }));
       await next.reply;
     });
 
     expect(await screen.findByRole('heading', { name: 'Pan' })).toBeInTheDocument();
     // Las 6 primeras no se volvieron a pintar: es el mismo nodo.
     expect(screen.getByRole('heading', { name: 'Arroz' })).toBe(first);
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(8);
+    expect(shownCards()).toHaveLength(8);
     expect(document.querySelectorAll('.skeleton-card')).toHaveLength(0);
-    expect(screen.getByText('Se cargaron 2 productos más')).toBeInTheDocument();
+    expect(screen.getByText('Se cargaron 2 productos más. Mostrando 8 de 8')).toBeInTheDocument();
     expect(
       (await screen.findByRole('heading', { name: 'Café' })).closest('li')?.querySelector('a'),
     ).toHaveFocus();
   });
 
-  it('cambiar de categoría sí reinicia la lista y muestra el esqueleto', async () => {
+  it('cambiar de categoría reinicia la lista y muestra el esqueleto', async () => {
     const six = SIX.map((name) => featured(name));
     renderBasket({
       'GET /v1/featured-products': [
-        basket(six),
-        basket([...six, featured('Café')]),
+        basket(six, { total: 8, hasMore: true }),
+        basket([featured('Café'), featured('Pan')], { total: 8, hasMore: false }),
         { status: 200, pending: true },
       ],
     });
-    fireEvent.click(await screen.findByRole('button', { name: 'Ver más' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Ver más/ }));
     await screen.findByRole('heading', { name: 'Café' });
 
     fireEvent.click(screen.getByRole('radio', { name: 'Aceites' }));
@@ -324,23 +432,55 @@ describe('canasta básica de hoy, en el Inicio', () => {
     expect(document.querySelectorAll('.skeleton-card')).toHaveLength(4);
   });
 
-  it('si falla la carga adicional conserva la lista y permite reintentar', async () => {
-    const six = SIX.map((name) => featured(name));
-    renderBasket({
-      'GET /v1/featured-products': [
-        basket(six),
-        { status: 500, body: { code: 'INTERNAL_ERROR', message: 'Ocurrió un error inesperado.' } },
-        basket([...six, featured('Café')]),
-      ],
-    });
+  it('al cambiar de categoría o de municipio vuelve a pedir desde la primera página', async () => {
+    const asks = paged();
+    fireEvent.click(await screen.findByRole('button', { name: /Ver más/ }));
+    await screen.findByRole('heading', { name: 'Producto 18' });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Ver más' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Aceites' }));
+
+    await vi.waitFor(() => {
+      expect(asks.at(-1)?.searchParams.get('category')).toBe('aceites');
+    });
+    expect(asks.at(-1)?.searchParams.has('offset')).toBe(false);
+    expect(asks.at(-1)?.searchParams.get('limit')).toBe('6');
+    expect(await screen.findByText('Mostrando 6 de 30')).toBeInTheDocument();
+    expect(shownCards()).toHaveLength(6);
+
+    fireEvent.click(screen.getByRole('button', { name: /Ver más/ }));
+    await screen.findByRole('heading', { name: 'Producto 18' });
+    fireEvent.click(screen.getByRole('button', { name: 'Dónde buscar: Armenia' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Calarcá' }));
+
+    await vi.waitFor(() => {
+      expect(asks.at(-1)?.searchParams.get('municipality')).toBe('calarca');
+    });
+    expect(asks.at(-1)?.searchParams.has('offset')).toBe(false);
+    expect(asks.at(-1)?.searchParams.get('category')).toBe('aceites');
+    expect(await screen.findByText('Mostrando 6 de 30')).toBeInTheDocument();
+  });
+
+  it('el chip de la categoría conocida muestra su total, sin pedir más', async () => {
+    const asks = paged();
+
+    await screen.findByText('Mostrando 6 de 30');
+    expect(await screen.findByRole('radio', { name: /^Todo\s+30$/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Aceites' })).toBeInTheDocument();
+    expect(asks).toHaveLength(1);
+  });
+
+  it('si falla una página siguiente conserva lo visto y permite reintentar', async () => {
+    let failing = true;
+    paged({ fail: (offset) => offset === 6 && failing });
+
+    fireEvent.click(await screen.findByRole('button', { name: /Ver más/ }));
 
     expect(await screen.findByText('Ocurrió un error inesperado.')).toBeInTheDocument();
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(6);
+    expect(shownCards()).toHaveLength(6);
+    failing = false;
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
-    expect(await screen.findByRole('heading', { name: 'Café' })).toBeInTheDocument();
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(7);
+    expect(await screen.findByRole('heading', { name: 'Producto 18' })).toBeInTheDocument();
+    expect(shownCards()).toHaveLength(18);
   });
 
   it('sin precios lo dice', async () => {
