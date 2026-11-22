@@ -109,6 +109,9 @@ export function StorePage() {
               <Icon name="plus" />
               Registrar un precio aquí
             </Link>
+            <Link to={`/comercios/registro?tienda=${store.id}`} className="btn ghost">
+              ¿Eres el dueño? Registra tu tienda
+            </Link>
           </div>
         </header>
       </div>
@@ -144,7 +147,7 @@ export function StorePage() {
         ) : (
           <ul className="offers store-offers">
             {prices.map((price) => (
-              <li key={price.reportId} className="offer store-offer">
+              <li key={price.presentationId} className="offer store-offer">
                 <ProductThumb size="row" />
                 <div className="store-offer-body">
                   <h3>
@@ -152,7 +155,7 @@ export function StorePage() {
                   </h3>
                   <p className="badges">
                     <FreshnessBadge freshness={price.freshness} observedAt={price.observedAt} />
-                    <ReliabilityBadge level={price.reliability} />
+                    {price.reliability && <ReliabilityBadge level={price.reliability} />}
                   </p>
                 </div>
                 <div className="store-offer-price">

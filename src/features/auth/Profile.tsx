@@ -8,12 +8,17 @@ import { type Role, useSession } from './session';
 import { SuspendedNotice } from './SuspendedNotice';
 import './auth.css';
 
-// La sección privada de cada rol. La del comercio llega en el Corte 3.
+// La sección privada de cada rol.
 const SECTION_OF: Partial<Record<Role, { to: string; label: string; text: string }>> = {
   reportante: {
     to: '/mis-aportes',
     label: 'Mis aportes',
     text: 'Los precios que registraste y su estado',
+  },
+  comercio: {
+    to: '/comercios/registro',
+    label: 'Mi tienda',
+    text: 'Consulta el estado de tu registro comercial',
   },
   moderador: { to: '/moderacion', label: 'Moderación', text: 'Revisa los reportes pendientes' },
 };
@@ -90,6 +95,13 @@ export function Profile() {
         {section && (
           <Group id="actividad" title="Mi actividad">
             <NavRow to={section.to} label={section.label} text={section.text} />
+            {session.role === 'reportante' && !session.suspendedUntil && (
+              <NavRow
+                to="/comercios/registro"
+                label="Registrar mi tienda"
+                text="Vincula tu cuenta con tu tienda"
+              />
+            )}
           </Group>
         )}
         <Group id="preferencias" title="Preferencias">
