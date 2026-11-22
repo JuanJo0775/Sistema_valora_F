@@ -7,6 +7,8 @@
   --bg-2: #f6f5f3;
   --bg-3: #efedea;
   --line: #ece9e5;
+  /* Placa suave bajo las fotos de producto (fotos con fondo blanco o transparente). */
+  --photo-plate: #f6f5f3;
   --line-2: #dad6d0;
   /* #28: borde de campos y botones con borde, 3:1 o más sobre el fondo (WCAG 1.4.11). */
   --field-line: #8c857c;
@@ -47,6 +49,7 @@
     --bg-2: #151517;
     --bg-3: #1d1d20;
     --line: #242427;
+    --photo-plate: #dedbd6;
     --line-2: #36363a;
     --field-line: #706a63;
     --ink: #f4f2ef;
@@ -77,6 +80,7 @@
   --bg-2: #151517;
   --bg-3: #1d1d20;
   --line: #242427;
+  --photo-plate: #dedbd6;
   --line-2: #36363a;
   --field-line: #706a63;
   --ink: #f4f2ef;
