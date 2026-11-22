@@ -11,6 +11,7 @@ import './shared/ui/tokens.css';
 import './shared/ui/base.css';
 import { App } from './app/App';
 import './shared/ui/web.css';
+import './shared/ui/highlight.css';
 import { startInstallListener } from './pwa/install';
 import { applyStoredTheme } from './shared/theme';
 

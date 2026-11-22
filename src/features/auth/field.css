@@ -25,10 +25,6 @@
   cursor: pointer;
 }
 
-.field-eye:hover {
-  color: var(--ink);
-}
-
 .field-eye[aria-pressed='true'] {
   color: var(--accent-ink);
 }
