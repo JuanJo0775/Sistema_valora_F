@@ -439,3 +439,69 @@
 .pending-deletion p {
   margin: 0;
 }
+
+/* Olvidé mi contraseña, restablecer y contraseña en Ajustes. */
+.forgot-link {
+  margin: -6px 0 0;
+}
+
+.forgot-link a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+}
+
+.forgot-form,
+.forgot-sent,
+.password-form,
+.password-block,
+.password-email {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.forgot-message p,
+.forgot-wait,
+.password-form p,
+.password-title {
+  margin: 0;
+}
+
+.password-title {
+  font-size: 1.05rem;
+}
+
+.password-form .banner,
+.reauth {
+  overflow-wrap: anywhere;
+}
+
+.reauth {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-m);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.reauth p {
+  margin: 0;
+}
+
+.reauth .actions {
+  flex-wrap: wrap;
+}
+
+.delete-google {
+  padding: 10px 14px;
+  border-radius: var(--r-m);
+  background: var(--bg-2);
+}
+
+.forgot-message {
+  display: grid;
+  gap: 8px;
+}
