@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { seriousViolations } from '../../test/axe';
@@ -260,8 +260,7 @@ describe('actualizar precios del plan guardado', () => {
     renderAt(stored(municipio).id);
     update();
     await saveButton();
-    await waitFor(async () => {
-      expect(await seriousViolations()).toEqual([]);
-    });
-  });
+    // Axe es lento (más con la cobertura): se ejecuta una sola vez, no dentro de un waitFor de 1 s.
+    expect(await seriousViolations()).toEqual([]);
+  }, 20_000);
 });
