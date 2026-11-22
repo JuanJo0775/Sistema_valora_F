@@ -66,10 +66,14 @@ function cheapestOf(options: SplitOption[]): SplitOption | undefined {
   }, undefined);
 }
 
+// Orden por caracteres, igual que el reparto: no depende del idioma del navegador (EC-06).
+const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+// Identidad de una opción: sus tiendas y su reparto, sin importar el orden en que vengan.
 const idOf = (option: SplitOption) =>
   option.shares
     .map(({ store, lines }) => `${store.id}:${lines.map((l) => l.presentationId).join(',')}`)
-    .sort()
+    .sort(byText)
     .join('|');
 
 export function recommend(
