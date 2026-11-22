@@ -36,7 +36,7 @@
   border-radius: 50%;
 }
 
-/* Mismos tamaños que ProductThumb (catalog.css). */
+/* Mismos tamaños que el marco de ProductThumb (.product-frame, catalog.css). */
 .skeleton.thumb-card {
   flex: none;
   width: 64px;

@@ -25,7 +25,7 @@ export function Skeleton({
   );
 }
 
-// Misma forma y tamaño que ProductThumb (64 px en tarjetas, 44 px en filas): sin saltos al cargar.
+// Misma forma y tamaño que el marco de ProductThumb (64 px en tarjetas, 44 px en filas): sin saltos al cargar.
 export function SkeletonThumb({ size }: { size: 'card' | 'row' }) {
   return <Skeleton variant="block" className={`thumb-${size}`} />;
 }
