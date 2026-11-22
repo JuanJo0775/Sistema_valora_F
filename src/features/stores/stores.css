@@ -77,11 +77,6 @@
   filter: drop-shadow(0 1px 2px rgb(0 0 0 / 55%));
 }
 
-.store-map .store-pin:hover .pin-shape,
-.store-map .store-pin:hover .pin-dot {
-  transform: scale(1.12);
-}
-
 .store-map .store-pin:focus-visible {
   outline: 3px solid #17140f;
   outline-offset: 0;
@@ -215,17 +210,6 @@
   gap: 6px;
 }
 
-.store-map .pin-link {
-  margin-top: 6px;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: var(--r-s);
-  background: var(--accent);
-  color: var(--on-accent);
-  font: inherit;
-  cursor: pointer;
-}
-
 .stores-main {
   align-content: start;
   display: grid;
@@ -343,18 +327,131 @@
   }
 }
 
-/* H-10: «Cómo llegar» del globo es el primero y se toca en 44 px; «Ver precios» queda al lado. */
-.store-map a.pin-link {
+/* Globo del mapa (popup de Leaflet), con los tokens del tema en claro y en oscuro: superficie --bg,
+   borde y sombra del sistema, esquina --r-m y la cola del mismo color. Dos botones iguales con el
+   patrón de .btn: «Ver precios» primario (naranja) y «Cómo llegar» secundario (con borde). */
+.store-map .leaflet-popup-content-wrapper {
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  box-shadow: var(--shadow-2);
+  color: var(--ink);
+}
+
+.store-map .leaflet-popup-tip {
+  border: 1px solid var(--line-2);
+  background: var(--bg);
+  box-shadow: none;
+}
+
+.store-map .leaflet-popup-content {
+  /* Leaflet fija el ancho en línea: nunca más que la pantalla menos los márgenes del mapa. */
+  max-width: min(300px, calc(100vw - 96px)) !important;
+  margin: 14px 16px 16px;
+  font-family: var(--f-body);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.store-map .leaflet-popup-content > div {
+  display: grid;
+  gap: 8px;
+}
+
+.store-map .leaflet-popup-content br {
+  display: none;
+}
+
+.store-map .leaflet-popup-content strong {
+  /* Deja sitio al botón de cerrar y una separación clara con los botones. */
+  min-height: 30px;
+  padding-right: 30px;
+  margin-bottom: 4px;
+  color: var(--ink);
+  font-family: var(--f-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.store-map .leaflet-popup .pin-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
   min-height: var(--touch);
-  margin: 6px 6px 0 0;
-  padding: 0 12px;
-  border: 1px solid var(--field-line);
-  border-radius: var(--r-s);
-  background: var(--bg);
-  color: var(--ink);
+  margin: 0;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--r-m);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
   text-decoration: none;
+  cursor: pointer;
+}
+
+.store-map .leaflet-popup a.pin-route {
+  border-color: var(--field-line);
+  background: transparent;
+  color: var(--ink);
+}
+
+.store-map .leaflet-popup .pin-link:active {
+  filter: brightness(0.88);
+}
+
+.store-map .leaflet-popup a.pin-route:active {
+  background: var(--press-bg);
+  filter: none;
+}
+
+.store-map .leaflet-popup .pin-link:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.store-map .leaflet-popup a.leaflet-popup-close-button {
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: var(--touch);
+  height: var(--touch);
+  padding: 0;
+  border-radius: var(--r-m);
+  color: var(--ink-2);
+  font: 400 1.5rem/1 var(--f-body);
+  transition: background-color var(--press-ms) ease-out;
+}
+
+.store-map .leaflet-popup a.leaflet-popup-close-button:active {
+  background: var(--press-bg);
+  color: var(--ink);
+}
+
+.store-map .leaflet-popup a.leaflet-popup-close-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .store-map .leaflet-popup .pin-link:hover {
+    filter: brightness(0.94);
+  }
+
+  .store-map .leaflet-popup a.pin-route:hover,
+  .store-map .leaflet-popup a.leaflet-popup-close-button:hover {
+    background: var(--hover-bg);
+    color: var(--ink);
+    filter: none;
+  }
 }
 
 /* En escritorio el radio va compacto bajo el mapa: título, ayuda y barra a la izquierda, los chips a

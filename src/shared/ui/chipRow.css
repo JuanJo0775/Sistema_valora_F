@@ -75,10 +75,6 @@
     right: 0;
   }
 
-  .chip-arrow:hover {
-    background: var(--bg-2);
-  }
-
   .chip-row:not([data-start='more']) .chip-arrow.start,
   .chip-row:not([data-end='more']) .chip-arrow.end {
     display: none;

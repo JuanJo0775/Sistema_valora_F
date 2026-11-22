@@ -1,0 +1,261 @@
+/* Sistema único de resaltes (hover, toque y foco). Se carga después de web.css y de las hojas de
+   cada pantalla para ganar con la misma especificidad.
+   - Tokens en tokens.css: --hover-bg, --press-bg, --hover-ring, --shadow-1, --shadow-2, --lift-bg,
+     --hl-pad (respiro alrededor del texto) y --press-ms (transición corta del toque).
+   - Toque (:active): vale con cualquier puntero; el resalte nativo del navegador se apaga.
+   - Ratón (:hover): SOLO con (hover: hover) and (pointer: fine), para que no quede pegado tras tocar.
+   - Foco por teclado (:focus-visible): lo define base.css y no se toca aquí.
+   - Nunca un fondo recto al ras del texto: todo resalte lleva esquina redondeada y respiro. */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(a, button, summary, label, input, select, [role='button']) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 1. Enlaces y botones de texto: el fondo se pinta con un anillo de --hl-pad alrededor del texto, sin
+   mover el diseño en reposo ni tocar a los vecinos. */
+:is(
+  .offer-store h3 a,
+  .offer-links a,
+  .link-button,
+  .settings-link,
+  a.back-link,
+  .basket-name,
+  .history-summary a,
+  .form p a,
+  .form label a
+) {
+  border-radius: var(--r-s);
+  transition:
+    background-color var(--press-ms) ease-out,
+    box-shadow var(--press-ms) ease-out;
+}
+
+:is(
+  .offer-store h3 a,
+  .offer-links a,
+  .link-button,
+  .settings-link,
+  a.back-link,
+  .basket-name,
+  .history-summary a,
+  .form p a,
+  .form label a
+):active {
+  background: var(--press-bg);
+  box-shadow: 0 0 0 var(--hl-pad) var(--press-bg);
+}
+
+/* 2. Controles con forma propia (chips, pestañas, botones, filas elegibles): el fondo cambia dentro
+   de su misma silueta, que ya es redondeada. */
+.tab {
+  border-radius: var(--r-m);
+}
+
+:is(
+  .tab:not([aria-current='page'], .primary),
+  .category-chip:not(:has(input:checked)),
+  .choice:not(:has(input:checked)),
+  .where-chip,
+  .where-trigger,
+  .btn.ghost,
+  .suggest-store,
+  .suggest-option,
+  .stepper button,
+  .overlay-close,
+  .field-eye,
+  .chip-arrow
+):active {
+  background: var(--press-bg);
+}
+
+.btn:active,
+.tab.primary:active {
+  filter: brightness(0.88);
+}
+
+.btn.ghost:active {
+  filter: none;
+}
+
+:is(
+  .stepper button,
+  .overlay-close,
+  .field-eye,
+  .where-chip,
+  .suggest-store,
+  .suggest-option,
+  .btn
+) {
+  transition:
+    background-color var(--press-ms) ease-out,
+    filter var(--press-ms) ease-out;
+}
+
+.trash {
+  transition: background-color var(--press-ms) ease-out;
+}
+
+.trash:active {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+/* 3. Filas de lista: el resalte vive en un pseudo-elemento redondeado con respiro; el contenido
+   conserva su alineación. */
+.offer-row,
+.basket-row,
+.nav-row {
+  position: relative;
+  isolation: isolate;
+}
+
+.offer-row::before,
+.basket-row::before {
+  content: '';
+  position: absolute;
+  inset: 2px calc(var(--hl-pad) * -1);
+  z-index: -1;
+  border-radius: var(--r-s);
+  pointer-events: none;
+  transition: background-color var(--press-ms) ease-out;
+}
+
+/* Las filas de navegación (Yo, Ajustes) ya tienen su relleno: el resalte queda dentro de la tarjeta. */
+.nav-row::before {
+  content: '';
+  position: absolute;
+  inset: 4px 8px;
+  z-index: -1;
+  border-radius: var(--r-s);
+  pointer-events: none;
+  transition: background-color var(--press-ms) ease-out;
+}
+
+.nav-row:active::before {
+  background: var(--press-bg);
+}
+
+/* 4. Tarjetas: al tocar, el fondo de toda la tarjeta; sin tocar el borde ni la esquina. */
+.result:active,
+.product-card:has(.product-card-link:active),
+.store-card:has(a:active:not(.btn)) {
+  background: var(--press-bg);
+}
+
+.result,
+.product-card,
+.store-card {
+  transition:
+    background-color var(--press-ms) ease-out,
+    box-shadow 160ms ease-out,
+    border-color 160ms ease-out;
+}
+
+/* 5. Solo con ratón de verdad. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    filter: brightness(0.94);
+  }
+
+  .btn.ghost:hover,
+  .side .btn.ghost:hover,
+  .product-card .btn:hover,
+  .suggest-store:hover {
+    background: var(--hover-bg);
+    filter: none;
+  }
+
+  .tab:not([aria-current='page'], .primary):hover {
+    background: var(--hover-bg);
+    color: var(--ink);
+  }
+
+  .tab.primary:hover {
+    filter: brightness(0.94);
+  }
+
+  .category-chip:not(:has(input:checked)):hover,
+  .choice:not(:has(input:checked)):hover,
+  .where-chip:hover,
+  .where-trigger:hover,
+  .suggest-option:hover,
+  .stepper button:hover,
+  .overlay-close:hover,
+  .field-eye:hover,
+  .chip-arrow:hover {
+    background: var(--hover-bg);
+  }
+
+  .where-chip:hover,
+  .field-eye:hover {
+    color: var(--ink);
+  }
+
+  .segment:not(:has(input:checked), :has(input:disabled)):hover {
+    color: var(--ink);
+  }
+
+  .trash:hover {
+    background: var(--bad-soft);
+    color: var(--bad);
+  }
+
+  /* Filas: fondo suave redondeado con respiro. */
+  .offer-row:hover::before,
+  .basket-row:hover::before,
+  .nav-row:hover::before {
+    background: var(--hover-bg);
+  }
+
+  /* Enlaces de texto: el mismo anillo que al tocar, más tenue. */
+  :is(
+    .offer-store h3 a,
+    .offer-links a,
+    .link-button,
+    .settings-link,
+    a.back-link,
+    .basket-name,
+    .history-summary a
+  ):hover {
+    background: var(--hover-bg);
+    box-shadow: 0 0 0 var(--hl-pad) var(--hover-bg);
+    color: var(--ink);
+  }
+
+  .offer-store h3 a:hover {
+    text-decoration: underline;
+  }
+
+  .basket-name:hover strong {
+    text-decoration: underline;
+  }
+
+  /* Tarjetas: elevación suave que respeta la esquina; el fondo sube un escalón en oscuro. */
+  .product-card:hover,
+  .store-card:hover,
+  .result:hover {
+    border-color: var(--line-2);
+    background: var(--lift-bg);
+    box-shadow: var(--shadow-2);
+  }
+
+  .result:hover {
+    background: var(--hover-bg);
+  }
+
+  .store-map .store-pin:hover .pin-shape,
+  .store-map .store-pin:hover .pin-dot {
+    transform: scale(1.12);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .product-card:hover,
+  .store-card:hover {
+    transform: translateY(-1px);
+  }
+}
