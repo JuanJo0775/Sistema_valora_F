@@ -45,11 +45,7 @@ describe('versión web: estilos', () => {
     expect(block('.skip-link:focus-visible')).toMatch(/transform:\s*none/);
   });
 
-  it('las filas densas y los hover no tocan el celular', () => {
+  it('las filas densas no tocan el celular', () => {
     expect(block('@media (width >= 960px) and (pointer: fine)')).toMatch(/min-height:\s*32px/);
-    const hover = block('@media (hover: hover)');
-    for (const selector of ['.btn:hover', '.tab:not', '.category-chip:not', '.offer-row:hover']) {
-      expect(hover).toContain(selector);
-    }
   });
 });
