@@ -8,15 +8,21 @@ import { ALREADY_DECIDED, CatalogDecision } from './CatalogDecision';
 import { explainWith } from './explain';
 import { PendingList } from './PendingList';
 
-type Proposal =
-  operations['listStoreProposals']['responses'][200]['content']['application/json']['items'][number];
+type Proposal = Extract<
+  operations['listStoreProposals']['responses'][200]['content']['application/json']['items'][number],
+  { kind: 'tienda' }
+>;
 
 const explain = explainWith({
   404: ALREADY_DECIDED,
   UNKNOWN_ESTABLISHMENT: 'Esa tienda ya no existe: elige otra decisión.',
 });
 
-const load = () => call(api.GET('/moderation/store-proposals')).then(({ items }) => items);
+// F#169 añade la gestión de correcciones de comercios. Aquí se moderan las propuestas de alta.
+const load = () =>
+  call(api.GET('/moderation/store-proposals')).then(({ items }) =>
+    items.filter((item) => item.kind !== 'correccion'),
+  );
 
 // #57 (RF-010 y RF-013): las tiendas que sugieren las personas esperan aquí la decisión de un
 // moderador. La ubicación es la de la tienda, nunca la de quien la sugirió (EC-08).

@@ -10,7 +10,6 @@ import { FlagPrice } from '../contributions/FlagPrice';
 
 type Item = components['schemas']['ComparisonItem'];
 
-// Hoy todo es de la comunidad; «oficial» llega con el módulo comercial (Corte 3).
 const SOURCE: Record<Item['source'], string> = {
   comunidad: 'Comunidad',
   oficial: 'Precio oficial',
@@ -77,7 +76,9 @@ export function Offer({
           >
             Cómo llegar
           </a>
-          <FlagPrice reportId={offer.reportId} storeName={offer.establishment.name} />
+          {offer.reportId && (
+            <FlagPrice reportId={offer.reportId} storeName={offer.establishment.name} />
+          )}
         </p>
       </div>
       <div className="offer-price">

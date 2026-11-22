@@ -17,7 +17,9 @@ export async function chooseFirstPresentation(page: Page) {
 export async function chooseStoreByName(page: Page, store: Store) {
   await page.getByRole('searchbox', { name: 'Buscar tienda por nombre' }).fill(store.name);
   await page.getByRole('button', { name: 'Buscar tienda' }).click();
-  await choose(page.getByRole('radio', { name: store.name, exact: true }));
+  // La semilla del Quindío puede devolver otras tiendas con el mismo nombre.
+  const byId = page.locator(`input[type="radio"][value="${store.id}"]`);
+  await choose(page.getByRole('radio', { name: store.name, exact: true }).and(byId));
 }
 
 export async function sendPrice(page: Page, priceCop: number) {
