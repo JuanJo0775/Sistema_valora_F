@@ -18,6 +18,10 @@ function screen<Name extends string>(load: () => Promise<Record<Name, ComponentT
   return lazy(() => load().then((module) => ({ default: module[name] })));
 }
 
+const MerchantRegistration = screen(
+  () => import('../features/commerce/MerchantRegistration'),
+  'MerchantRegistration',
+);
 const Profile = screen(() => import('../features/auth/Profile'), 'Profile');
 const PendingReports = screen(() => import('../pwa/PendingReports'), 'PendingReports');
 const BasketPage = screen(() => import('../features/basket/BasketPage'), 'BasketPage');
@@ -140,6 +144,7 @@ export function App() {
                 <Route path="/canasta/plan" element={<PlanPage />} />
                 <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
                 <Route path="/yo" element={<Profile />} />
+                <Route path="/comercios/registro" element={<MerchantRegistration />} />
                 <Route path="/yo/ajustes" element={<Settings />} />
                 <Route path="/yo/eliminar-cuenta" element={<DeleteAccount />} />
                 <Route path="/yo/app" element={<InstallAndUninstall />} />

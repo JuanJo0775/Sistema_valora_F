@@ -5,6 +5,7 @@ import { askLocation, formatDistance } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import './reports.css';
 
 export type Store = components['schemas']['Establishment'];
 
@@ -13,7 +14,9 @@ export type Store = components['schemas']['Establishment'];
 export function StorePicker({
   value,
   onChange,
+  mode = 'report',
 }: {
+  mode?: 'report' | 'claim';
   value: Store | null;
   onChange: (store: Store) => void;
 }) {
@@ -75,17 +78,21 @@ export function StorePicker({
   return (
     <fieldset role="radiogroup" className="choices stores">
       <legend>Tienda</legend>
-      <button
-        type="button"
-        className="btn ghost"
-        aria-describedby="para-ubicacion"
-        onClick={findNearby}
-      >
-        Usar mi ubicación
-      </button>
-      <p id="para-ubicacion" className="muted">
-        Solo se usa en tu teléfono para buscar las tiendas cercanas; no se guarda ni se publica.
-      </p>
+      {mode === 'report' && (
+        <>
+          <button
+            type="button"
+            className="btn ghost"
+            aria-describedby="para-ubicacion"
+            onClick={findNearby}
+          >
+            Usar mi ubicación
+          </button>
+          <p id="para-ubicacion" className="muted">
+            Solo se usa en tu teléfono para buscar las tiendas cercanas; no se guarda ni se publica.
+          </p>
+        </>
+      )}
       {/* Va dentro del formulario del reporte: Enter busca la tienda, no envía el reporte. */}
       <div className="store-search">
         <input
@@ -102,7 +109,7 @@ export function StorePicker({
             findByName();
           }}
         />
-        <button type="button" className="btn ghost" onClick={findByName}>
+        <button type="button" className="btn ghost" onClick={findByName} disabled={searching}>
           Buscar tienda
         </button>
       </div>
@@ -113,9 +120,11 @@ export function StorePicker({
           {problem}
         </p>
       )}
-      <Link to="/proponer/tienda" className="link-button">
-        ¿No está la tienda? Sugiérela
-      </Link>
+      {mode === 'report' && (
+        <Link to="/proponer/tienda" className="link-button">
+          ¿No está la tienda? Sugiérela
+        </Link>
+      )}
       {/* La tienda ya elegida (la última usada) aparece aunque no se haya pedido la ubicación. */}
       <div className="store-list">
         {withChosen(stores, value).map((store) => (
@@ -129,7 +138,12 @@ export function StorePicker({
                 onChange(store);
               }}
             />
-            <span>{store.name}</span>
+            <span>
+              {store.name}
+              {mode === 'claim' && store.address && (
+                <small className="muted">{store.address}</small>
+              )}
+            </span>
             {store.distanceM !== undefined && (
               <span className="muted">{formatDistance(store.distanceM)}</span>
             )}
