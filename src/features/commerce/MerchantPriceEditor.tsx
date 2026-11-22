@@ -74,6 +74,7 @@ export function MerchantPriceEditor({
         <p>{selection.label}</p>
         <Field
           label="Precio oficial en pesos"
+          autoFocus
           inputMode="numeric"
           value={price}
           onValue={setPrice}
