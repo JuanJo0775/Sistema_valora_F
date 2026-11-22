@@ -1,5 +1,4 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { choose } from '../../test/choose';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { seriousViolations } from '../../test/axe';
 import { stubApi } from '../../test/fakeApi';
@@ -118,7 +117,7 @@ describe('plan de compra', () => {
     const aside = await screen.findByRole('complementary', {
       name: 'Supuestos del traslado y planes guardados',
     });
-    expect(within(aside).getByText('Supuestos del traslado')).toBeInTheDocument();
+    expect(within(aside).getByText('¿Cuánto te cuesta ir?')).toBeInTheDocument();
   });
 
   it('en tableta y celular no hay panel lateral: los supuestos van en el mismo bloque', async () => {
@@ -126,7 +125,7 @@ describe('plan de compra', () => {
     stubMatchMedia(false);
     renderPlan(rice, milk);
 
-    expect(await screen.findByText('Supuestos del traslado')).toBeInTheDocument();
+    expect(await screen.findByText('¿Cuánto te cuesta ir?')).toBeInTheDocument();
     expect(
       screen.queryByRole('complementary', { name: 'Supuestos del traslado y planes guardados' }),
     ).not.toBeInTheDocument();
@@ -173,8 +172,8 @@ describe('plan de compra', () => {
     expect(travel()).toHaveTextContent(/min a pie/);
     expect(travel()).not.toHaveTextContent('$');
 
-    await choose('Cómo cuentas el traslado', 'Costo por km');
-    fireEvent.change(screen.getByLabelText('Costo por km (COP)'), { target: { value: '800' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Gasto por km' }));
+    fireEvent.change(screen.getByLabelText('Gasto por km (COP)'), { target: { value: '800' } });
 
     expect(travel()).toHaveTextContent('$');
   });
@@ -188,7 +187,14 @@ describe('plan de compra', () => {
     await waitFor(() => {
       expect(two.getByText(/Traslado extra estimado/)).toBeInTheDocument();
     });
-    expect(two.getByText(/Supuestos: línea recta × 1,3; 4,5 km\/h/)).toBeInTheDocument();
+    expect(
+      two.getByText(
+        'Cómo estimamos esto: contamos 1,3 veces la distancia en línea recta, caminando a 4,5 km/h.',
+      ),
+    ).toBeInTheDocument();
+    // El rodeo y la velocidad ya no se piden: son fijos.
+    expect(screen.queryByLabelText('Factor de rodeo')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Velocidad a pie (km/h)')).not.toBeInTheDocument();
     expect(two.getByText(/Neto estimado/)).toBeInTheDocument();
   });
 
@@ -240,8 +246,8 @@ describe('plan de compra', () => {
     await waitFor(() => {
       expect(two.getByText(/Traslado extra estimado/)).toBeInTheDocument();
     });
-    await choose('Cómo cuentas el traslado', 'Pasaje');
-    fireEvent.change(screen.getByLabelText('Pasaje por tramo (COP)'), {
+    fireEvent.click(screen.getByRole('radio', { name: 'Pago pasaje' }));
+    fireEvent.change(screen.getByLabelText('Pasaje por viaje (COP)'), {
       target: { value: '2500' },
     });
 
@@ -254,7 +260,7 @@ describe('plan de compra', () => {
     await option('2 tiendas');
     const before = Object.keys(localStorage).sort();
 
-    fireEvent.change(screen.getByLabelText('Factor de rodeo'), { target: { value: '1.5' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Pago pasaje' }));
 
     expect(Object.keys(localStorage).sort()).toEqual([...before, 'valora:plan-supuestos'].sort());
   });

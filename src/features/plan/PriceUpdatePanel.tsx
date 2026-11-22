@@ -38,7 +38,6 @@ export function PriceUpdatePanel({
       <div role="status">
         {notice && <p>{notice}</p>}
         {state.status === 'loading' && <p>Buscando precios de hoy…</p>}
-        {state.status === 'denied' && <p>No pudimos obtener tu ubicación; arma el plan de nuevo</p>}
         {state.status === 'failed' && (
           <p>No pudimos consultar los precios. Revisa tu conexión e inténtalo de nuevo.</p>
         )}

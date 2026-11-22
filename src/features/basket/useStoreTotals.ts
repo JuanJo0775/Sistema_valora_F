@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import type { Municipality } from '../comparison/criteria';
@@ -71,7 +71,9 @@ export function useStoreTotals(items: BasketItem[], area?: Area) {
   }, [key]);
 
   const result = offers?.key === key ? offers : null;
-  const totals = ((): StoreTotals => {
+  // Estable mientras no cambien la canasta ni la respuesta: quien reparte con `lines` no recalcula.
+  const totals = useMemo((): StoreTotals => {
+    const pending = items.filter(({ bought }) => !bought);
     if (pending.length === 0) return { status: 'empty' };
     if (!result) return { status: 'loading' };
     if (!('byProduct' in result)) return { status: 'failed' };
@@ -90,6 +92,6 @@ export function useStoreTotals(items: BasketItem[], area?: Area) {
       pending: pending.length,
       lines,
     };
-  })();
+  }, [items, result]);
   return { municipality, totals };
 }

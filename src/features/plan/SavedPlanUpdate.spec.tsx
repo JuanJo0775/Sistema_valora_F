@@ -149,9 +149,10 @@ describe('actualizar precios del plan guardado', () => {
     expect(saved?.stores).toEqual(plan.stores);
     expect(saved?.summary.productsCop).toBe(2350 * 2 + 9000);
     expect(saved?.summary).toMatchObject({ baselineCop: null, netCop: null });
-    // La ubicación solo viajó en la consulta (EC-08).
-    expect(requested[0]?.searchParams.get('lat')).toBe('4.51234');
-    expect(requested[0]?.searchParams.get('radiusKm')).toBe('1.5');
+    // Ya no se pide la ubicación: se consulta por el municipio de las tiendas del plan (ADR-031).
+    expect(requested[0]?.searchParams.get('municipality')).toBe('armenia');
+    expect(requested[0]?.searchParams.has('lat')).toBe(false);
+    expect(requested[0]?.searchParams.has('radiusKm')).toBe(false);
     const raw = localStorage.getItem('valora:planes') ?? '';
     for (const secret of ['distanceM', '4.51234', '-75.61234']) expect(raw).not.toContain(secret);
 
@@ -196,17 +197,19 @@ describe('actualizar precios del plan guardado', () => {
     expect(readPlans()[0]).toEqual(plan);
   });
 
-  it('con ubicación negada lo dice y no consulta ni rompe nada', async () => {
+  it('un plan de «cerca de mí» no pide la ubicación: consulta el municipio de sus tiendas', async () => {
     stubLocation('deny');
     const { requested } = stubApi(unchanged());
     renderAt(stored().id);
     update();
 
-    expect(
-      await screen.findByText('No pudimos obtener tu ubicación; arma el plan de nuevo'),
-    ).toBeInTheDocument();
-    expect(requested).toHaveLength(0);
-    expect(screen.getByRole('button', { name: 'Actualizar precios' })).toBeEnabled();
+    expect(await screen.findByText(/Los precios siguen igual/)).toBeInTheDocument();
+    expect(requested.length).toBeGreaterThan(0);
+    for (const url of requested) {
+      expect(url.searchParams.get('municipality')).toBe('armenia');
+      expect(url.searchParams.has('lat')).toBe(false);
+      expect(url.searchParams.has('lng')).toBe(false);
+    }
   });
 
   it('si la consulta falla, avisa con Reintentar y no cambia el plan', async () => {

@@ -73,9 +73,11 @@ export const comparisonOf = (productId: string, ...results: ReturnType<typeof of
 });
 
 // Tiendas A y B: con distancia (la persona dio su ubicación) y sin ella.
+// La cercanía se calcula en el dispositivo desde estas coordenadas (origen de las pruebas: 4,53 / -75,6811):
+// A queda a ~400 m al norte y B a ~1,2 km, al noreste (no en línea con A, así ir a las dos suma recorrido).
 export const near = {
-  a: shop('a', 'Tienda A', 4.5339, 400),
-  b: shop('b', 'Tienda B', 4.5439, 1100),
+  a: shop('a', 'Tienda A', 4.5336, 400),
+  b: { ...shop('b', 'Tienda B', 4.5399, 1100), lng: -75.6761 },
 };
 export const far = { a: shop('a', 'Tienda A', 4.5339), b: shop('b', 'Tienda B', 4.5439) };
 

@@ -17,9 +17,14 @@ describe('supuestos del plan', () => {
   });
 
   it('lo que se guarda se lee igual', () => {
-    const a: TravelAssumptions = { detour: 1.5, kmh: 5, mode: 'fare', fareCop: 2500 };
+    const a: TravelAssumptions = { ...DEFAULT_ASSUMPTIONS, mode: 'fare', fareCop: 2500 };
     saveAssumptions(a);
     expect(readAssumptions()).toEqual(a);
+  });
+
+  it('el rodeo y la velocidad ya no se eligen: lo guardado antes se ignora', () => {
+    saveAssumptions({ detour: 1.5, kmh: 5, mode: 'perKm', perKmCop: 800 });
+    expect(readAssumptions()).toEqual({ ...DEFAULT_ASSUMPTIONS, mode: 'perKm', perKmCop: 800 });
     expect(JSON.parse(localStorage.getItem(KEY) ?? '{}')).toMatchObject({ v: 1 });
   });
 

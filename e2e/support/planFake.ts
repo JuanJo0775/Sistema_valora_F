@@ -12,13 +12,12 @@ interface Store {
   name: string;
   lat: number;
   address?: string;
-  distanceM: number;
 }
 
 const STORES: Store[] = [
-  { id: 'e-a', name: LONG_STORE, lat: 4.5339, address: LONG_ADDRESS, distanceM: 400 },
-  { id: 'e-b', name: 'Tienda Don Pepe', lat: 4.5439, address: 'Calle 12 # 3-4', distanceM: 1100 },
-  { id: 'e-c', name: 'Mercado La Esquina', lat: 4.5539, distanceM: 2400 },
+  { id: 'e-a', name: LONG_STORE, lat: 4.5339, address: LONG_ADDRESS },
+  { id: 'e-b', name: 'Tienda Don Pepe', lat: 4.5439, address: 'Calle 12 # 3-4' },
+  { id: 'e-c', name: 'Mercado La Esquina', lat: 4.5539 },
 ];
 
 const shop = (s: Store) => ({
@@ -29,7 +28,6 @@ const shop = (s: Store) => ({
   lat: s.lat,
   lng: -75.6811,
   municipality: 'armenia',
-  distanceM: s.distanceM,
 });
 
 // Producto de la canasta: precio en cada tienda (A, B, C); null = esa tienda no lo tiene.
@@ -78,9 +76,12 @@ const offersOf = (p: Product) =>
   });
 
 // Responde la comparación de cada producto; `mode` simula un fallo o que no hay precios.
-export async function fakeApi(page: Page, mode: 'ok' | 'empty' | 'error' = 'ok') {
+// `seen` recoge cada solicitud que llega a /v1 (para contarlas en las pruebas).
+export async function fakeApi(page: Page, mode: 'ok' | 'empty' | 'error' = 'ok', seen: URL[] = []) {
   await page.route('**/v1/**', async (route) => {
-    const { pathname } = new URL(route.request().url());
+    const url = new URL(route.request().url());
+    seen.push(url);
+    const { pathname } = url;
     const match = /\/products\/([^/]+)\/comparison$/.exec(pathname);
     if (!match) return route.fulfill({ status: 401, json: { title: 'Sin sesión' } });
     if (mode === 'error') return route.fulfill({ status: 500, json: { title: 'Falla' } });
