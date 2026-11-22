@@ -290,6 +290,11 @@ for (const size of SIZES) {
 test.describe('«Dónde comprar»: solicitudes', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
   const QUERY = 'municipality=armenia&sort=unit_price&onlyCurrent=true';
+  // La CI compila el frontend con NODE_ENV=development (el backend lo necesita en ese trabajo): React
+  // corre con StrictMode y monta los efectos dos veces, así que cada producto se pide dos veces en el
+  // mismo instante. En producción es una vez. Lo que vigila el ADR-033 es que no se pida NADA más al
+  // activar la ubicación, cambiar de tarjeta o de radio, y que nunca viajen lat ni lng.
+  const MOUNTS = process.env['NODE_ENV'] === 'development' ? 2 : 1;
 
   test('N productos, N solicitudes con la misma URL y ninguna con lat/lng, aun con «Cerca de mí»', async ({
     page,
@@ -308,7 +313,7 @@ test.describe('«Dónde comprar»: solicitudes', () => {
     const comparisons = () => seen.filter(({ pathname }) => pathname.endsWith('/comparison'));
     const expectSame = (label: string) => {
       const found = comparisons();
-      expect(found, `${label}: una solicitud por producto`).toHaveLength(products.length);
+      expect(found, `${label}: una solicitud por producto`).toHaveLength(products.length * MOUNTS);
       expect(
         [...new Set(found.map(({ search }) => search.slice(1)))],
         `${label}: la misma query para todos`,
