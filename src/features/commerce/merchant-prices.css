@@ -1,0 +1,48 @@
+.merchant-prices {
+  display: grid;
+  gap: 20px;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.merchant-prices section,
+.merchant-price-form,
+.merchant-price-list {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.merchant-prices section {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  padding: clamp(12px, 3vw, 20px);
+}
+
+.merchant-prices :is(h1, h2, h3, p) {
+  margin-block: 0;
+  overflow-wrap: anywhere;
+}
+
+.merchant-price-form,
+.merchant-price-list {
+  width: 100%;
+}
+
+.merchant-price-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.merchant-price-list li {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  width: 100%;
+  min-width: 0;
+}

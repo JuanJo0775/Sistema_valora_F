@@ -128,13 +128,36 @@ describe('panel de precios oficiales (#166)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cargar precios' }));
     expect(await screen.findByText('Filas publicadas: 1.')).toBeInTheDocument();
     expect(screen.getByText('Precio inválido.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Descargar filas con errores' })).toHaveAttribute(
-      'download',
-      'precios-por-corregir.csv',
+    const download = screen.getByRole('link', { name: 'Descargar filas con errores' });
+    expect(download).toHaveAttribute('download', 'precios-por-corregir.csv');
+    expect(decodeURIComponent(download.getAttribute('href')?.split(',')[1] ?? '')).toBe(
+      'codigo_barras;precio\r\n01234567;no\r\n',
     );
     const request = calls.find(({ path }) => path === `${prices}/bulk`);
     expect(request?.headers.get('Content-Type')).toMatch(/^text\/csv/);
     expect(request?.body).toBe(csv);
+  });
+
+  it('rechaza un precio fuera del rango del backend sin publicar', async () => {
+    const { calls } = openPanel();
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar precio de Arroz · 500 g' }));
+    fireEvent.change(screen.getByLabelText('Precio oficial en pesos'), { target: { value: '99' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar precio' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/entre \$100 y \$5\.000\.000/);
+    expect(calls.some(({ method }) => method === 'PUT')).toBe(false);
+  });
+
+  it('mantiene operativos los precios si falla la consulta de avisos', async () => {
+    openPanel({
+      'GET /v1/commerce/alerts': {
+        status: 500,
+        body: { code: 'INTERNAL_ERROR', message: 'No se pudieron consultar los avisos.' },
+      },
+    });
+    expect(await screen.findByText('No se pudieron consultar los avisos.')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Todos mis precios siguen igual' }),
+    ).toBeEnabled();
   });
 
   it('no consulta datos comerciales desde una cuenta reportante', async () => {

@@ -18,6 +18,10 @@ function screen<Name extends string>(load: () => Promise<Record<Name, ComponentT
   return lazy(() => load().then((module) => ({ default: module[name] })));
 }
 
+const MerchantPrices = screen(
+  () => import('../features/commerce/MerchantPrices'),
+  'MerchantPrices',
+);
 const MerchantRegistration = screen(
   () => import('../features/commerce/MerchantRegistration'),
   'MerchantRegistration',
@@ -145,6 +149,7 @@ export function App() {
                 <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
                 <Route path="/yo" element={<Profile />} />
                 <Route path="/comercios/registro" element={<MerchantRegistration />} />
+                <Route path="/comercios" element={<MerchantPrices />} />
                 <Route path="/yo/ajustes" element={<Settings />} />
                 <Route path="/yo/eliminar-cuenta" element={<DeleteAccount />} />
                 <Route path="/yo/app" element={<InstallAndUninstall />} />

@@ -128,7 +128,9 @@ function ClaimStatus({
   unlocks: Unlocks | undefined;
   onRefresh: () => void;
 }) {
+  const { session } = useSession();
   const pending = status === 'pre_aprobado';
+  const canManage = !pending && session.status === 'active' && session.role === 'comercio';
   return (
     <section className="form merchant-registration" aria-live="polite">
       <h1>{pending ? 'Tu tienda quedó preaprobada' : 'Tu tienda quedó verificada'}</h1>
@@ -152,6 +154,11 @@ function ClaimStatus({
           <button type="button" className="btn" onClick={onRefresh}>
             Consultar estado
           </button>
+        )}
+        {canManage && (
+          <Link className="btn" to="/comercios">
+            Administrar mis precios
+          </Link>
         )}
         <Link className="btn ghost" to="/yo">
           Volver a Yo
