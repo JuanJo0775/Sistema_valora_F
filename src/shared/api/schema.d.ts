@@ -631,7 +631,7 @@ export interface paths {
         };
         /**
          * Tiendas propuestas pendientes de decisión (RF-005)
-         * @description Solo el rol moderador. La más antigua primero. Cada una dice si está fuera de la zona de servicio (rectángulo aproximado del Quindío, RN1) y trae sus posibles duplicados: tiendas a menos de 50 m con un nombre equivalente (RN3; valores provisionales). No dice quién la propuso (EC-08). Sin caché (#27).
+         * @description Solo el rol moderador. La más antigua primero. Cada una dice si está fuera de la zona de servicio (rectángulo aproximado del Quindío, RN1) y trae sus posibles duplicados: tiendas a menos de 50 m con un nombre equivalente (RN3; valores provisionales). No dice quién la propuso (EC-08). Sin caché (#27). Desde la #207 trae también las correcciones de nombre o ubicación que pidió un comercio (kind correccion), con el valor actual y el propuesto (D5).
          */
         get: operations["listStoreProposals"];
         put?: never;
@@ -653,7 +653,7 @@ export interface paths {
         put?: never;
         /**
          * Aprobar, fusionar o rechazar una tienda propuesta (RF-005)
-         * @description Solo el rol moderador. aprobar crea la tienda (aparece en el mapa) con el id de la propuesta; fusionar la une a una tienda existente (mergeInto) sin crear nada, nunca de forma automática (RN3); rechazar no crea nada. Siempre con motivo (#27).
+         * @description Solo el rol moderador. aprobar crea la tienda (aparece en el mapa) con el id de la propuesta; fusionar la une a una tienda existente (mergeInto) sin crear nada, nunca de forma automática (RN3); rechazar no crea nada. Siempre con motivo (#27). Con el id de una corrección (#207): aprobar aplica el nombre o la ubicación a la tienda y rechazar la descarta; una corrección no se fusiona.
          */
         post: operations["decideStoreProposal"];
         delete?: never;
@@ -751,12 +751,136 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Solicitar el perfil de un establecimiento (RF-015) */
+        /**
+         * Registrar como suya una tienda, del mapa o nueva (RF-015)
+         * @description D2 y D3 del grill comercial (#201). Solo un reportante con el correo verificado. La persona debe estar a 50 m o menos de la tienda: location es la ubicación del celular en ese momento, solo sirve para comprobarlo y no se guarda (EC-08). Si todo está bien, la cuenta queda verificada como dueña de la tienda y su rol pasa a comercio. Una tienda por cuenta y un dueño por tienda. El NIT es opcional; sin NIT, el comercio es informal. Su dígito de verificación solo detecta errores al escribir: no se consulta a la DIAN.
+         *     Si la tienda no está en el mapa (#202), se envía newEstablishment en lugar de establishmentId: se crea una propuesta de tienda en el punto de location (RF-005 RN7, la revisa el moderador) y la solicitud queda pre_aprobado. Al aprobarse la tienda, el comercio queda verificado solo; si el moderador la fusiona con una tienda sin dueño, queda verificado en esa tienda; si la rechaza o la tienda ya tenía dueño, la solicitud se cierra y GET /commerce/me muestra el motivo. El rol pasa a comercio cuando se verifica, por un evento interno: el frontend vuelve a pedir GET /auth/session.
+         */
         post: operations["claimEstablishment"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/commerce/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Perfil del comercio de la sesión (RF-015)
+         * @description D3 del grill comercial (#201): la tienda de la cuenta y su estado. Nunca una ubicación (EC-08). Si la última solicitud se cerró y no hay otra, responde rechazado con el motivo (#202).
+         */
+        get: operations["getMerchantProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/establishments/{establishmentId}/merchant-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Denunciar un comercio («no es de quien dice») (RF-015, D2)
+         * @description D2 y D3 del grill comercial (#208). Cualquier cuenta con sesión, sobre una tienda que tiene comercio, nunca la propia, y una denuncia abierta por cuenta y tienda. Se guarda la clave seudónima de quien denuncia, nunca su cuenta (EC-08). El moderador decide en GET /moderation/merchant-cases.
+         */
+        post: operations["reportMerchant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/moderation/merchant-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Denuncias y disputas de comercios pendientes (RF-015, D2)
+         * @description Solo el rol moderador (#208). La más antigua primero. Una disputa se abre sola cuando otra cuenta, estando en la tienda (presencia, D2), intenta registrar una tienda que ya tiene dueño. Trae los datos del comercio para verificarlo; nunca quién abrió el caso ni la cuenta del dueño (EC-08). Sin caché.
+         */
+        get: operations["listMerchantCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/moderation/merchant-cases/{caseId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revocar el comercio o descartar el caso (RF-015, D3)
+         * @description Solo el rol moderador (#208). revocar retira al instante los precios oficiales y las promociones de la tienda, devuelve la cuenta a reportante, cierra los casos abiertos de esa tienda y deja anotado quién, cuándo y por qué; esa cuenta no puede volver a registrar esa tienda. descartar cierra el caso sin tocar el comercio. Siempre con motivo.
+         */
+        post: operations["decideMerchantCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Los avisos del comercio (RF-016, D4, ADR-008)
+         * @description B9 (#209). Solo un comercio verificado. vence_pronto: a un precio oficial le queda un día o menos de vigencia (D4); vencido: ya no está vigente; discrepancia: la comunidad corrobora otro precio (D1, ADR-008). Cada aviso trae el texto listo para mostrar. Los avisos nuevos también llegan por correo, en un resumen de máximo uno al día desde las 7:00 a. m. de Colombia (precisiones de D4); el correo lo envía identity, y commerce nunca lo conoce (EC-08).
+         */
+        get: operations["listMerchantAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/establishment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Corregir los datos de su tienda (RF-015, D5)
+         * @description D5 del grill comercial (#207). Solo un comercio verificado, en su propia tienda. El horario, el teléfono y el nombre se aplican al instante, salvo un nombre equivalente al de otra tienda a menos de 50 m, que va al moderador. La ubicación va siempre al moderador, porque cambia la distancia que entra al orden neutral. Las correcciones esperan en la cola de propuestas de tiendas (GET /moderation/store-proposals).
+         */
+        patch: operations["updateMerchantEstablishment"];
         trace?: never;
     };
     "/commerce/prices": {
@@ -766,10 +890,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Publicar o actualizar un precio oficial (RF-016, EC-02) */
+        /**
+         * Los precios oficiales del comercio con su vigencia (RF-016)
+         * @description D4 del grill comercial (#203). La vigencia cuenta desde la última confirmación, con el TTL de la categoría (ADR-005).
+         */
+        get: operations["listOfficialPrices"];
+        /**
+         * Publicar o actualizar un precio oficial (RF-016, EC-02)
+         * @description D4 del grill comercial (#203). Solo un comercio verificado, en su propia tienda. Publicar otra vez la misma presentación reemplaza el precio y lo deja reconfirmado. El precio cumple el mismo piso y techo absolutos que un reporte (ADR-030). Vale lo mismo que un reporte (ADR-005), contando desde la última confirmación.
+         */
         put: operations["upsertOfficialPrice"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/prices/reconfirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * «Todos mis precios siguen igual» (RF-016)
+         * @description D4 del grill comercial (#203). Sin cuerpo: reconfirma de un toque todos los precios oficiales de su tienda.
+         */
+        post: operations["reconfirmOfficialPrices"];
         delete?: never;
         options?: never;
         head?: never;
@@ -785,7 +936,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Carga masiva de precios oficiales por plantilla CSV (RF-016, ADR-016) */
+        /**
+         * Cargar precios oficiales por archivo CSV (RF-016, D7)
+         * @description D7 del grill comercial (#205, ADR-027). Se procesa al momento. El archivo es «CSV UTF-8» con el encabezado codigo_barras;precio y una fila por producto, separada por punto y coma; máximo 1.000 filas y 1 MB. Las filas buenas se publican juntas y quedan reconfirmadas (D4); las malas se informan con su número de fila de Excel. Subir el mismo archivo otra vez actualiza sin duplicar. Nunca crea un producto: un código que no está en Valora falla con UNKNOWN_BARCODE.
+         */
         post: operations["bulkOfficialPrices"];
         delete?: never;
         options?: never;
@@ -800,11 +954,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Las promociones del comercio con su estado de hoy (RF-017) */
+        get: operations["listMerchantPromotions"];
         put?: never;
-        /** Publicar una promoción con reglas y vigencia (RF-017, EC-06) */
+        /**
+         * Publicar una promoción con reglas y vigencia (RF-017, EC-06)
+         * @description D6 del grill comercial (#206). Solo un comercio verificado, sobre el precio oficial VIGENTE de una presentación de su tienda (si no, 422 OFFICIAL_PRICE_REQUIRED). Condiciones fijas, sin texto libre. Dura como mucho 30 días; puede empezar en el futuro (queda programada). Si el oficial deja de estar vigente se pausa sola y reconfirmarlo la reactiva. Va siempre aparte de los resultados de la comparación y nunca cambia el orden (ADR-009).
+         */
         post: operations["createPromotion"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/promotions/{promotionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Retirar una promoción propia (RF-017) */
+        delete: operations["withdrawPromotion"];
         options?: never;
         head?: never;
         patch?: never;
@@ -836,7 +1011,170 @@ export interface components {
              */
             scheduledFor: string;
         };
-        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84) y scheduledFor en el 403 ACCOUNT_PENDING_DELETION (PendingDeletionError, ADR-032). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), INVALID_PASSWORD (403), LAST_MODERATOR_CANNOT_DELETE (403), ACCOUNT_PENDING_DELETION (403), NOT_FOUND (404), CONFLICT (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, IMPLAUSIBLE_PRICE, INVALID_TTL, INVALID_VERIFICATION_TOKEN y los que agreguen las reglas futuras. */
+        OfficialPrice: {
+            /** Format: uuid */
+            establishmentId: string;
+            /** Format: uuid */
+            presentationId: string;
+            priceCop: number;
+            /**
+             * Format: date-time
+             * @description Última confirmación.
+             */
+            confirmedAt: string;
+        };
+        OfficialPriceWithFreshness: {
+            /** Format: uuid */
+            establishmentId: string;
+            /** Format: uuid */
+            presentationId: string;
+            priceCop: number;
+            /** Format: date-time */
+            confirmedAt: string;
+            /** @enum {string} */
+            freshness: "vigente" | "por_confirmar" | "desactualizado";
+        };
+        /** @description Horario de la tienda por día, sin texto libre (D5, precisiones del 22-nov). Cada día es null (cerrado) o abre y cierra el mismo día, en hora de Colombia. */
+        OpeningHours: {
+            lunes: components["schemas"]["DayHours"];
+            martes: components["schemas"]["DayHours"];
+            miercoles: components["schemas"]["DayHours"];
+            jueves: components["schemas"]["DayHours"];
+            viernes: components["schemas"]["DayHours"];
+            sabado: components["schemas"]["DayHours"];
+            domingo: components["schemas"]["DayHours"];
+        };
+        DayHours: {
+            opens: string;
+            closes: string;
+        } | null;
+        /** @description Una tienda propuesta (#27). */
+        StoreProposalQueueItem: {
+            /** @enum {string} */
+            kind: "tienda";
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            type: "barrio" | "minimercado" | "supermercado" | "descuento";
+            address?: string;
+            lat: number;
+            lng: number;
+            municipality: components["schemas"]["Municipality"];
+            outOfZone: boolean;
+            possibleDuplicates: components["schemas"]["PossibleDuplicates"];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Una corrección de nombre o ubicación que pidió un comercio (D5, #207). No dice quién la pidió (EC-08). */
+        StoreCorrectionQueueItem: {
+            /** @enum {string} */
+            kind: "correccion";
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            establishmentId: string;
+            current: {
+                name: string;
+                lat: number;
+                lng: number;
+            };
+            /** @description Solo lo que cambia. */
+            proposed: {
+                name?: string;
+                lat?: number;
+                lng?: number;
+            };
+            possibleDuplicates: components["schemas"]["PossibleDuplicates"];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Tiendas a menos de 50 m con un nombre equivalente (RF-005 RN3). */
+        PossibleDuplicates: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            distanceM: number;
+        }[];
+        /** @description Una denuncia o una disputa sobre un comercio (D2, D3); sin quién la abrió (EC-08). */
+        MerchantCase: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "denuncia" | "disputa";
+            establishment: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
+            /** @description El comercio, para verificarlo; null si ya no existe. */
+            owner: {
+                responsibleName: string;
+                nit: string | null;
+                phone: string;
+                /** @enum {string} */
+                status: "pre_aprobado" | "verificado";
+                /** Format: date-time */
+                verifiedAt: string | null;
+            } | null;
+            reason: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Un aviso del comercio (#209). Los campos de precio solo vienen en discrepancia. */
+        MerchantAlert: {
+            /** @enum {string} */
+            kind: "vence_pronto" | "vencido" | "discrepancia";
+            /** Format: uuid */
+            presentationId: string;
+            productName: string;
+            /** @description Texto listo para mostrar. */
+            message: string;
+            /**
+             * Format: date-time
+             * @description En vence_pronto y vencido, la última confirmación del oficial.
+             */
+            confirmedAt?: string;
+            officialPriceCop?: number;
+            /** @description La mediana de los reportes que corroboran. */
+            reportedPriceCop?: number;
+            reports?: number;
+            /** Format: date-time */
+            since?: string;
+        };
+        /** @description Lo que el comercio pre-aprobado podrá hacer al aprobarse su tienda (D2). */
+        MerchantUnlocks: ("precios_oficiales" | "carga_por_archivo" | "promociones" | "avisos_de_precio" | "datos_de_la_tienda")[];
+        MerchantProfile: components["schemas"]["ActiveMerchantProfile"] | components["schemas"]["RejectedMerchantProfile"];
+        RejectedMerchantProfile: {
+            /**
+             * @description rechazado, la tienda propuesta no se aprobó (#202); revocado, un moderador revocó el comercio (#208).
+             * @enum {string}
+             */
+            status: "rechazado" | "revocado";
+            /** @description Motivo del moderador o de la fusión. */
+            reason: string;
+            /** Format: date-time */
+            rejectedAt: string;
+        };
+        ActiveMerchantProfile: {
+            /** @enum {string} */
+            status: "pre_aprobado" | "verificado";
+            establishment: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
+            responsibleName: string;
+            /** @description Sin NIT. */
+            informal: boolean;
+            /**
+             * Format: date-time
+             * @description null si está pre-aprobado.
+             */
+            verifiedAt: string | null;
+            unlocks?: components["schemas"]["MerchantUnlocks"];
+        };
+        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84) y scheduledFor en el 403 ACCOUNT_PENDING_DELETION (PendingDeletionError, ADR-032). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), MERCHANT_NOT_VERIFIED (403), INVALID_PASSWORD (403), LAST_MODERATOR_CANNOT_DELETE (403), ACCOUNT_PENDING_DELETION (403), NOT_FOUND (404), CONFLICT (409), ESTABLISHMENT_HAS_OWNER (409), ACCOUNT_HAS_ESTABLISHMENT (409), MERCHANT_REPORT_OPEN (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, IMPLAUSIBLE_PRICE, INVALID_TTL, INVALID_VERIFICATION_TOKEN, NOT_AT_ESTABLISHMENT, UNKNOWN_PRESENTATION, OFFICIAL_PRICE_REQUIRED, INVALID_PROMOTION, INVALID_OPENING_HOURS, OWN_ESTABLISHMENT, REVOKED_FROM_ESTABLISHMENT y los que agreguen las reglas futuras. */
         Error: {
             /** @example INVALID_QUANTITY */
             code: string;
@@ -921,7 +1259,7 @@ export interface components {
             municipality: components["schemas"]["Municipality"];
             /** @description Metros desde el punto consultado; solo en GET /establishments/nearby. */
             distanceM?: number;
-            /** @description Cuántas presentaciones tienen hoy un precio en la tienda, con el mismo criterio que GET /establishments/{establishmentId}/prices con onlyCurrent=true: no cuentan los desactualizados ni los que están en revisión; los por confirmar sí cuentan. */
+            /** @description Cuántas presentaciones tienen hoy un precio en la tienda, con el mismo criterio que GET /establishments/{establishmentId}/prices con onlyCurrent=true: no cuentan los desactualizados ni los que están en revisión; los por confirmar sí cuentan. Incluye los precios oficiales y cuenta cada presentación una sola vez (#218). */
             priceCount: number;
         };
         /**
@@ -929,13 +1267,14 @@ export interface components {
          * @enum {string}
          */
         Municipality: "armenia" | "buenavista" | "calarca" | "circasia" | "cordoba" | "filandia" | "genova" | "la-tebaida" | "montenegro" | "pijao" | "quimbaya" | "salento";
+        /** @description Un precio por tienda. Si la tienda tiene precio oficial (#204, D1 del grill comercial), sale el oficial (source oficial, sin reportId, reliability ni confirmations), salvo que 2 o más reportes confiables, recientes, posteriores al último cambio del oficial, del mismo lado y a más de 5 % sean más que los que coinciden: entonces entra al orden la mediana de esos reportes (source comunidad, con su reportId) y discrepancy trae el oficial al lado. */
         ComparisonItem: {
             establishment: components["schemas"]["Establishment"];
             /**
              * Format: uuid
-             * @description El reporte cuyo precio se muestra; sirve para marcarlo como dudoso (RF-013).
+             * @description El reporte cuyo precio se muestra; sirve para marcarlo como dudoso (RF-013). No viene en un precio oficial (#204).
              */
-            reportId: string;
+            reportId?: string;
             /** Format: uuid */
             presentationId: string;
             priceCop: number;
@@ -946,7 +1285,7 @@ export interface components {
                 per: "100g" | "100ml" | "und";
             };
             /**
-             * @description Hoy siempre es comunidad; oficial llega con el módulo comercial (corte 3).
+             * @description comunidad (reportes), siembra (dato inicial, #135) u oficial (publicado por el comercio verificado, #204).
              * @enum {string}
              */
             source: "comunidad" | "oficial" | "siembra";
@@ -956,22 +1295,36 @@ export interface components {
              */
             freshness: "vigente" | "por_confirmar" | "desactualizado";
             /**
-             * @description Confiabilidad del precio al momento de la consulta (score de RF-011, issue #31): alta, media o baja. en_revision si el único precio de esa tienda quedó sospechoso (RF-012) y espera moderación; no compite en el orden. Un precio sin evaluar cuenta como baja.
+             * @description Confiabilidad del precio al momento de la consulta (score de RF-011, issue #31): alta, media o baja. en_revision si el único precio de esa tienda quedó sospechoso (RF-012) y espera moderación; no compite en el orden. Un precio sin evaluar cuenta como baja. No viene en un precio oficial, que no se califica (#204).
              * @enum {string}
              */
-            reliability: "alta" | "media" | "baja" | "en_revision";
+            reliability?: "alta" | "media" | "baja" | "en_revision";
             /** @description Verdadero en el precio por unidad más bajo (valor exacto) entre los resultados vigentes y por confirmar; si varios empatan, en todos. Un precio desactualizado o en_revision siempre es falso. */
             isCheapest: boolean;
-            /** @description Cuántas cuentas distintas confirman el precio (a ±5 %, dentro de su vigencia). */
-            confirmations: number;
-            /** Format: date-time */
+            /** @description Cuántas cuentas distintas confirman el precio (a ±5 %, dentro de su vigencia). No viene en un precio oficial (#204). */
+            confirmations?: number;
+            /**
+             * Format: date-time
+             * @description Cuándo se vio el precio; en un precio oficial, su última confirmación.
+             */
             observedAt: string;
+            discrepancy?: components["schemas"]["PriceDiscrepancy"];
         };
+        /** @description Solo con discrepancia corroborada (D1, ADR-008): el oficial se muestra al lado del precio que entra al orden, con aviso. */
+        PriceDiscrepancy: {
+            officialPriceCop: number;
+            /** @description La mediana de los reportes que corroboran. */
+            reportedPriceCop: number;
+            /** @description Cuántos reportes la corroboran. */
+            reports: number;
+            /**
+             * Format: date-time
+             * @description El más antiguo de esos reportes.
+             */
+            since: string;
+        };
+        /** @description D6 del grill comercial (#206). Según type: percent (descuento_porcentual, entero de 1 a 90), specialPriceCop (precio_especial, menor que el oficial y de al menos $100) o payX y takeY (pague_x_lleve_y, takeY mayor que payX). */
         Promotion: {
-            /** Format: uuid */
-            readonly id?: string;
-            /** Format: uuid */
-            readonly establishmentId?: string;
             /** Format: uuid */
             presentationId: string;
             /** @enum {string} */
@@ -980,10 +1333,77 @@ export interface components {
             specialPriceCop?: number;
             payX?: number;
             takeY?: number;
+            conditions: components["schemas"]["PromotionConditions"];
+            /**
+             * Format: date
+             * @description Fecha de Colombia
+             */
+            validFrom: string;
+            /**
+             * Format: date
+             * @description Fecha de Colombia
+             */
+            validUntil: string;
+        };
+        /** @description Condiciones fijas, sin texto libre (D6). */
+        PromotionConditions: {
+            maxPerCustomer?: number;
+            whileStocksLast: boolean;
+            /** @enum {string} */
+            paymentMethod: "cualquiera" | "efectivo" | "tarjeta";
+        };
+        /** @description Una promoción del comercio con su estado calculado hoy (D6). */
+        MerchantPromotion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            establishmentId: string;
+            /** Format: uuid */
+            presentationId: string;
+            /** @enum {string} */
+            type: "descuento_porcentual" | "precio_especial" | "pague_x_lleve_y";
+            percent?: number;
+            specialPriceCop?: number;
+            payX?: number;
+            takeY?: number;
+            conditions: components["schemas"]["PromotionConditions"];
             /** Format: date */
-            validFrom?: string;
+            validFrom: string;
             /** Format: date */
             validUntil: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * @description pausada si el oficial ya no está vigente; reconfirmarlo la reactiva.
+             * @enum {string}
+             */
+            status: "activa" | "pausada" | "vencida" | "programada";
+            officialPriceCop: number | null;
+            /** @description Precio de una unidad con la promoción; en pague X lleve Y, el promedio por unidad. */
+            promotedPriceCop: number | null;
+        };
+        /** @description Una promoción activa de una tienda del área, aparte de los resultados (ADR-009). */
+        ComparisonPromotion: {
+            /** Format: uuid */
+            id: string;
+            establishment: components["schemas"]["Establishment"];
+            /** Format: uuid */
+            presentationId: string;
+            /** @enum {string} */
+            type: "descuento_porcentual" | "precio_especial" | "pague_x_lleve_y";
+            percent?: number;
+            specialPriceCop?: number;
+            payX?: number;
+            takeY?: number;
+            conditions: components["schemas"]["PromotionConditions"];
+            /** Format: date */
+            validFrom: string;
+            /** Format: date */
+            validUntil: string;
+            /** @description El «antes» */
+            officialPriceCop: number;
+            /** @description El precio de una unidad con la promoción. */
+            promotedPriceCop: number;
         };
         Comparison: {
             /** Format: uuid */
@@ -997,8 +1417,8 @@ export interface components {
             };
             /** @description Primero los precios vigentes y por confirmar, ordenados por el criterio declarado; al final los desactualizados y los que están en revisión (reliability en_revision), ordenados entre sí con el mismo criterio (no compiten con los demás). Con onlyCurrent=true no aparecen. */
             results: components["schemas"]["ComparisonItem"][];
-            /** @description Siempre separadas del resultado; no alteran el orden. Vacío hasta el módulo comercial (corte 3). */
-            promotions: components["schemas"]["Promotion"][];
+            /** @description Siempre separadas del resultado; no alteran el orden (ADR-009). Solo las activas de las tiendas del área (#206). */
+            promotions: components["schemas"]["ComparisonPromotion"][];
             /** @description Opcional. Precio mayorista por kilo publicado por SIPSA (DANE), cargado a mano por el equipo (RF-014, ADR-011). Es una referencia pública: nunca es precio de una tienda, no entra al orden ni a isCheapest. Solo para productos que se venden por peso, y solo si su periodo terminó hace 30 días o menos (#34). */
             wholesaleReference?: {
                 /** @enum {string} */
@@ -1031,6 +1451,9 @@ export interface components {
              */
             label: string;
             priceCop: number;
+            /** @enum {string} */
+            source: "comunidad" | "oficial" | "siembra";
+            discrepancy?: components["schemas"]["PriceDiscrepancy"];
             /** @description Redondeado al peso entero con la mitad hacia arriba (RF-004). */
             unitPrice: {
                 valueCop: number;
@@ -1124,7 +1547,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description code FORBIDDEN: el rol no tiene permiso. code CSRF_TOKEN_INVALID: falta la cabecera X-CSRF-Token o no coincide con la sesión. code ACCOUNT_SUSPENDED: la cuenta está suspendida y su sesión solo sirve para ver el estado de sus reportes, apelar y cerrar sesión (#71). code EMAIL_NOT_VERIFIED: solo en POST /reports, la cuenta aún no verificó su correo (ADR-029). INVALID_PASSWORD y LAST_MODERATOR_CANNOT_DELETE: solo en POST /me/account-deletion (ADR-032). */
+        /** @description code FORBIDDEN: el rol no tiene permiso. code CSRF_TOKEN_INVALID: falta la cabecera X-CSRF-Token o no coincide con la sesión. code ACCOUNT_SUSPENDED: la cuenta está suspendida y su sesión solo sirve para ver el estado de sus reportes, apelar y cerrar sesión (#71). code EMAIL_NOT_VERIFIED: solo en POST /reports y POST /commerce/claims, la cuenta aún no verificó su correo (ADR-029). INVALID_PASSWORD y LAST_MODERATOR_CANNOT_DELETE: solo en POST /me/account-deletion (ADR-032). */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1582,6 +2005,9 @@ export interface operations {
                             lat: number;
                             lng: number;
                             municipality: components["schemas"]["Municipality"];
+                            openingHours?: components["schemas"]["OpeningHours"];
+                            /** @description Teléfono de la tienda, si lo puso el comercio (#207). Dato del negocio, no de una persona (EC-08). */
+                            phone?: string;
                         };
                         prices: {
                             /** Format: uuid */
@@ -1592,9 +2018,9 @@ export interface operations {
                             productName: string;
                             /**
                              * Format: uuid
-                             * @description El reporte cuyo precio se muestra; sirve para marcarlo (RF-013).
+                             * @description El reporte cuyo precio se muestra (RF-013). Se omite para un oficial (#218).
                              */
-                            reportId: string;
+                            reportId?: string;
                             priceCop: number;
                             unitPrice: {
                                 valueCop: number;
@@ -1605,11 +2031,16 @@ export interface operations {
                             source: "comunidad" | "oficial" | "siembra";
                             /** @enum {string} */
                             freshness: "vigente" | "por_confirmar" | "desactualizado";
-                            /** @enum {string} */
-                            reliability: "alta" | "media" | "baja" | "en_revision";
-                            confirmations: number;
+                            /**
+                             * @description Se omite para un oficial.
+                             * @enum {string}
+                             */
+                            reliability?: "alta" | "media" | "baja" | "en_revision";
+                            /** @description Se omite para un oficial. */
+                            confirmations?: number;
                             /** Format: date-time */
                             observedAt: string;
+                            discrepancy?: components["schemas"]["PriceDiscrepancy"];
                         }[];
                     };
                 };
@@ -2572,26 +3003,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        items: {
-                            /** Format: uuid */
-                            id: string;
-                            name: string;
-                            /** @enum {string} */
-                            type: "barrio" | "minimercado" | "supermercado" | "descuento";
-                            address?: string;
-                            lat: number;
-                            lng: number;
-                            municipality: components["schemas"]["Municipality"];
-                            outOfZone: boolean;
-                            possibleDuplicates: {
-                                /** Format: uuid */
-                                id: string;
-                                name: string;
-                                distanceM: number;
-                            }[];
-                            /** Format: date-time */
-                            createdAt: string;
-                        }[];
+                        items: (components["schemas"]["StoreProposalQueueItem"] | components["schemas"]["StoreCorrectionQueueItem"])[];
                     };
                 };
             };
@@ -2884,17 +3296,388 @@ export interface operations {
             content: {
                 "application/json": {
                     /** Format: uuid */
-                    establishmentId: string;
+                    establishmentId?: string;
+                    /** @description La tienda que no está en el mapa; su punto es location. */
+                    newEstablishment?: {
+                        name: string;
+                        /** @enum {string} */
+                        type: "barrio" | "minimercado" | "supermercado" | "descuento";
+                        address?: string;
+                        municipality: components["schemas"]["Municipality"];
+                    };
+                    /** @example Rosa Gómez */
+                    responsibleName: string;
+                    /**
+                     * @description Con su dígito de verificación, con o sin puntos.
+                     * @example 800.197.268-4
+                     */
+                    nit?: string;
+                    /**
+                     * @description Celular (10 dígitos que empiezan por 3) o fijo (60 + 8 dígitos).
+                     * @example 3001234567
+                     */
+                    phone: string;
+                    /**
+                     * @description Versión vigente de las condiciones para comercios.
+                     * @example 2026-11
+                     */
+                    acceptedTermsVersion: string;
+                    /** @description Ubicación del celular en el momento. Con establishmentId solo comprueba la presencia y no se guarda; con newEstablishment es el punto de la tienda propuesta. */
+                    location: {
+                        lat: number;
+                        lng: number;
+                    };
+                } & (unknown | unknown);
+            };
+        };
+        responses: {
+            /** @description verificado: la cuenta quedó como dueña de la tienda del mapa y su rol pasa a comercio. pre_aprobado: la tienda nueva espera la aprobación de su propuesta; unlocks dice lo que se desbloquea al aprobarse. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "verificado" | "pre_aprobado";
+                        /**
+                         * Format: uuid
+                         * @description Con pre_aprobado es el id de la propuesta, que será el de la tienda.
+                         */
+                        establishmentId: string;
+                        unlocks?: components["schemas"]["MerchantUnlocks"];
+                    };
+                };
+            };
+            /** @description Datos inválidos (VALIDATION_ERROR), también un NIT cuyo dígito de verificación no corresponde o una versión de las condiciones que no es la vigente. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN: la cuenta no es reportante (ya es comercio o moderador). code EMAIL_NOT_VERIFIED: la cuenta aún no verificó su correo (ADR-029). También CSRF_TOKEN_INVALID y ACCOUNT_SUSPENDED, como en toda ruta con sesión. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description code ESTABLISHMENT_HAS_OWNER: la tienda ya tiene dueño; queda una disputa para el moderador (#208). code ACCOUNT_HAS_ESTABLISHMENT: la cuenta ya tiene una tienda. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code NOT_AT_ESTABLISHMENT: la ubicación está a más de 50 m de la tienda. code REVOKED_FROM_ESTABLISHMENT: un moderador revocó a esta cuenta de esta tienda (#208). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMerchantProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Perfil del comercio. */
+            200: {
+                headers: {
+                    /** @description Dato de la propia cuenta. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MerchantProfile"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN, un moderador no tiene perfil de comercio. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description La cuenta no tiene una tienda registrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    reportMerchant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                establishmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
                 };
             };
         };
         responses: {
-            /** @description Solicitud en verificación */
+            /** @description Denuncia recibida, pendiente del moderador. */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @enum {string} */
+                        status: "pendiente";
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description La tienda no tiene un comercio registrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code MERCHANT_REPORT_OPEN, ya denunció este comercio y el caso sigue abierto. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code OWN_ESTABLISHMENT, no se denuncia la tienda propia. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listMerchantCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Casos pendientes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["MerchantCase"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    decideMerchantCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "revocar" | "descartar";
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Decisión registrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description El caso no existe o ya se decidió. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listMerchantAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Avisos de hoy. */
+            200: {
+                headers: {
+                    /** @description Dato de la propia cuenta. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["MerchantAlert"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    updateMerchantEstablishment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    openingHours?: components["schemas"]["OpeningHours"];
+                    /** @description Celular (10 dígitos que empiezan por 3) o fijo (60 + 8 dígitos). */
+                    phone?: string;
+                    name?: string;
+                    location?: {
+                        lat: number;
+                        lng: number;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Qué se aplicó al instante y qué quedó en revisión. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        applied: ("openingHours" | "phone" | "name")[];
+                        inReview: ("name" | "location")[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED, como en PUT /commerce/prices. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code INVALID_OPENING_HOURS, el horario no sirve (formato HH:MM, cierre después de la apertura, los 7 días). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listOfficialPrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sus precios oficiales, en el orden en que los publicó. */
+            200: {
+                headers: {
+                    /** @description Dato de la propia cuenta. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["OfficialPriceWithFreshness"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED, como en PUT. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
         };
     };
@@ -2915,14 +3698,67 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Precio oficial publicado */
+            /** @description Precio oficial publicado y confirmado ahora. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OfficialPrice"];
+                };
             };
-            403: components["responses"]["Forbidden"];
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN: la cuenta no es comercio. code MERCHANT_NOT_VERIFIED: su tienda no está verificada. También CSRF_TOKEN_INVALID y ACCOUNT_SUSPENDED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code UNKNOWN_PRESENTATION: la presentación no está en el catálogo. code IMPLAUSIBLE_PRICE: menos de $100 o más de $5.000.000. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    reconfirmOfficialPrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cuántos precios se reconfirmaron. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        reconfirmed: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED, como en PUT /commerce/prices. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     bulkOfficialPrices: {
@@ -2938,12 +3774,86 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Archivo recibido para procesar */
-            202: {
+            /** @description Cuántas filas se publicaron y cuáles fallaron. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        published: number;
+                        errors: {
+                            /** @description Número de la fila en Excel. */
+                            row: number;
+                            barcode: string;
+                            /** @enum {string} */
+                            code: "INVALID_PRICE" | "DUPLICATE_ROW" | "UNKNOWN_BARCODE";
+                            message: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description VALIDATION_ERROR, el archivo no tiene el encabezado codigo_barras;precio o no es texto CSV. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED, como en PUT /commerce/prices. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description PAYLOAD_TOO_LARGE, más de 1.000 filas o de 1 MB. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listMerchantPromotions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La más reciente primero. */
+            200: {
+                headers: {
+                    /** @description Dato de la propia cuenta. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["MerchantPromotion"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
         };
     };
@@ -2960,12 +3870,74 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Promoción publicada en colección aparte */
+            /** @description Promoción publicada, con su estado de hoy. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
+                content: {
+                    "application/json": components["schemas"]["MerchantPromotion"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED, como en PUT /commerce/prices. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code OFFICIAL_PRICE_REQUIRED: no hay precio oficial vigente de esa presentación. code INVALID_PROMOTION: la oferta no baja el oficial, está fuera de sus límites o las fechas no sirven (final antes del inicio o ya pasado, o más de 30 días). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    withdrawPromotion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                promotionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retirada; deja de salir en la comparación. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No existe o es de otra tienda. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
         };
     };

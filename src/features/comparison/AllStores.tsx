@@ -303,7 +303,7 @@ function Results({
       <ol className="offer-list">
         {competing.map((offer, index) => (
           <Offer
-            key={offer.reportId}
+            key={offer.reportId ?? `${offer.establishment.id}:${offer.presentationId}`}
             offer={offer}
             size={sizeOf(offer.presentationId)}
             rank={rankOf(competing, index, criteria.sort)}
@@ -317,7 +317,7 @@ function Results({
           <ul className="offer-list">
             {others.map((offer) => (
               <Offer
-                key={offer.reportId}
+                key={offer.reportId ?? `${offer.establishment.id}:${offer.presentationId}`}
                 offer={offer}
                 size={sizeOf(offer.presentationId)}
                 sameName={names.get(offer.establishment.name.toLowerCase()) !== 1}

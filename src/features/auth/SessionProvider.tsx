@@ -1,17 +1,36 @@
 import type { Middleware } from 'openapi-fetch';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, call } from '../../shared/api';
 import { readLastRole, saveLastRole } from './lastRole';
-import { type Session, SessionContext } from './session';
+import { type Role, type Session, SessionContext } from './session';
+
+// MerchantVerified cambia el rol por el relé. El segundo reintento cubre el intervalo de 5 s.
+async function fetchSession(signal: AbortSignal, expectedRole?: Role) {
+  let session = await call(api.GET('/auth/session', { signal }));
+  for (
+    let retries = 0;
+    expectedRole && session.role !== expectedRole && retries < 2;
+    retries += 1
+  ) {
+    await new Promise<void>((resolve) => window.setTimeout(resolve, retries === 0 ? 600 : 4500));
+    if (signal.aborted) return session;
+    session = await call(api.GET('/auth/session', { signal }));
+  }
+  return session;
+}
 
 // ADR-014: la sesión es una cookie del servidor; la app pregunta quién es al abrirse.
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>({ status: 'loading' });
-  const [attempt, setAttempt] = useState(0);
+  const [attempt, setAttempt] = useState<{ expectedRole?: Role }>({});
+  const request = useRef<AbortController>(null);
 
   useEffect(() => {
-    call(api.GET('/auth/session'))
+    const controller = new AbortController();
+    request.current = controller;
+    fetchSession(controller.signal, attempt.expectedRole)
       .then(({ role, suspendedUntil, displayName, emailVerified, emailVerificationRequired }) => {
+        if (controller.signal.aborted) return;
         saveLastRole(role);
         setSession({
           status: 'active',
@@ -25,6 +44,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .catch((error: unknown) => {
         // Solo un 401 dice que no hay sesión; sin red no se sabe.
         const anonymous = error instanceof ApiError && error.status === 401;
+        if (controller.signal.aborted || (attempt.expectedRole && !anonymous)) return;
         if (anonymous) saveLastRole(null);
         setSession(
           anonymous
@@ -32,6 +52,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             : { status: 'unknown', error, lastRole: readLastRole() },
         );
       });
+    return () => {
+      controller.abort();
+    };
   }, [attempt]);
 
   // Una sesión vencida o revocada responde 401 en cualquier ruta: la app la da por cerrada y las
@@ -59,26 +82,28 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       signIn: async (credentials: { email: string; password: string }) => {
         await call(api.POST('/auth/login', { body: credentials }));
         setSession({ status: 'loading' });
-        setAttempt((current) => current + 1);
+        setAttempt({});
       },
       // Restaurar una cuenta en período de gracia: igual que iniciar sesión.
       restoreAccount: async (credentials: { email: string; password: string }) => {
         await call(api.POST('/auth/restore-account', { body: credentials }));
         setSession({ status: 'loading' });
-        setAttempt((current) => current + 1);
+        setAttempt({});
       },
       signOut: async () => {
         await call(api.POST('/auth/logout'));
+        request.current?.abort();
         saveLastRole(null);
         setSession({ status: 'anonymous' });
       },
       endSession: () => {
+        request.current?.abort();
         saveLastRole(null);
         setSession({ status: 'anonymous' });
       },
-      reload: () => {
-        setSession({ status: 'loading' });
-        setAttempt((current) => current + 1);
+      reload: (expectedRole?: Role) => {
+        if (!expectedRole) setSession({ status: 'loading' });
+        setAttempt(expectedRole ? { expectedRole } : {});
       },
     }),
     [session],

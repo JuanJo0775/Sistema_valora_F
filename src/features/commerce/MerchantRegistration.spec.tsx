@@ -1,10 +1,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
+import { seriousViolations } from '../../test/axe';
 import { NO_SESSION, sessionAs, stubApi } from '../../test/fakeApi';
-import { stubLocation } from '../../test/location';
+import { askLocation } from '../../shared/location';
 
 vi.mock('../stores/StoreMap', () => ({ StoreMap: () => null }));
+vi.mock('../../shared/location', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../shared/location')>()),
+  askLocation: vi.fn(),
+}));
+const locate = vi.mocked(askLocation);
 
 const store = {
   id: '1eee2222-3333-4444-8555-666666666666',
@@ -45,6 +51,7 @@ async function findStore() {
 
 describe('registro de comercios (#165)', () => {
   afterEach(() => {
+    locate.mockReset();
     vi.unstubAllGlobals();
     window.history.pushState({}, '', '/');
   });
@@ -52,13 +59,15 @@ describe('registro de comercios (#165)', () => {
   it('pide entrar y conserva la tienda de origen', async () => {
     stubApi({ [`GET ${session}`]: NO_SESSION });
     open(`${registration}?tienda=${store.id}`);
-    await waitFor(() => expect(window.location.pathname).toBe('/entrar'));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/entrar');
+    });
     expect(new URLSearchParams(window.location.search).get('volver')).toBe(
       `${registration}?tienda=${store.id}`,
     );
   });
 
-  it('enlaza desde Yo y desde la ficha de la tienda', async () => {
+  it('enlaza desde Yo al registro', async () => {
     stubApi({
       [`GET ${session}`]: sessionAs('reportante'),
       [`GET /v1/establishments/${store.id}/prices`]: {
@@ -91,8 +100,7 @@ describe('registro de comercios (#165)', () => {
   });
 
   it('busca sin ubicación, registra sin NIT y espera el cambio de rol', async () => {
-    stubLocation();
-    const locate = vi.spyOn(navigator.geolocation, 'getCurrentPosition');
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
     let sent = false;
     let checks = 0;
     const { calls } = stubApi({
@@ -124,13 +132,15 @@ describe('registro de comercios (#165)', () => {
         location: { lat: 4.53, lng: -75.68 },
       }),
     );
-    await waitFor(() => expect(checks).toBe(2));
+    await waitFor(() => {
+      expect(checks).toBe(2);
+    });
     fireEvent.click(screen.getByRole('link', { name: 'Volver a Yo' }));
     expect(await screen.findByText('Comercio', { exact: true })).toBeInTheDocument();
   });
 
   it('propone una tienda nueva y muestra qué se desbloquea al aprobarla', async () => {
-    stubLocation();
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
     const { calls } = stubApi({
       [`GET ${session}`]: sessionAs('reportante'),
       [`GET ${profile}`]: missing,
@@ -183,7 +193,7 @@ describe('registro de comercios (#165)', () => {
   });
 
   it('no envía el formulario si el navegador niega la ubicación', async () => {
-    stubLocation('deny');
+    locate.mockRejectedValue(new Error('Ubicación denegada'));
     const { calls } = stubApi({
       [`GET ${session}`]: sessionAs('reportante'),
       [`GET ${profile}`]: missing,
@@ -198,7 +208,7 @@ describe('registro de comercios (#165)', () => {
   });
 
   it('explica una ubicación fuera del radio que valida el backend', async () => {
-    stubLocation();
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
     stubApi({
       [`GET ${session}`]: sessionAs('reportante'),
       [`GET ${profile}`]: missing,
@@ -215,10 +225,57 @@ describe('registro de comercios (#165)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/50 m/);
   });
 
+  it('pide aceptar las condiciones antes de compartir la ubicación', async () => {
+    const { calls } = stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Acepto las condiciones para comercios' }),
+    );
+    submit();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/acepta las condiciones/i);
+    expect(locate).not.toHaveBeenCalled();
+    expect(calls.some(({ path }) => path === claims)).toBe(false);
+  });
+
+  it('actualiza la sesión cuando una tienda preaprobada pasa a verificada', async () => {
+    let approved = false;
+    stubApi({
+      [`GET ${session}`]: () => sessionAs(approved ? 'comercio' : 'reportante'),
+      [`GET ${profile}`]: () => ({
+        status: 200,
+        body: { status: approved ? 'verificado' : 'pre_aprobado', establishment: store },
+      }),
+    });
+    open(registration);
+    const refresh = await screen.findByRole('button', { name: 'Consultar estado' });
+    approved = true;
+    fireEvent.click(refresh);
+    expect(
+      await screen.findByRole('heading', { name: 'Tu tienda quedó verificada' }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Volver a Yo' }));
+    expect(await screen.findByText('Comercio', { exact: true })).toBeInTheDocument();
+  });
+
+  it('el formulario no tiene violaciones graves de axe', async () => {
+    stubApi({ [`GET ${session}`]: sessionAs('reportante'), [`GET ${profile}`]: missing });
+    open(registration);
+    await screen.findByRole('heading', { name: 'Registrar mi tienda' });
+    expect(await seriousViolations(screen.getByRole('main'))).toEqual([]);
+  });
+
   it('ofrece reenviar el enlace si el correo no está verificado', async () => {
     stubApi({ [`GET ${session}`]: sessionAs('reportante', undefined, false) });
     open(registration);
-    expect(await screen.findByRole('button', { name: 'Enviarme otro enlace' })).toBeInTheDocument();
+    expect(
+      (await screen.findAllByRole('button', { name: 'Enviarme otro enlace' }))[0],
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Compartir mi ubicación y registrar' }),
     ).not.toBeInTheDocument();
