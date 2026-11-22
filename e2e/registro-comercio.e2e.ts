@@ -103,7 +103,7 @@ async function verifyPromotions(page: Page) {
   await section.getByLabel('Presentación').selectOption({ index: 1 });
   await section.getByLabel('Descuento (%)').fill('10');
   await section.getByLabel('Desde').fill(today);
-  await section.getByLabel('Hasta').fill(today);
+  await section.getByLabel('Hasta', { exact: true }).fill(today);
   await section.getByRole('button', { name: 'Publicar promoción' }).click();
   await expect(section.getByText('Promoción publicada.')).toBeVisible();
   await expect(section.getByText('Activa', { exact: true })).toBeVisible();
