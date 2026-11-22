@@ -33,3 +33,24 @@ export function nameProblem(name: string): string {
 // Ley 1581: sin consentimiento no se crea la cuenta.
 export const POLICY_REQUIRED =
   'Para crear la cuenta debes aceptar la política de tratamiento de datos.';
+
+// Mismas reglas que el registro (POST /auth/register): el servidor vuelve a validarlas.
+export const MIN_PASSWORD = 10;
+export const PASSWORD_HINT = `Mínimo ${String(MIN_PASSWORD)} caracteres.`;
+
+export function newPasswordProblem(password: string): string {
+  return password.length < MIN_PASSWORD
+    ? `La contraseña debe tener al menos ${String(MIN_PASSWORD)} caracteres.`
+    : '';
+}
+
+export function confirmProblem(password: string, confirm: string): string {
+  return password === confirm ? '' : 'Las contraseñas no coinciden.';
+}
+
+// Cuánto esperar tras un 429, en una frase.
+export function waitText(seconds: number | undefined): string {
+  if (!seconds) return 'Espera unos minutos.';
+  if (seconds >= 120) return `Espera unos ${String(Math.ceil(seconds / 60))} minutos.`;
+  return `Espera ${String(seconds)} ${seconds === 1 ? 'segundo' : 'segundos'}.`;
+}

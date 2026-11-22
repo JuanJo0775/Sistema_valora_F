@@ -15,6 +15,8 @@ const FIXED: Record<string, string> = {
   '/yo/eliminar-cuenta': 'Eliminar mi cuenta',
   '/entrar': 'Entrar',
   '/crear-cuenta': 'Crear cuenta',
+  '/olvide-contrasena': 'Olvidé mi contraseña',
+  '/restablecer-contrasena': 'Restablecer contraseña',
   '/privacidad': 'Privacidad',
   '/verificar-correo': 'Verificar correo',
   // F#154: quien entró con Google y aún no tiene cuenta.
