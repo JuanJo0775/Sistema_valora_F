@@ -111,3 +111,36 @@
     justify-self: end;
   }
 }
+
+.merchant-promotion-fields {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.merchant-promotion-fields select {
+  min-width: 0;
+  min-height: var(--touch);
+  padding: 0 12px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.merchant-stock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .merchant-promotion-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

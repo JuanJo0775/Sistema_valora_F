@@ -75,6 +75,72 @@ describe('promociones del comercio (#167)', () => {
     });
   });
 
+  it.each([
+    ['precio_especial', [['Precio especial en pesos', '1700']], { specialPriceCop: 1700 }],
+    [
+      'pague_x_lleve_y',
+      [
+        ['Unidades que lleva', '3'],
+        ['Unidades que paga', '2'],
+      ],
+      { takeY: 3, payX: 2 },
+    ],
+  ] as const)('envía solo las cantidades de una oferta %s', async (type, fields, expected) => {
+    const { calls } = await open({ [`POST ${path}`]: { status: 201, body: promotion } });
+    await screen.findByRole('option', { name: /Arroz/ });
+    fill('Presentación', 'p1');
+    fill('Tipo de promoción', type);
+    for (const [label, value] of fields) fill(label, value);
+    fill('Desde', '2026-11-22');
+    fill('Hasta', '2026-11-25');
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar promoción' }));
+    expect(await screen.findByText('Promoción publicada.')).toBeInTheDocument();
+    const sent = calls.find(({ method, path: url }) => method === 'POST' && url === path);
+    expect(JSON.parse(sent?.body ?? '{}') as unknown).toEqual({
+      presentationId: 'p1',
+      type,
+      ...expected,
+      validFrom: '2026-11-22',
+      validUntil: '2026-11-25',
+      conditions: { whileStocksLast: false, paymentMethod: 'cualquiera' },
+    });
+  });
+
+  it('rechaza fechas que superan los 30 días antes de publicar', async () => {
+    const { calls } = await open();
+    await screen.findByRole('option', { name: /Arroz/ });
+    fill('Presentación', 'p1');
+    fill('Descuento (%)', '10');
+    fill('Desde', '2026-11-22');
+    fill('Hasta', '2026-12-22');
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar promoción' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('1 a 30 días');
+    expect(calls.some(({ method, path: url }) => method === 'POST' && url === path)).toBe(false);
+  });
+
+  it('ofrece volver a Precios si el backend detecta un precio vencido', async () => {
+    await open({
+      [`POST ${path}`]: {
+        status: 422,
+        body: {
+          code: 'OFFICIAL_PRICE_REQUIRED',
+          message: 'Se requiere un precio oficial vigente.',
+        },
+      },
+    });
+    await screen.findByRole('option', { name: /Arroz/ });
+    fill('Presentación', 'p1');
+    fill('Descuento (%)', '10');
+    fill('Desde', '2026-11-22');
+    fill('Hasta', '2026-11-25');
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar promoción' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Se requiere un precio oficial vigente.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ir a Precios' }));
+    expect(screen.getByRole('heading', { name: 'Mis precios' })).toBeInTheDocument();
+  });
+
   it('muestra los estados de la API y retira una promoción con confirmación', async () => {
     const { calls } = await open({
       [`GET ${path}`]: [
