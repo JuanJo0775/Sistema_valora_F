@@ -14,8 +14,22 @@ function InstallOrGuide() {
   const { installed, canPrompt, platform, install } = useInstall();
   const [open, setOpen] = useState(false);
   const guideId = useId();
-  // Ya instalada no hay nada que instalar: la fila se va en vez de quedar como un texto suelto sin flecha.
-  if (installed) return null;
+  // Ya instalada, la fila dice el estado y lleva a la guía (por si la quiere en otro dispositivo o quitarla).
+  if (installed) {
+    return (
+      <li className="install-row">
+        <Link to="/yo/app" className="nav-row">
+          <span className="settings-text">
+            <strong>La app</strong>
+            <span className="muted">Instalada en este dispositivo. Ver la guía.</span>
+          </span>
+          <span className="nav-arrow" aria-hidden="true">
+            ›
+          </span>
+        </Link>
+      </li>
+    );
+  }
   return (
     <li className="install-row">
       <button

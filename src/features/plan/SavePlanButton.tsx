@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { type BasketItem, useBasket } from '../basket/basketContext';
 import type { PlanChoice } from './PlanPage';
-import { savePlan, toSavedPlan, type PlanDraft, type SavedLine } from './savedPlan';
+import { savePlanOnce, toSavedPlan, type PlanDraft, type SavedLine } from './savedPlan';
 
-type Result = 'saved' | 'full' | 'failed';
+type Result = 'saved' | 'same' | 'full' | 'failed';
 
 // Arma lo que se guarda: una línea por producto pendiente y solo las tiendas del reparto.
 function draftOf(choice: PlanChoice, pending: BasketItem[]): PlanDraft {
@@ -110,10 +110,10 @@ export function SavePlanButton({
   const save = () => {
     const pending = items.filter(({ bought }) => !bought);
     const plan = toSavedPlan(draftOf(choice, pending), new Date());
-    const outcome = savePlan(plan);
-    setId(plan.id);
+    const { outcome, id: savedId } = savePlanOnce(plan);
+    setId(savedId);
     setResult(outcome);
-    if (outcome === 'saved') onSaved?.();
+    if (outcome === 'saved' || outcome === 'same') onSaved?.();
   };
 
   return (
@@ -122,9 +122,10 @@ export function SavePlanButton({
         Guardar plan
       </button>
       <div role="status" className="plan-save-result">
-        {result === 'saved' && (
+        {(result === 'saved' || result === 'same') && (
           <p>
-            <span>Plan guardado</span> <Link to={`/canasta/plan/${id}`}>Ver plan guardado</Link>
+            <span>{result === 'saved' ? 'Plan guardado' : 'Este plan ya estaba guardado'}</span>{' '}
+            <Link to={`/canasta/plan/${id}`}>Ver plan guardado</Link>
           </p>
         )}
         {result === 'full' && (

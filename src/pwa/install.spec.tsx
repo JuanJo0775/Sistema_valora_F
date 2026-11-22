@@ -401,9 +401,11 @@ describe('fila «Instalar la app» de Yo', () => {
     expect(document.querySelector('ol.install-steps')).not.toBeNull();
   });
 
-  it('ya instalada no muestra la fila de instalar', () => {
+  it('ya instalada dice que lo está y lleva a la guía, sin ofrecer instalar', () => {
     setStandalone(true);
     inList();
+    expect(screen.getByText('Instalada en este dispositivo. Ver la guía.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /La app/ })).toHaveAttribute('href', '/yo/app');
     expect(screen.queryByText('Instalar la app')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
   });

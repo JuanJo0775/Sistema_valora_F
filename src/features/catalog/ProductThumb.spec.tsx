@@ -8,6 +8,12 @@ const offPhoto = {
   attribution: 'Open Food Facts, licencia ODbL',
 };
 
+function loaded(img: HTMLImageElement, naturalWidth: number, naturalHeight: number) {
+  Object.defineProperty(img, 'naturalWidth', { value: naturalWidth, configurable: true });
+  Object.defineProperty(img, 'naturalHeight', { value: naturalHeight, configurable: true });
+  fireEvent.load(img);
+}
+
 describe('miniatura del producto', () => {
   it('con foto muestra una imagen decorativa de tamaño fijo, perezosa', () => {
     const { container } = render(<ProductThumb image={offPhoto} size="card" />);
@@ -20,7 +26,7 @@ describe('miniatura del producto', () => {
     expect(img).toHaveAttribute('decoding', 'async');
     expect(img).toHaveAttribute('width', '64');
     expect(img).toHaveAttribute('height', '64');
-    expect(container.firstElementChild).toHaveClass('product-thumb', 'card');
+    expect(container.firstElementChild).toHaveClass('product-frame', 'card');
   });
 
   it('las filas usan el tamaño pequeño', () => {
@@ -84,5 +90,41 @@ describe('miniatura del producto', () => {
     fireEvent.error(container.querySelector('img') as HTMLImageElement);
 
     expect(container.querySelector('svg')).toHaveAttribute('data-category', 'bakery');
+  });
+
+  it('mientras la foto carga reserva el marco y la muestra al terminar', () => {
+    const { container } = render(<ProductThumb image={offPhoto} size="card" />);
+    const frame = container.firstElementChild;
+
+    expect(frame).toHaveAttribute('data-state', 'loading');
+
+    loaded(container.querySelector('img') as HTMLImageElement, 400, 300);
+
+    expect(frame).toHaveAttribute('data-state', 'ready');
+  });
+
+  it('una foto diminuta (40 px) se trata como una que falla: ilustración de la categoría', () => {
+    const { container } = render(<ProductThumb image={offPhoto} size="row" category="bakery" />);
+
+    loaded(container.querySelector('img') as HTMLImageElement, 40, 40);
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.firstElementChild).toHaveAttribute('data-state', 'art');
+    expect(container.querySelector('svg')).toHaveAttribute('data-category', 'bakery');
+  });
+
+  it('una foto estrecha pero grande (50 × 120) no es diminuta', () => {
+    const { container } = render(<ProductThumb image={offPhoto} size="row" />);
+
+    loaded(container.querySelector('img') as HTMLImageElement, 50, 120);
+
+    expect(container.querySelector('img')).not.toBeNull();
+  });
+
+  it('la ilustración y la foto comparten el mismo marco cuadrado', () => {
+    const photo = render(<ProductThumb image={offPhoto} size="row" />).container;
+    const art = render(<ProductThumb size="row" />).container;
+
+    expect(photo.firstElementChild?.className).toBe(art.firstElementChild?.className);
   });
 });

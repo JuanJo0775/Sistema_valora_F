@@ -20,7 +20,7 @@ import {
   salt,
   SALT,
 } from '../../test/planFixtures';
-import { readPlans, savePlan, toSavedPlan, type PlanDraft } from './savedPlan';
+import { readPlans, savePlan, toggleBought, toSavedPlan, type PlanDraft } from './savedPlan';
 
 const { a, b } = near;
 const routes = () => ({
@@ -70,6 +70,34 @@ describe('guardar el plan', () => {
     expect(section.getByRole('link', { name: /Ver plan guardado/ })).toHaveAttribute(
       'href',
       `/canasta/plan/${plan?.id ?? ''}`,
+    );
+  });
+
+  it('guardar dos veces el mismo plan no crea otro: refresca la fecha y lo dice', async () => {
+    locate();
+    stubApi(routes());
+    renderPlan(rice, milk);
+
+    const save = async () => {
+      fireEvent.click((await twoStores()).getByRole('button', { name: 'Guardar plan' }));
+    };
+    await save();
+    const [first] = readPlans();
+    // Se marcó una compra: el plan guardado no debe perder ese avance.
+    toggleBought(first?.id ?? '', 'arroz-500g');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await save();
+
+    const plans = readPlans();
+    expect(plans).toHaveLength(1);
+    expect(plans[0]?.id).toBe(first?.id);
+    expect((plans[0]?.savedAt ?? '') > (first?.savedAt ?? '')).toBe(true);
+    expect(plans[0]?.lines.some((l) => l.bought)).toBe(true);
+    const section = await twoStores();
+    expect(section.getByText('Este plan ya estaba guardado')).toBeInTheDocument();
+    expect(section.getByRole('link', { name: /Ver plan guardado/ })).toHaveAttribute(
+      'href',
+      `/canasta/plan/${first?.id ?? ''}`,
     );
   });
 

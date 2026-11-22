@@ -33,6 +33,7 @@ const DeleteAccount = screen(() => import('../features/auth/DeleteAccount'), 'De
 const SignIn = screen(() => import('../features/auth/SignIn'), 'SignIn');
 const SignUp = screen(() => import('../features/auth/SignUp'), 'SignUp');
 const VerifyEmail = screen(() => import('../features/auth/VerifyEmail'), 'VerifyEmail');
+const Welcome = screen(() => import('../features/auth/Welcome'), 'Welcome');
 const MyReports = screen(() => import('../features/contributions/MyReports'), 'MyReports');
 const ModerationPanel = screen(
   () => import('../features/moderation/ModerationPanel'),
@@ -146,6 +147,7 @@ export function App() {
                 <Route path="/crear-cuenta" element={<SignUp />} />
                 <Route path="/privacidad" element={<PrivacyPolicy />} />
                 <Route path="/verificar-correo" element={<VerifyEmail />} />
+                <Route path="/bienvenida" element={<Welcome />} />
               </Route>
             </Routes>
           </BrowserRouter>

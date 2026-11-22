@@ -17,3 +17,19 @@ export function emailProblem(email: string): string {
   if (!EMAIL.test(value)) return 'Escribe un correo válido, por ejemplo nombre@correo.co.';
   return '';
 }
+
+// B#133: letras (con tildes y ñ) y, entre palabras, un espacio, apóstrofo o guion. La misma regla que
+// el servidor; aquí solo se dice antes de enviar.
+const NAME = /^\p{L}+(?:[ '-]\p{L}+)*$/u;
+
+export function nameProblem(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed.length < 2 || trimmed.length > 40 || !NAME.test(trimmed)) {
+    return 'Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.';
+  }
+  return '';
+}
+
+// Ley 1581: sin consentimiento no se crea la cuenta.
+export const POLICY_REQUIRED =
+  'Para crear la cuenta debes aceptar la política de tratamiento de datos.';

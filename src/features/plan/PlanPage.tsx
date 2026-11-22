@@ -1,10 +1,12 @@
 import { useId, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
 import { formatCop } from '../../shared/money';
 import { formatDistance, type Point } from '../../shared/location';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { useWide } from '../../shared/useWide';
 import { type BasketItem, useBasket } from '../basket/basketContext';
 import { type Area, useStoreTotals } from '../basket/useStoreTotals';
 import type { BasketLine } from '../basket/totals';
@@ -18,6 +20,7 @@ import { SavedPlansList } from './SavedPlansList';
 import { bestSplits, type SplitOption } from './split';
 import {
   extraTravel,
+  hasLocation,
   netEstimate,
   routeEstimate,
   shownTravel,
@@ -85,10 +88,15 @@ export function PlanPage({
       />
     ));
   const pending = items.filter(({ bought }) => !bought);
-  return (
-    <section className="plan">
-      <h1>Plan de compra</h1>
-      {pending.length === 0 ? (
+  const wide = useWide();
+  // En computador, los supuestos (que dibuja PlanContent, dueño de su estado) y los planes guardados
+  // van en el panel lateral; en tableta y celular, en línea y en el orden de siempre (DOM = visual).
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const saved = <SavedPlansList key={savedCount} />;
+  if (pending.length === 0) {
+    return (
+      <section className="plan">
+        <h1>Plan de compra</h1>
         <EmptyState
           title="Tu canasta está vacía"
           text="Agrega productos desde su página para armar tu plan de compra."
@@ -98,26 +106,39 @@ export function PlanPage({
             </Link>
           }
         />
-      ) : (
-        <>
-          <p className="muted">Repartimos tu canasta entre una, dos o tres tiendas cercanas.</p>
-          <div className="plan-where">
-            <WherePicker where={where} />
-          </div>
-          {where.ready ? (
-            <PlanContent
-              pending={pending}
-              area={where.query}
-              origin={where.point}
-              renderAction={action}
-            />
-          ) : (
-            <Loading text="Buscando tu ubicación…" />
-          )}
-        </>
+        {saved}
+      </section>
+    );
+  }
+  return (
+    <div className="with-side plan-layout">
+      <section className="plan">
+        <h1>Plan de compra</h1>
+        <p className="muted">Repartimos tu canasta entre una, dos o tres tiendas cercanas.</p>
+        <div className="plan-where">
+          <WherePicker where={where} />
+        </div>
+        {where.ready ? (
+          <PlanContent
+            pending={pending}
+            area={where.query}
+            origin={where.point}
+            renderAction={action}
+            wide={wide}
+            assumptionsSlot={slot}
+          />
+        ) : (
+          <Loading text="Buscando tu ubicación…" />
+        )}
+        {!wide && saved}
+      </section>
+      {wide && (
+        <aside className="side plan-side" aria-label="Supuestos del traslado y planes guardados">
+          <div ref={setSlot} className="plan-slot" />
+          {saved}
+        </aside>
       )}
-      <SavedPlansList key={savedCount} />
-    </section>
+    </div>
   );
 }
 
@@ -126,11 +147,16 @@ function PlanContent({
   area,
   origin,
   renderAction,
+  wide,
+  assumptionsSlot,
 }: {
   pending: BasketItem[];
   area: Area;
   origin: Point | null;
   renderAction?: (choice: PlanChoice) => ReactNode;
+  // En computador el formulario de supuestos va al panel lateral; si no, en línea.
+  wide: boolean;
+  assumptionsSlot: HTMLElement | null;
 }) {
   const { totals } = useStoreTotals(pending, area);
   const [assumptions, setAssumptions] = useState(readAssumptions);
@@ -257,14 +283,21 @@ function PlanContent({
           {`Sin precio vigente cerca: ${unpricedItems.map(({ productName }) => productName).join(', ')}. No cuentan en los totales.`}
         </p>
       )}
-      <AssumptionsForm value={assumptions} onChange={choose} />
-      {upToTwo.map(render)}
-      {three && (
-        <details className="plan-more">
-          <summary>Probar con 3 tiendas</summary>
-          {render(three)}
-        </details>
+      {wide ? (
+        assumptionsSlot &&
+        createPortal(<AssumptionsForm value={assumptions} onChange={choose} />, assumptionsSlot)
+      ) : (
+        <AssumptionsForm value={assumptions} onChange={choose} />
       )}
+      <div className="plan-options">
+        {upToTwo.map(render)}
+        {three && (
+          <details className="plan-more">
+            <summary>Probar con 3 tiendas</summary>
+            {render(three)}
+          </details>
+        )}
+      </div>
     </>
   );
 }
@@ -310,6 +343,10 @@ function OptionCard({
   const split = option.stores > 1;
   const cost = (estimate: TravelEstimate) =>
     estimate.costCop === null ? '' : ` · ${formatCop(estimate.costCop)}`;
+  // Una tienda que se visita pero no tiene coordenadas válidas queda fuera del traslado.
+  const unlocated = option.shares.filter(
+    ({ store }) => !deliveryOf(store.id).on && !hasLocation(store),
+  ).length;
   const assumed = `Supuestos: línea recta × ${NUM.format(assumptions.detour)}; ${NUM.format(assumptions.kmh)} km/h a pie.`;
   return (
     <section className="plan-option" aria-labelledby={titleId}>
@@ -355,6 +392,11 @@ function OptionCard({
             )}
             <p className="muted">Sin tu ubicación no estimamos el trayecto desde tu casa</p>
           </>
+        )}
+        {unlocated > 0 && (
+          <p className="muted">
+            {`No pudimos ubicar ${String(unlocated)} ${unlocated === 1 ? 'tienda' : 'tiendas'}; el traslado no ${unlocated === 1 ? 'la cuenta' : 'las cuenta'}.`}
+          </p>
         )}
         <p className="muted">{assumed}</p>
         {hasFee && <p>{`Domicilio estimado: ${formatCop(deliveryCop)} (tarifa que escribiste)`}</p>}

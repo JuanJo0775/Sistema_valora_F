@@ -238,3 +238,56 @@ test('al imprimir solo queda el contenido del plan', async ({ page }) => {
   expect(heights.length).toBeGreaterThan(0);
   for (const height of heights) expect(height).toBeLessThan(pageHeightPx);
 });
+
+test('actualizar precios muestra la diferencia antes y ahora sin cambiar el plan', async ({
+  page,
+}) => {
+  // Sin backend: cada producto responde con sus precios del plan, salvo el arroz, que subió.
+  await page.route('**/v1/**', async (route) => {
+    const { pathname } = new URL(route.request().url());
+    const productId = /\/products\/([^/]+)\/comparison$/.exec(pathname)?.[1];
+    if (!productId) return route.fulfill({ status: 401, json: { title: 'Sin sesión' } });
+    const results = plan.lines.flatMap((l) => {
+      const store = plan.stores.find((s) => s.id === l.storeId);
+      if (l.productId !== productId || !store || l.priceCop === null) return [];
+      return [
+        {
+          establishment: store,
+          reportId: `r-${productId}`,
+          presentationId: l.presentationId,
+          priceCop: productId === 'arroz' ? 3350 : l.priceCop,
+          unitPrice: { valueCop: l.priceCop, per: 'und' },
+          source: 'comunidad',
+          freshness: 'vigente',
+          reliability: 'alta',
+          confirmations: 1,
+          isCheapest: false,
+          observedAt: now.toISOString(),
+        },
+      ];
+    });
+    return route.fulfill({
+      json: { productId, criteria: { sort: 'unit_price' }, results, promotions: [] },
+    });
+  });
+  await page.goto('/');
+  await seedPlan(page);
+  await page.goto(planUrl(PLAN_ID));
+
+  await page.getByRole('button', { name: 'Actualizar precios' }).click();
+
+  await expect(
+    page.getByText(
+      /Arroz blanco · Tienda La Esquina de Prueba: antes \$\s?3\.200 \(\d+ \S+\) → ahora \$\s?3\.350 \(\d+ \S+\), subió/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/Leche entera · Tienda La Esquina de Prueba: sin cambios/),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Guardar con precios nuevos' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Descartar' })).toBeVisible();
+  // Todavía no se guardó nada.
+  const saved = await page.evaluate(() => localStorage.getItem('valora:planes') ?? '');
+  expect(saved).toContain('3200');
+  expect(saved).not.toContain('3350');
+});
