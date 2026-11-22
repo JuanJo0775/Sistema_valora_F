@@ -37,6 +37,8 @@ const DeleteAccount = screen(() => import('../features/auth/DeleteAccount'), 'De
 const SignIn = screen(() => import('../features/auth/SignIn'), 'SignIn');
 const SignUp = screen(() => import('../features/auth/SignUp'), 'SignUp');
 const VerifyEmail = screen(() => import('../features/auth/VerifyEmail'), 'VerifyEmail');
+const ForgotPassword = screen(() => import('../features/auth/ForgotPassword'), 'ForgotPassword');
+const ResetPassword = screen(() => import('../features/auth/ResetPassword'), 'ResetPassword');
 const Welcome = screen(() => import('../features/auth/Welcome'), 'Welcome');
 const MyReports = screen(() => import('../features/contributions/MyReports'), 'MyReports');
 const ModerationPanel = screen(
@@ -149,6 +151,8 @@ export function App() {
                 <Route path="/yo/eliminar-cuenta" element={<DeleteAccount />} />
                 <Route path="/yo/app" element={<InstallAndUninstall />} />
                 <Route path="/entrar" element={<SignIn />} />
+                <Route path="/olvide-contrasena" element={<ForgotPassword />} />
+                <Route path="/restablecer-contrasena" element={<ResetPassword />} />
                 <Route path="/crear-cuenta" element={<SignUp />} />
                 <Route path="/privacidad" element={<PrivacyPolicy />} />
                 <Route path="/verificar-correo" element={<VerifyEmail />} />

@@ -1,7 +1,15 @@
+import { POLICY_VERSION } from '../legal/policy';
+
 // ADR-029, fase 2 (F#154): un enlace normal y no el Link del router, porque el navegador debe salir de
 // la PWA hacia el servidor (/v1/* va a la API), que lo lleva a Google y lo trae de vuelta. Sin el
 // JavaScript de Google: nada de terceros se carga en la página (EC-08).
 export const GOOGLE_START = '/v1/auth/google/start';
+
+// Volver a entrar con Google para confirmar que es la misma persona (cambiar o crear la contraseña,
+// eliminar la cuenta). Navegación completa; el servidor devuelve a `returnTo`, que es una ruta de la app.
+export function googleReauthUrl(returnTo: string): string {
+  return `${GOOGLE_START}?${new URLSearchParams({ acceptPolicy: POLICY_VERSION, returnTo }).toString()}`;
+}
 
 // La «G» de colores que pide Google en sus botones de inicio de sesión. Va dentro de la página (no se
 // descarga de Google) y es decorativa: el nombre del botón lo da el texto.

@@ -133,6 +133,20 @@ describe('accesibilidad de los flujos críticos (axe, WCAG 2.2 AA)', () => {
     expect(await seriousViolations()).toEqual([]);
   });
 
+  it('olvidé mi contraseña', async () => {
+    visit('/olvide-contrasena', { 'GET /v1/auth/session': NO_SESSION });
+    await screen.findByRole('button', { name: 'Enviarme el enlace' });
+
+    expect(await seriousViolations()).toEqual([]);
+  });
+
+  it('restablecer la contraseña', async () => {
+    visit('/restablecer-contrasena?token=abc', { 'GET /v1/auth/session': NO_SESSION });
+    await screen.findByRole('button', { name: 'Guardar contraseña' });
+
+    expect(await seriousViolations()).toEqual([]);
+  });
+
   it('la canasta con un producto', async () => {
     localStorage.setItem(
       'valora:canasta',

@@ -5,18 +5,14 @@ import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { Field } from './Field';
+import { ReauthPanel } from './ReauthPanel';
+import { waitText } from './formErrors';
 import { withReturn } from './safeReturn';
 import { longDate } from './scheduledDate';
 import { useSession } from './session';
 import './auth.css';
 
-type Problem = { kind: 'password' } | { kind: 'other'; message: string };
-
-function waitText(seconds: number | undefined): string {
-  if (!seconds) return 'Espera unos minutos.';
-  if (seconds >= 120) return `Espera unos ${String(Math.ceil(seconds / 60))} minutos.`;
-  return `Espera ${String(seconds)} ${seconds === 1 ? 'segundo' : 'segundos'}.`;
-}
+type Problem = { kind: 'password' } | { kind: 'reauth' } | { kind: 'other'; message: string };
 
 // Mensajes claros y con salida para cada error de POST /v1/me/account-deletion.
 export function problemOf(error: unknown): Problem {
@@ -24,6 +20,7 @@ export function problemOf(error: unknown): Problem {
     return { kind: 'other', message: 'Algo salió mal. Inténtalo de nuevo.' };
   }
   if (error.status === 403 && error.code === 'INVALID_PASSWORD') return { kind: 'password' };
+  if (error.status === 403 && error.code === 'REAUTH_REQUIRED') return { kind: 'reauth' };
   if (error.status === 403 && error.code === 'LAST_MODERATOR_CANNOT_DELETE') {
     return {
       kind: 'other',
@@ -59,7 +56,8 @@ export function problemOf(error: unknown): Problem {
 }
 
 // «Yo» › Ajustes › Eliminar mi cuenta. Pantalla propia, con contraseña y una confirmación
-// explícita. La contraseña vive solo en el estado del formulario.
+// explícita. La contraseña vive solo en el estado del formulario. Una cuenta creada con Google no
+// tiene contraseña: confirma con la casilla y, si su sesión es vieja, volviendo a entrar con Google.
 export function DeleteAccount() {
   const { session, endSession, reload } = useSession();
   const { pathname, search } = useLocation();
@@ -69,6 +67,8 @@ export function DeleteAccount() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [scheduledFor, setScheduledFor] = useState<string | null>(null);
+  // Se recuerda al enviar: al programarse, la sesión local se cierra y ya no se sabe.
+  const [hadPassword, setHadPassword] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
   const finalRef = useRef<HTMLHeadingElement>(null);
@@ -77,6 +77,7 @@ export function DeleteAccount() {
   // Al aparecer un error el foco va a él (o a la contraseña, si fue la que falló).
   useEffect(() => {
     if (!problem) return;
+    if (problem.kind === 'reauth') return;
     if (problem.kind === 'password') {
       formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
     } else alertRef.current?.focus();
@@ -95,7 +96,8 @@ export function DeleteAccount() {
           </h1>
           <p>
             Se eliminará el <strong>{longDate(scheduledFor)}</strong>, pero tienes 10 días para
-            cambiar de opinión: inicia sesión con tu correo y contraseña y podrás restaurarla.
+            cambiar de opinión
+            {hadPassword ? ': inicia sesión con tu correo y contraseña y podrás restaurarla' : ''}.
             Pasado ese plazo se elimina de forma definitiva.
           </p>
           <p className="muted">
@@ -115,13 +117,15 @@ export function DeleteAccount() {
     return <Navigate to={withReturn('/entrar', pathname + search)} replace />;
   }
 
+  const hasPassword = session.hasPassword;
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    if (!password || !understood || sending) return;
+    if ((hasPassword && !password) || !understood || sending) return;
     setProblem(null);
     setSending(true);
-    call(api.POST('/me/account-deletion', { body: { password } }))
+    call(api.POST('/me/account-deletion', { body: hasPassword ? { password } : {} }))
       .then((result) => {
+        setHadPassword(hasPassword);
         setScheduledFor(result.scheduledFor);
         // El servidor cerró todas las sesiones: la local también.
         endSession();
@@ -158,7 +162,8 @@ export function DeleteAccount() {
         <h2 id="plazo">Tienes 10 días para cambiar de opinión</h2>
         <p>
           Al confirmar, cerramos tus sesiones y la cuenta queda programada para eliminarse. Durante
-          10 días puedes iniciar sesión con tu correo y contraseña para restaurarla.{' '}
+          10 días puedes cambiar de opinión
+          {hasPassword ? ': inicia sesión con tu correo y contraseña para restaurarla' : ''}.{' '}
           <strong>Pasado ese plazo se elimina de forma definitiva y no se puede deshacer.</strong>
         </p>
       </section>
@@ -171,21 +176,34 @@ export function DeleteAccount() {
       <div ref={alertRef} tabIndex={-1} role="alert" className="delete-alert">
         {problem?.kind === 'other' && <p className="field-error">{problem.message}</p>}
       </div>
-      <Field
-        label="Tu contraseña"
-        type="password"
-        autoComplete="current-password"
-        value={password}
-        onValue={(value) => {
-          setPassword(value);
-          if (problem?.kind === 'password') setProblem(null);
-        }}
-        error={
-          problem?.kind === 'password'
-            ? 'La contraseña no es correcta. Revísala e inténtalo de nuevo.'
-            : undefined
-        }
-      />
+      {problem?.kind === 'reauth' && (
+        <ReauthPanel returnTo="/yo/eliminar-cuenta">
+          <Link to="/yo/ajustes" className="btn ghost">
+            Crear una contraseña primero
+          </Link>
+        </ReauthPanel>
+      )}
+      {hasPassword ? (
+        <Field
+          label="Tu contraseña"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onValue={(value) => {
+            setPassword(value);
+            if (problem?.kind === 'password') setProblem(null);
+          }}
+          error={
+            problem?.kind === 'password'
+              ? 'La contraseña no es correcta. Revísala e inténtalo de nuevo.'
+              : undefined
+          }
+        />
+      ) : (
+        <p className="delete-google">
+          <strong>Tu cuenta usa Google.</strong> Para eliminarla confirma que eres tú.
+        </p>
+      )}
       <label className="delete-confirm" htmlFor={checkId}>
         <input
           id={checkId}
@@ -201,7 +219,7 @@ export function DeleteAccount() {
         <button
           type="submit"
           className="btn danger"
-          disabled={!password || !understood || sending}
+          disabled={(hasPassword && !password) || !understood || sending}
           aria-busy={sending || undefined}
         >
           {sending ? 'Programando…' : 'Eliminar mi cuenta definitivamente'}
