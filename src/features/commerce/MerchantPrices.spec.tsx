@@ -122,6 +122,7 @@ describe('panel de precios oficiales (#166)', () => {
         },
       },
     });
+    fireEvent.click(await screen.findByRole('button', { name: 'Carga masiva' }));
     fireEvent.change(await screen.findByLabelText('Archivo CSV'), {
       target: { files: [new File([csv], 'precios.csv', { type: 'text/csv' })] },
     });
@@ -158,6 +159,23 @@ describe('panel de precios oficiales (#166)', () => {
     expect(
       await screen.findByRole('button', { name: 'Todos mis precios siguen igual' }),
     ).toBeEnabled();
+  });
+
+  it('organiza el portal por secciones y muestra la tienda verificada', async () => {
+    openPanel({ 'GET /v1/commerce/promotions': { status: 200, body: { items: [] } } });
+    expect(await screen.findByRole('heading', { name: 'La Rosa' })).toBeInTheDocument();
+    expect(screen.getByText('Verificado')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Precios' })).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.queryByRole('heading', { name: 'Cargar precios por CSV' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Promociones' }));
+    expect(await screen.findByText('Aún no tienes promociones publicadas.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mi tienda' }));
+    expect(screen.getByRole('link', { name: 'Ver ficha pública' })).toHaveAttribute(
+      'href',
+      '/tiendas/s1',
+    );
   });
 
   it('no consulta datos comerciales desde una cuenta reportante', async () => {

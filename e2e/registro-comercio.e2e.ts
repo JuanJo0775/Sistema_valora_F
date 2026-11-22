@@ -81,6 +81,7 @@ async function verifyOfficialPrices(page: Page) {
   await page.getByRole('button', { name: 'Todos mis precios siguen igual' }).click();
   await expect(page.getByText('Precios reconfirmados: 1.')).toBeVisible();
 
+  await page.getByRole('button', { name: 'Carga masiva' }).click();
   await page.getByLabel('Archivo CSV').setInputFiles({
     name: 'precios.csv',
     mimeType: 'text/csv',
