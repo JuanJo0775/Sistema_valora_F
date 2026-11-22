@@ -37,6 +37,7 @@ test.describe('Registro de comercios (F#165)', () => {
     await expect(page.getByText('Comercio', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: /Mi tienda/ }).click();
     await verifyOfficialPrices(page);
+    await verifyPromotions(page);
   });
 
   test('desde Yo propone una tienda nueva y recupera la preaprobación al recargar', async ({
@@ -93,4 +94,21 @@ async function verifyOfficialPrices(page: Page) {
   const download = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Descargar filas con errores' }).click();
   expect((await download).suggestedFilename()).toBe('precios-por-corregir.csv');
+}
+
+async function verifyPromotions(page: Page) {
+  await page.getByRole('button', { name: 'Promociones' }).click();
+  const section = page.getByRole('region', { name: 'Promociones' });
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+  await section.getByLabel('Presentación').selectOption({ index: 1 });
+  await section.getByLabel('Descuento (%)').fill('10');
+  await section.getByLabel('Desde').fill(today);
+  await section.getByLabel('Hasta', { exact: true }).fill(today);
+  await section.getByRole('button', { name: 'Publicar promoción' }).click();
+  await expect(section.getByText('Promoción publicada.')).toBeVisible();
+  await expect(section.getByText('Activa', { exact: true })).toBeVisible();
+  await section.getByRole('button', { name: 'Retirar promoción' }).click();
+  await section.getByRole('button', { name: 'Confirmar retiro' }).click();
+  await expect(section.getByText('Promoción retirada.')).toBeVisible();
+  await expect(section.getByText('Aún no tienes promociones publicadas.')).toBeVisible();
 }

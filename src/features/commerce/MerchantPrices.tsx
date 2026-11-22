@@ -9,6 +9,7 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { RequireRole } from '../auth/RequireRole';
 import { MerchantPriceEditor, type PriceSelection } from './MerchantPriceEditor';
+import { MerchantPromotions } from './MerchantPromotions';
 import { MerchantPriceUpload } from './MerchantPriceUpload';
 import './merchant-prices.css';
 
@@ -347,28 +348,15 @@ function PricePanel() {
           {promotions && 'error' in promotions && (
             <ErrorState error={promotions.error} onRetry={refresh} />
           )}
-          {promotions &&
-            'data' in promotions &&
-            (promotions.data.length ? (
-              <ul className="merchant-price-list">
-                {promotions.data.map((promotion) => (
-                  <li key={promotion.id}>
-                    <h3>{productLabel(promotion.presentationId)}</h3>
-                    <p>
-                      {promotion.type === 'precio_especial'
-                        ? 'Precio especial'
-                        : promotion.type === 'descuento_porcentual'
-                          ? 'Descuento porcentual'
-                          : 'Pague y lleve'}{' '}
-                      · {promotion.status}
-                    </p>
-                    <p className="muted">Hasta el {promotion.validUntil}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">Aún no tienes promociones publicadas.</p>
-            ))}
+          <MerchantPromotions
+            items={promotions && 'data' in promotions ? promotions.data : undefined}
+            prices={prices && 'data' in prices ? prices.data : undefined}
+            label={productLabel}
+            onChanged={refresh}
+            onPrices={() => {
+              setTab('prices');
+            }}
+          />
         </section>
       )}
       {tab === 'store' && (
