@@ -101,9 +101,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         saveLastRole(null);
         setSession({ status: 'anonymous' });
       },
-      reload: (expectedRole?: Role) => {
-        if (!expectedRole) setSession({ status: 'loading' });
-        setAttempt(expectedRole ? { expectedRole } : {});
+      reload: () => {
+        setSession({ status: 'loading' });
+        setAttempt({});
+      },
+      refreshRole: (expectedRole: Role) => {
+        setAttempt({ expectedRole });
       },
     }),
     [session],

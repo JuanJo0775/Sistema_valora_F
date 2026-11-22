@@ -29,7 +29,8 @@ export interface SessionState {
   signOut: () => Promise<void>;
   // La cuenta ya no existe: la sesión local se da por cerrada sin llamar a /auth/logout.
   endSession: () => void;
-  reload: (expectedRole?: Role) => void;
+  reload: () => void;
+  refreshRole: (expectedRole: Role) => void;
 }
 
 export const SessionContext = createContext<SessionState>({
@@ -39,6 +40,7 @@ export const SessionContext = createContext<SessionState>({
   signOut: () => Promise.resolve(),
   endSession: () => undefined,
   reload: () => undefined,
+  refreshRole: () => undefined,
 });
 
 export const useSession = () => useContext(SessionContext);

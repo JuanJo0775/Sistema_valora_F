@@ -49,7 +49,7 @@ export function MerchantRegistration() {
 }
 
 function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
-  const { session, reload } = useSession();
+  const { session, refreshRole } = useSession();
   const [query] = useSearchParams();
   const storeId = query.get('tienda');
   const [attempt, setAttempt] = useState(0);
@@ -62,8 +62,8 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
   useEffect(() => {
     if (status !== 'verificado' || isMerchant || refreshedRole.current) return;
     refreshedRole.current = true;
-    reload('comercio');
-  }, [isMerchant, reload, status]);
+    refreshRole('comercio');
+  }, [isMerchant, refreshRole, status]);
 
   useEffect(() => {
     const controller = new AbortController();
