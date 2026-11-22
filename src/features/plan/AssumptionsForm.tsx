@@ -34,10 +34,14 @@ function withMoney(
 export function AssumptionsForm({
   value,
   onChange,
+  level = 2,
 }: {
   value: TravelAssumptions;
   onChange: (next: TravelAssumptions) => void;
+  // Nivel del título: 3 cuando va dentro de un panel que ya tiene su h2.
+  level?: 2 | 3;
 }) {
+  const Title = `h${String(level)}` as 'h2' | 'h3';
   // Se escribe como texto para poder borrar y teclear; solo lo válido sube a los supuestos.
   const [detour, setDetour] = useState(String(value.detour));
   const [kmh, setKmh] = useState(String(value.kmh));
@@ -51,7 +55,7 @@ export function AssumptionsForm({
 
   return (
     <section className="plan-assumptions" aria-labelledby="plan-assumptions-title">
-      <h2 id="plan-assumptions-title">Supuestos del traslado</h2>
+      <Title id="plan-assumptions-title">Supuestos del traslado</Title>
       <p className="muted">
         Todo traslado es estimado. Cambia estos supuestos y los cálculos se actualizan.
       </p>
