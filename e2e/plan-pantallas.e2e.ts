@@ -96,7 +96,9 @@ for (const size of SIZES) {
       await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
       await fakeApi(page);
       await page.goto('/canasta');
-      await expect(page.getByRole('link', { name: 'Armar plan de compra' })).toBeVisible();
+      await expect(
+        page.getByRole('link', { name: 'Ver el plan completo y guardarlo' }),
+      ).toBeVisible();
       await check(page, 'canasta', size.name, ['Compra todo en'], 'aside');
     });
 

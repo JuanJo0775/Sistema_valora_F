@@ -2,7 +2,8 @@ import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { type BasketItem, useBasket } from './basketContext';
 import { ProductThumb } from '../catalog/ProductThumb';
-import { CheapestStore } from './CheapestStore';
+import { useWhere } from '../comparison/useWhere';
+import { WhereToBuy } from './WhereToBuy';
 import { useStoreTotals } from './useStoreTotals';
 import './basket.css';
 
@@ -10,8 +11,10 @@ import './basket.css';
 // tacha y baja al final, para ir marcando en la tienda.
 export function BasketPage() {
   const { items, setQuantity, toggleBought, removeBought } = useBasket();
-  // Las mismas cuentas para la tarjeta naranja y para decir dónde sale más barato cada producto.
-  const { municipality, totals } = useStoreTotals(items);
+  // Dónde buscar (municipio guardado, o la ubicación del momento con su radio) manda en las fichas de
+  // «Dónde comprar» y en el «dónde sale más barato» de cada producto: las mismas cuentas para todo.
+  const where = useWhere();
+  const { municipality, totals } = useStoreTotals(where.ready ? items : [], where.query);
   const bestStore = totals.status === 'ready' ? totals.best?.store.name : undefined;
   if (items.length === 0) {
     return (
@@ -54,7 +57,8 @@ export function BasketPage() {
           </button>
         )}
       </section>
-      <CheapestStore
+      <WhereToBuy
+        where={where}
         municipality={municipality}
         totals={totals}
         items={items.filter(({ bought }) => !bought)}
