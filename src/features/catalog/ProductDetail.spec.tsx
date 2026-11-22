@@ -329,7 +329,7 @@ describe('detalle del producto', () => {
     await screen.findByRole('heading', { name: 'Arroz blanco' });
     // Sin foto: la ilustración de la categoría, oculta a lectores (el nombre ya está en el título).
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(document.querySelector('.product-image.illustration svg')).toHaveAttribute(
+    expect(document.querySelector('.product-image .product-frame svg')).toHaveAttribute(
       'aria-hidden',
       'true',
     );

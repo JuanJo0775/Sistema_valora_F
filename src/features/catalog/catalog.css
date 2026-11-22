@@ -45,36 +45,89 @@
   min-width: 0;
 }
 
-/* Miniatura de tarjetas y filas: tamaño fijo, foto contenida sobre --bg-2. */
-.product-thumb {
+/* Marco único de toda imagen de producto (ProductFrame): cuadrado 1:1 con el mismo recuadro para la
+   ilustración por categoría y para la foto, así una lista mezclada queda alineada. */
+.product-frame {
+  position: relative;
   display: grid;
   flex: none;
   place-items: center;
+  box-sizing: border-box;
+  aspect-ratio: 1;
   overflow: hidden;
+  border: 1px solid var(--line);
   border-radius: var(--r-m);
   background: var(--bg-2);
 }
 
-.product-thumb.card {
+.product-frame.card {
   width: 64px;
-  height: 64px;
 }
 
-.product-thumb.row {
+.product-frame.row {
   width: 44px;
-  height: 44px;
   border-radius: var(--r-s);
 }
 
-.product-thumb img {
+.product-frame.detail {
+  width: 112px;
+  border-radius: var(--r-l);
+}
+
+@media (min-width: 720px) {
+  .product-frame.detail {
+    width: 144px;
+  }
+}
+
+/* Con foto: una placa suave (clara en ambos temas, apagada en el oscuro) y multiply para que el fondo
+   blanco de la foto se funda con la placa y no quede un recuadro blanco; la foto, contenida con
+   relleno, sin recortar ni estirar. */
+.product-frame:not([data-state='art']) {
+  background: var(--photo-plate);
+}
+
+.product-frame img {
   display: block;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
+  padding: 10%;
   object-fit: contain;
+  mix-blend-mode: multiply;
+  transition: opacity 0.25s ease;
 }
 
-.product-thumb svg,
-.product-image.illustration svg {
+.product-frame.row img {
+  padding: 8%;
+}
+
+/* Mientras carga: el marco ya reserva el espacio, con un pulso suave; la foto entra con fundido. */
+.product-frame[data-state='loading'] {
+  animation: frame-pulse 1.4s ease-in-out infinite;
+}
+
+.product-frame[data-state='loading'] img {
+  opacity: 0;
+}
+
+@keyframes frame-pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-frame[data-state='loading'] {
+    animation: none;
+  }
+
+  .product-frame img {
+    transition: none;
+  }
+}
+
+.product-frame svg {
   width: 62%;
   height: 62%;
   fill: none;
@@ -82,6 +135,55 @@
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Detalle: tocar la foto la amplía. El botón ocupa todo el marco y conserva el foco visible. */
+.frame-zoom {
+  all: unset;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+}
+
+.frame-zoom:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.photo-lightbox {
+  width: min(92vw, 720px);
+  max-height: 90vh;
+  padding: 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-l);
+  background: var(--photo-plate);
+  color: #17140f;
+}
+
+.photo-lightbox::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+.photo-lightbox img {
+  display: block;
+  width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+.photo-lightbox-close {
+  display: block;
+  min-height: var(--touch);
+  margin: 12px auto 0;
+  padding: 0 20px;
+  border: 1px solid #5e5850;
+  border-radius: var(--r-m);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* Ilustración por categoría (CategoryArt): el cuerpo se rellena suave, los detalles son solo trazo. */
@@ -112,45 +214,31 @@
   display: grid;
   gap: 4px;
   justify-items: center;
-}
-
-.product-image img,
-.product-image.illustration {
-  display: block;
-  width: 100%;
-  max-width: 240px;
-  aspect-ratio: 1;
-  object-fit: contain;
-  border-radius: var(--r-l);
-  background: var(--bg-2);
-}
-
-.product-image.illustration {
-  display: grid;
-  place-items: center;
-  justify-self: center;
+  min-width: 0;
 }
 
 .product-image figcaption {
   font-size: 0.8rem;
+  text-align: center;
 }
 
 /* #65: encabezado del prototipo. La foto pequeña al lado del nombre; en el celular, arriba. */
 .detail-head {
   display: grid;
-  grid-template-columns: 96px 1fr;
+  grid-template-columns: 112px 1fr;
   gap: 16px;
   align-items: start;
+}
+
+@media (min-width: 720px) {
+  .detail-head {
+    grid-template-columns: 144px 1fr;
+  }
 }
 
 .detail-photo {
   display: grid;
   gap: 8px;
-}
-
-.detail-photo .product-image img,
-.detail-photo .product-image.illustration {
-  max-width: 96px;
 }
 
 .detail-title {
