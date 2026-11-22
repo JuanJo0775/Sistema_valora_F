@@ -4,6 +4,8 @@ import { type Municipality, MUNICIPALITY_OPTIONS } from '../comparison/criteria'
 import { readMunicipality, saveMunicipality } from '../comparison/lastMunicipality';
 import { readRadius, saveRadius } from '../comparison/radius';
 import { AdvancedOptions } from './AdvancedOptions';
+import { PasswordSettings } from './PasswordSettings';
+import { useSession } from './session';
 import { setPinShapes, usePinShapes } from '../stores/pinShapePref';
 import { BackLink } from '../../shared/ui/BackLink';
 import { SelectField } from '../../shared/ui/SelectField';
@@ -18,6 +20,7 @@ export function Settings() {
   const [radiusKm, setRadiusKm] = useState(readRadius);
   const [testing, setTesting] = useState(isUsabilityMode);
   const pinShapes = usePinShapes();
+  const { session } = useSession();
   return (
     <section className="profile">
       <div className="profile-top">
@@ -68,6 +71,16 @@ export function Settings() {
           />
         </div>
       </section>
+      {session.status === 'active' && (
+        <section className="profile-block" aria-labelledby="seguridad">
+          <h2 id="seguridad" className="eyebrow">
+            Seguridad
+          </h2>
+          <div className="profile-card profile-pad">
+            <PasswordSettings />
+          </div>
+        </section>
+      )}
       <section className="profile-block" aria-labelledby="pruebas">
         <h2 id="pruebas" className="eyebrow">
           Pruebas del equipo
