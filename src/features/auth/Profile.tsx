@@ -16,9 +16,9 @@ const SECTION_OF: Partial<Record<Role, { to: string; label: string; text: string
     text: 'Los precios que registraste y su estado',
   },
   comercio: {
-    to: '/comercios/registro',
+    to: '/comercios',
     label: 'Mi tienda',
-    text: 'Consulta el estado de tu registro comercial',
+    text: 'Administra tus precios oficiales y consulta tus avisos',
   },
   moderador: { to: '/moderacion', label: 'Moderación', text: 'Revisa los reportes pendientes' },
 };
