@@ -111,9 +111,8 @@ function Recommended({
   const area = nearbyTotals(totals, where.point, where.radiusKm);
   const bestId = area.status === 'ready' ? area.best?.store.id : undefined;
   const sole = selected?.option.stores === 1 ? selected.option.shares[0]?.store.id : undefined;
-  // Sin ninguna tienda con todo, la tarjeta dice qué tiene cada una (como siempre).
-  const showCheapest =
-    area.status === 'ready' && (bestId === undefined || (sole !== undefined && sole === bestId));
+  // Si ninguna tienda tiene todo no se muestra: el aviso del panel ya lo dice.
+  const showCheapest = area.status === 'ready' && sole !== undefined && sole === bestId;
   return (
     <>
       {notices.map((notice) => (
@@ -149,6 +148,7 @@ function Recommended({
             onDelivery={settings.setDelivery}
             panel
             hideTotal
+            quietSingle
           />
           <AssumptionsForm value={settings.assumptions} onChange={settings.choose} />
         </>

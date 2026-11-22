@@ -177,7 +177,7 @@ describe('mi canasta', () => {
     expect(await screen.findByText('500 g · Éxito')).toBeInTheDocument();
   });
 
-  it('si ninguna tienda tiene todo, lo dice y cuenta cuántos productos tiene cada una', async () => {
+  it('si ninguna tienda tiene todo, no muestra la tarjeta naranja: el panel avisa qué producto no tiene precio', async () => {
     stubApi({
       ...comparisonOf(RICE, offer(ara, 'arroz-500g', 2600), offer(d1, 'arroz-500g', 2300)),
       ...comparisonOf(MILK, offer(ara, 'leche-1l-otra', 4000)),
@@ -187,9 +187,10 @@ describe('mi canasta', () => {
     const panel = await where();
 
     expect(
-      await within(panel).findByText('Ninguna tienda tiene todos tus productos.'),
+      await within(panel).findByText(/Sin precio vigente cerca: Leche entera/),
     ).toBeInTheDocument();
-    expect(panel).toHaveTextContent('D1: tiene 1 de 2; le falta Leche entera');
+    expect(within(panel).queryByText('Ninguna tienda tiene todos tus productos.')).toBeNull();
+    expect(within(panel).queryByRole('heading', { name: /Dónde te sale más barata/ })).toBeNull();
   });
 
   it('lo comprado no entra al cálculo', async () => {

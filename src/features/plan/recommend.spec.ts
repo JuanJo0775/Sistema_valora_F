@@ -90,7 +90,53 @@ describe('recommend: sin ubicación (solo municipio)', () => {
     const { items, notices } = recommend(lines, null, 1.5);
     expect(items[0]).toMatchObject({ covered: 3, total: 4 });
     expect(items[0]?.notes).toContain('incomplete');
-    expect(notices).toContainEqual({ type: 'noneComplete', covered: 3, total: 4 });
+    // Una opción parcial no se llama «la más barata»: se llama por lo que es.
+    expect(items[0]?.kinds).toEqual(['mostCovered']);
+    expect(notices).toContainEqual({
+      type: 'noSingle',
+      covered: 3,
+      total: 4,
+      full: null,
+      stores: 3,
+    });
+  });
+
+  it('una combinación parcial, aunque sea más barata, no se llama «La más barata»', () => {
+    // A (cerca) solo tiene el arroz; B (lejos) tiene todo y cuesta más que el arroz solo.
+    const lines = [
+      line('arroz', 2, offer(a, 'arroz', 2000), offer(b, 'arroz', 2500)),
+      line('leche', 1, offer(b, 'leche', 3000)),
+    ];
+    const { items, notices } = recommend(lines, ORIGIN, 0.5);
+    const partial = items.find((r) => r.covered < r.total) as Recommendation;
+    expect(partial).toBeDefined();
+    expect(partial.productsCop).toBeLessThan(
+      items.find((r) => r.covered === r.total)?.productsCop ?? 0,
+    );
+    expect(partial.kinds).toEqual(['mostCovered']);
+    expect(partial.against).toBeNull();
+    // Las que cubren todo van primero y llevan las etiquetas de precio y cercanía.
+    expect(items[0]?.covered).toBe(items[0]?.total);
+    expect(kinds(items)).toEqual(['cheapestAll', 'nearest', 'mostCovered']);
+    expect(notices).toEqual([
+      { type: 'noSingle', covered: 1, total: 2, full: 'municipality', stores: 2 },
+    ]);
+  });
+
+  it('si ninguna tienda sola tiene todo pero una combinación sí, el aviso lo dice', () => {
+    const lines = [
+      line('arroz', 2, offer(a, 'arroz', 2000)),
+      line('leche', 1, offer(b, 'leche', 3000)),
+    ];
+    const { items, notices } = recommend(lines, null, 1.5);
+    expect(kinds(items)).toEqual(['cheapest']);
+    expect(notices).toContainEqual({
+      type: 'noSingle',
+      covered: 2,
+      total: 2,
+      full: 'area',
+      stores: 2,
+    });
   });
 
   it('un producto sin oferta vigente no cuenta y se informa', () => {
@@ -250,9 +296,15 @@ describe('recommend: propiedades contra búsqueda exhaustiva (semilla fija)', ()
       }
       cases += 1;
       const first = items[0];
-      if (!first?.kinds.includes('cheapest')) wrong.push({ n, kinds: first?.kinds });
+      if (!first?.kinds.includes('cheapest') && !first?.kinds.includes('mostCovered')) {
+        wrong.push({ n, kinds: first?.kinds });
+      }
       if (JSON.stringify(sum(first)) !== JSON.stringify(expected))
         wrong.push({ n, got: sum(first), expected });
+      const lying = items.filter(
+        (r) => r.covered < r.total && r.kinds.some((kind) => kind !== 'mostCovered'),
+      );
+      if (lying.length > 0) wrong.push({ n, lying: lying.map((r) => r.kinds) });
       if (dominatedPairs(items).length > 0) wrong.push({ n, dominated: dominatedPairs(items) });
     }
     expect(cases).toBeGreaterThanOrEqual(100);
@@ -274,7 +326,9 @@ describe('recommend: propiedades contra búsqueda exhaustiva (semilla fija)', ()
       if (!municipal || !lines.some((l) => l.offers.length > 0)) continue;
       cases += 1;
       const inRadius = brute(lines, near);
-      const cheapest = items.find((r) => r.kinds.includes('cheapest'));
+      const cheapest = items.find(
+        (r) => r.kinds.includes('cheapest') || r.kinds.includes('mostCovered'),
+      );
       const anyInRadius = lines.some((l) => l.offers.some((o) => near.has(o.establishment.id)));
       const area = anyInRadius && inRadius ? inRadius : municipal;
       if (JSON.stringify(sum(cheapest)) !== JSON.stringify(area))
@@ -286,6 +340,10 @@ describe('recommend: propiedades contra búsqueda exhaustiva (semilla fija)', ()
       if (wide && (JSON.stringify(sum(wide)) !== JSON.stringify(municipal) || !better)) {
         wrong.push({ n, wide: sum(wide), municipal });
       }
+      const lying = items.filter(
+        (r) => r.covered < r.total && r.kinds.some((kind) => kind !== 'mostCovered'),
+      );
+      if (lying.length > 0) wrong.push({ n, lying: lying.map((r) => r.kinds) });
       if (dominatedPairs(items).length > 0) wrong.push({ n, dominated: dominatedPairs(items) });
     }
     expect(cases).toBeGreaterThanOrEqual(100);

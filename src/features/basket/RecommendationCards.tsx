@@ -2,6 +2,7 @@ import { useId, useRef, type KeyboardEvent } from 'react';
 import { formatDistance } from '../../shared/location';
 import { formatCop } from '../../shared/money';
 import { radiusLabel } from '../comparison/radius';
+import { AT_STORE_M } from '../plan/nearby';
 import { DEFAULT_ASSUMPTIONS } from '../plan/travel';
 import type { Kind, Notice, Recommendation } from '../plan/recommend';
 
@@ -12,14 +13,12 @@ const walk = (minutes: number) => `≈ ${String(minutes)} min a pie`;
 const walkMin = (meters: number) =>
   Math.round(((meters / 1000) * DEFAULT_ASSUMPTIONS.detour * 60) / DEFAULT_ASSUMPTIONS.kmh);
 
-// Por debajo de esto, «a 0 m» no dice nada: la persona está en la tienda.
-const NEAR_M = 30;
-
 const LABELS: Record<Kind, (municipality: string) => string> = {
   cheapest: () => 'La más barata',
   single: () => 'Todo en una tienda',
   nearest: () => 'La más cercana',
   cheapestAll: (municipality) => `La más barata en ${municipality}`,
+  mostCovered: () => 'La que más cubre',
 };
 
 // «La más barata y la más cercana»: las etiquetas de una recomendación fusionada.
@@ -58,7 +57,7 @@ export function gainSentence(rec: Recommendation, located: boolean): string {
 const firstDistance = (rec: Recommendation) => {
   const meters = rec.option.shares[0]?.store.distanceM;
   if (meters === undefined) return '';
-  return meters < NEAR_M ? 'está a pasos de ti' : `está a ${formatDistance(meters)}`;
+  return meters < AT_STORE_M ? 'está a pasos de ti' : `está a ${formatDistance(meters)}`;
 };
 
 // Lo que dicen las tarjetas de dos o tres tiendas: no hace falta explicar parámetros.
@@ -71,14 +70,27 @@ const spread = (rec: Recommendation) => {
   return `Estas ${count} tiendas tienen ${has}, pero están separadas por ${km(rec.betweenKm)} (${walk(rec.betweenMin)}). Tú decides si te desplazas.`;
 };
 
+// Una sola explicación de por qué no hay «todo en una tienda» y qué sí cubre la lista.
+function noSingleText({ covered, total, full, stores }: Extract<Notice, { type: 'noSingle' }>) {
+  if (full === 'area') {
+    return `Ninguna tienda sola tiene toda tu lista; con ${String(stores)} tiendas sí la cubres.`;
+  }
+  if (full === 'municipality') {
+    return stores === 1
+      ? 'Cerca de ti, ninguna tienda tiene toda tu lista; una del municipio sí la tiene.'
+      : `Cerca de ti, ninguna tienda sola tiene toda tu lista; con ${String(stores)} tiendas del municipio sí la cubres.`;
+  }
+  return `Ninguna combinación de hasta 3 tiendas cubre toda tu lista; la que más cubre tiene ${String(covered)} de ${String(total)}.`;
+}
+
 export function noticeText(notice: Notice): string {
   switch (notice.type) {
     case 'shareLocation':
       return 'Comparte tu ubicación para ver la más cercana.';
     case 'noneInRadius':
       return `No hay tiendas con tu lista a ${radiusLabel(notice.radiusKm)}; te mostramos las del municipio.`;
-    case 'noneComplete':
-      return `Ninguna tienda tiene todos tus productos. Te proponemos la combinación que más cubre: ${String(notice.covered)} de ${String(notice.total)}.`;
+    case 'noSingle':
+      return noSingleText(notice);
   }
 }
 
@@ -177,7 +189,7 @@ function Card({
               <span key={store.id}>
                 {store.name}
                 {store.distanceM !== undefined &&
-                  (store.distanceM < NEAR_M
+                  (store.distanceM < AT_STORE_M
                     ? ' · a pasos de ti'
                     : ` · a ${formatDistance(store.distanceM)} (${walk(walkMin(store.distanceM))})`)}
               </span>

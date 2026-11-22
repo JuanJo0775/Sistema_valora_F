@@ -352,7 +352,7 @@ describe('canasta: dónde comprar', () => {
     ).toHaveAttribute('role', 'status');
   });
 
-  it('si ninguna tienda tiene todo, lo dice y propone la que más cubre', async () => {
+  it('si cerca no hay tienda con todo: una opción parcial no se llama «la más barata», hay un solo aviso y sin tarjeta naranja', async () => {
     locateAt(4.53, -75.6811);
     localStorage.setItem('valora:radio', '0.5');
     stubApi({
@@ -362,13 +362,59 @@ describe('canasta: dónde comprar', () => {
     renderBasket(rice, milk);
 
     const side = await panel();
-    await side.findByRole('radio', { name: 'La más barata en Armenia' });
+    const partial = (await side.findByRole('radio', { name: 'La que más cubre' })).closest('label');
+    expect(partial).toHaveTextContent('Cubre 1 de 2 productos');
+    expect(side.getByRole('radio', { name: 'La más barata en Armenia' })).toBeInTheDocument();
+    // Una sola explicación, coherente con lo que se ve.
+    expect(side.getAllByText(/ninguna tienda .*tiene (toda|todos)/i)).toHaveLength(1);
     expect(
       side.getByText(
-        'Ninguna tienda tiene todos tus productos. Te proponemos la combinación que más cubre: 1 de 2.',
+        'Cerca de ti, ninguna tienda sola tiene toda tu lista; con 2 tiendas del municipio sí la cubres.',
+      ),
+    ).toHaveAttribute('role', 'status');
+    expect(side.queryByText(/Dónde te sale más barata en/)).not.toBeInTheDocument();
+    expect(side.queryByText(/Ninguna tienda sola tiene todo;/)).not.toBeInTheDocument();
+  });
+
+  it('si ninguna combinación de hasta 3 tiendas cubre todo, lo dice con lo que más cubre', async () => {
+    const shops = ['c', 'd', 'e', 'f'].map((id, i) =>
+      shop(id, `Tienda ${id.toUpperCase()}`, 4.54 + i / 100),
+    );
+    stubApi({
+      ...comparisonOf(RICE, offer(shops[0] as (typeof shops)[0], 'arroz-500g', 2000)),
+      ...comparisonOf(MILK, offer(shops[1] as (typeof shops)[0], 'leche-1l', 3000)),
+      ...comparisonOf(SALT, offer(shops[2] as (typeof shops)[0], 'sal-1kg', 1000)),
+      ...comparisonOf(
+        '6c4f5d97-8f41-4ebd-a094-3dae4b5f6071',
+        offer(shops[3] as (typeof shops)[0], 'azucar-1kg', 1500),
+      ),
+    });
+    renderBasket(rice, milk, salt, {
+      ...salt,
+      productId: '6c4f5d97-8f41-4ebd-a094-3dae4b5f6071',
+      productName: 'Azúcar',
+      presentationId: 'azucar-1kg',
+    });
+
+    const side = await panel();
+    expect(
+      await side.findByText(
+        'Ninguna combinación de hasta 3 tiendas cubre toda tu lista; la que más cubre tiene 3 de 4.',
       ),
     ).toBeInTheDocument();
-    expect(side.getByText('Cubre 1 de 2 productos')).toBeInTheDocument();
+    expect(side.getByRole('radio', { name: 'La que más cubre' })).toBeChecked();
+    expect(side.queryByRole('radio', { name: 'La más barata' })).not.toBeInTheDocument();
+  });
+
+  it('el detalle usa «a pasos de ti» también, no «a 0 m de ti»', async () => {
+    locateAt(4.5336, -75.6811);
+    stubApi(routesFor(near));
+    renderBasket(rice, milk);
+
+    const side = await panel();
+    await side.findByRole('radio', { name: 'La más barata' });
+    expect(side.queryByText(/a 0 m de ti/)).not.toBeInTheDocument();
+    expect(side.getAllByText(/a pasos de ti/).length).toBeGreaterThan(1);
   });
 
   it('si ningún producto tiene precio, lo dice', async () => {

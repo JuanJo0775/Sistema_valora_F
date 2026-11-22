@@ -7,12 +7,21 @@ import { DEFAULT_ASSUMPTIONS, routeEstimate } from './travel';
 // Recomendaciones del plan de compra: función pura. Recibe las ofertas del municipio (una sola
 // consulta, igual para todos) y, si la persona compartió su ubicación, calcula aquí la cercanía.
 // EC-06: solo cuentan precio, distancia e identificadores; nada comercial.
-export type Kind = 'cheapest' | 'cheapestAll' | 'single' | 'nearest';
+// `mostCovered`: la que más cubre cuando no cubre toda la lista; nunca se llama «la más barata».
+export type Kind = 'cheapest' | 'cheapestAll' | 'single' | 'nearest' | 'mostCovered';
 export type Note = 'maybeNotCheapest' | 'incomplete';
 export type Notice =
   | { type: 'shareLocation' }
   | { type: 'noneInRadius'; radiusKm: number }
-  | { type: 'noneComplete'; covered: number; total: number };
+  // Ninguna tienda sola tiene toda la lista. `full`: dónde hay una combinación que sí la cubre (en el
+  // área, en el municipio o en ninguna) y con cuántas tiendas; si no, lo más que se cubre.
+  | {
+      type: 'noSingle';
+      covered: number;
+      total: number;
+      full: 'area' | 'municipality' | null;
+      stores: number;
+    };
 
 export interface Recommendation {
   // Identifica la combinación de tiendas y su reparto (sirve de clave).
@@ -43,7 +52,7 @@ export interface Recommendations {
   unpriced: string[];
 }
 
-const ORDER: Kind[] = ['cheapest', 'cheapestAll', 'single', 'nearest'];
+const ORDER: Kind[] = ['cheapest', 'cheapestAll', 'single', 'nearest', 'mostCovered'];
 const covered = (option: SplitOption) =>
   option.shares.reduce((sum, { lines }) => sum + lines.length, 0);
 
@@ -100,8 +109,9 @@ export function recommend(
   add('cheapest', cheapest);
 
   // Todo en una tienda: la mejor tienda única que cubre todo (si no es ya la más barata).
-  const single = area.options.find(({ stores, savingsVsBestSingleCop }) => {
-    return stores === 1 && savingsVsBestSingleCop !== null;
+  // (completa respecto a toda la lista, no solo a lo que hay dentro del radio)
+  const single = area.options.find(({ stores, ...option }) => {
+    return stores === 1 && covered({ stores, ...option }) === total;
   });
   if (single && idOf(single) !== idOf(cheapest)) add('single', single);
 
@@ -129,6 +139,8 @@ export function recommend(
   }
 
   const items = [...picked.values()].map(({ option, kinds }): Recommendation => {
+    // Lo que no cubre toda la lista no es «la más barata» (le falta algo): se dice por lo que es.
+    if (covered(option) < total) kinds.splice(0, kinds.length, 'mostCovered');
     kinds.sort((x, y) => ORDER.indexOf(x) - ORDER.indexOf(y));
     const mine = measure(option);
     const isCheapest = kinds.includes('cheapest');
@@ -167,8 +179,18 @@ export function recommend(
       x.option.stores - y.option.stores ||
       (x.id < y.id ? -1 : x.id > y.id ? 1 : 0),
   );
-  if (covered(cheapest) < total) {
-    notices.push({ type: 'noneComplete', covered: covered(cheapest), total });
+  if (!single) {
+    const wide = cheapestOf(everywhere.options);
+    const areaFull = covered(cheapest) === total;
+    const full = areaFull ? 'area' : wide && covered(wide) === total ? 'municipality' : null;
+    const best = full === 'municipality' ? wide : cheapest;
+    notices.push({
+      type: 'noSingle',
+      covered: covered(cheapest),
+      total,
+      full,
+      stores: best?.stores ?? 0,
+    });
   }
   return { items, notices, unpriced: everywhere.unpriced };
 }

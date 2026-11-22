@@ -3,6 +3,10 @@ import { type BasketLine, totalsByStore } from '../basket/totals';
 import type { StoreTotals } from '../basket/useStoreTotals';
 import { haversineM, hasLocation } from './travel';
 
+// Por debajo de esto, «a 0 m» no dice nada: la persona está en la tienda. Una sola regla para las
+// tarjetas y para el detalle de cada tienda.
+export const AT_STORE_M = 30;
+
 // La cercanía se calcula en el dispositivo (ADR-031): la consulta es siempre por municipio, igual
 // para todos, y la ubicación nunca sale del teléfono (EC-08). Estas funciones devuelven copias:
 // la respuesta de la red, que está en memoria compartida, no se muta.

@@ -383,7 +383,7 @@ for (const size of SIZES.filter(({ width }) => [360, 768, 1440].includes(width))
         await page.goto('/canasta');
         const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
         await expect(
-          panel.getByText(/Ninguna tienda tiene todos tus productos/).first(),
+          panel.getByText(/ninguna tienda sola tiene toda tu lista/i).first(),
         ).toBeVisible();
         expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
         await shot(page, `panel-${size.name}-sin-tienda-con-todo.png`);

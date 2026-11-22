@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { formatCop } from '../../shared/money';
 import { formatDistance, type Point } from '../../shared/location';
+import { AT_STORE_M } from './nearby';
 import { type Delivery, PlanStoreSection } from './PlanStoreSection';
 import type { OptionView } from './planView';
 import {
@@ -33,6 +34,7 @@ export function OptionCard({
   fold,
   panel = false,
   hideTotal = false,
+  quietSingle = false,
 }: {
   view: OptionView;
   names: Map<string, { name: string; label: string }>;
@@ -46,6 +48,8 @@ export function OptionCard({
   panel?: boolean;
   // El total ya se dice en otra parte del panel (la tarjeta naranja).
   hideTotal?: boolean;
+  // El panel ya explica por qué ninguna tienda sola tiene todo: no se repite aquí.
+  quietSingle?: boolean;
 }) {
   const titleId = useId();
   const { option, covered, total, route, shown, savingsCop, netCop, deliveryCop } = view;
@@ -101,7 +105,9 @@ export function OptionCard({
       )}
       {split &&
         (option.savingsVsBestSingleCop === null ? (
-          <p className="muted">{`Ninguna tienda sola tiene todo; con ${String(option.stores)} tiendas cubres ${String(covered)} de ${String(total)}.`}</p>
+          quietSingle ? null : (
+            <p className="muted">{`Ninguna tienda sola tiene todo; con ${String(option.stores)} tiendas cubres ${String(covered)} de ${String(total)}.`}</p>
+          )
         ) : option.savingsVsBestSingleCop > 0 ? (
           <p>
             <span className="pill ok">{`Ahorras ${formatCop(option.savingsVsBestSingleCop)} frente a comprar todo en ${view.baselineName ?? 'una tienda'}`}</span>
@@ -116,7 +122,9 @@ export function OptionCard({
           travelLabel={
             share.store.distanceM === undefined
               ? undefined
-              : `a ${formatDistance(share.store.distanceM)} de ti`
+              : share.store.distanceM < AT_STORE_M
+                ? 'a pasos de ti'
+                : `a ${formatDistance(share.store.distanceM)} de ti`
           }
           names={names}
           delivery={deliveryOf(share.store.id)}
