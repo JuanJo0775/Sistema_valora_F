@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router';
+import { MerchantCases } from './MerchantCases';
 import { ModerationQueue } from './ModerationQueue';
 import { ProductRequests } from './ProductRequests';
 import { RoleChange } from './RoleChange';
@@ -6,12 +7,13 @@ import { StoreProposals } from './StoreProposals';
 import './moderation.css';
 import { BackLink } from '../../shared/ui/BackLink';
 
-type View = 'precios' | 'tiendas' | 'productos' | 'roles';
+type View = 'precios' | 'tiendas' | 'productos' | 'roles' | 'comercios';
 
 const VIEWS: { value: View; label: string }[] = [
   { value: 'precios', label: 'Precios' },
   { value: 'tiendas', label: 'Tiendas' },
   { value: 'productos', label: 'Productos' },
+  { value: 'comercios', label: 'Comercios' },
   { value: 'roles', label: 'Roles' },
 ];
 
@@ -46,6 +48,7 @@ export function ModerationPanel() {
         {view.value === 'precios' && <ModerationQueue />}
         {view.value === 'tiendas' && <StoreProposals />}
         {view.value === 'productos' && <ProductRequests />}
+        {view.value === 'comercios' && <MerchantCases />}
         {view.value === 'roles' && <RoleChange />}
       </div>
     </section>

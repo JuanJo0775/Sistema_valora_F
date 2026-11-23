@@ -5,15 +5,19 @@ import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Field } from './Field';
 import { GoogleSignIn } from './GoogleSignIn';
-import { emailProblem, nameProblem, POLICY_REQUIRED, useFocusFirstInvalid } from './formErrors';
+import {
+  emailProblem,
+  MIN_PASSWORD,
+  nameProblem,
+  POLICY_REQUIRED,
+  useFocusFirstInvalid,
+} from './formErrors';
 import { safeReturn, withReturn } from './safeReturn';
 import { POLICY_VERSION } from '../legal/policy';
 import { useSession } from './session';
 import { rememberVerifyReturn } from './verifyReturn';
 import { NameField, PolicyConsent } from './AccountConsent';
 import './auth.css';
-
-const MIN_PASSWORD = 10;
 
 type Problems = { name?: string; email?: string; password?: string; accepted?: string };
 

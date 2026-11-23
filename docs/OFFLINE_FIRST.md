@@ -4,7 +4,7 @@
 
 La PWA mantiene una cola local persistente para **registrar precios** sin conexión. La consulta y comparación de precios requieren conectividad. No se promete una aplicación completamente offline.
 
-Un plan de compra guardado (propuesta ADR-032) está pensado para leerse sin conexión: es un documento fechado que la persona guardó en su teléfono, no una consulta. **Pendiente de comprobar** con una prueba de red cortada en el navegador (hoy solo hay pruebas unitarias; depende del respaldo de rutas del service worker). Armar el plan de nuevo con precios de hoy sí requiere conexión.
+Una lista guardada con su plan de compra (propuesta ADR-034; se abre en `/canasta/plan/:id` y se ve junto a las demás en la pestaña «Guardadas» de `/canasta`) está pensado para leerse sin conexión: es un documento fechado que la persona guardó en su teléfono, no una consulta. **Pendiente de comprobar** con una prueba de red cortada en el navegador (hoy solo hay pruebas unitarias; depende del respaldo de rutas del service worker). Actualizar los precios o volver a calcular «Dónde comprar» sí requiere conexión; «Usar esta lista» (cargarla en «Mi lista») no.
 
 ## Tecnología (ADR-017)
 

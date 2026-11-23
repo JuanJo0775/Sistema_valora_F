@@ -6,6 +6,7 @@ import { StoreMap } from '../stores/StoreMap';
 import { STORE_TYPES } from '../stores/storeTypes';
 import { ALREADY_DECIDED, CatalogDecision } from './CatalogDecision';
 import { explainWith } from './explain';
+import { StoreCorrection } from './StoreCorrection';
 import { PendingList } from './PendingList';
 
 type Proposal =
@@ -25,43 +26,47 @@ export function StoreProposals() {
     <PendingList
       load={load}
       empty="No hay tiendas propuestas"
-      renderItem={(proposal: Proposal, done) => (
-        <>
-          {proposal.outOfZone && (
-            <p className="badges">
-              <span className="pill warn">Fuera del Quindío</span>
-            </p>
-          )}
-          <h2>{proposal.name}</h2>
-          <p className="muted">{`${STORE_TYPES[proposal.type]} · ${MUNICIPALITIES[proposal.municipality]}`}</p>
-          {proposal.address && <p>{proposal.address}</p>}
-          {proposal.possibleDuplicates.length > 0 && (
-            <p>
-              {`Posibles duplicados: ${proposal.possibleDuplicates
-                .map(({ name, distanceM }) => `${name} (${formatDistance(distanceM)})`)
-                .join(', ')}`}
-            </p>
-          )}
-          <StoreMap stores={[]} label={`Ubicación de ${proposal.name}`} picked={proposal} />
-          <CatalogDecision
-            id={proposal.id}
-            approveLabel="Aprobar como tienda nueva"
-            duplicates={proposal.possibleDuplicates}
-            send={(body) =>
-              call(
-                api.POST('/moderation/store-proposals/{proposalId}/decision', {
-                  params: { path: { proposalId: proposal.id } },
-                  body,
-                }),
-              )
-            }
-            onDone={() => {
-              done(proposal.name);
-            }}
-            explain={explain}
-          />
-        </>
-      )}
+      renderItem={(proposal: Proposal, done) =>
+        proposal.kind === 'correccion' ? (
+          <StoreCorrection correction={proposal} onDecided={done} />
+        ) : (
+          <>
+            {proposal.outOfZone && (
+              <p className="badges">
+                <span className="pill warn">Fuera del Quindío</span>
+              </p>
+            )}
+            <h2>{proposal.name}</h2>
+            <p className="muted">{`${STORE_TYPES[proposal.type]} · ${MUNICIPALITIES[proposal.municipality]}`}</p>
+            {proposal.address && <p>{proposal.address}</p>}
+            {proposal.possibleDuplicates.length > 0 && (
+              <p>
+                {`Posibles duplicados: ${proposal.possibleDuplicates
+                  .map(({ name, distanceM }) => `${name} (${formatDistance(distanceM)})`)
+                  .join(', ')}`}
+              </p>
+            )}
+            <StoreMap stores={[]} label={`Ubicación de ${proposal.name}`} picked={proposal} />
+            <CatalogDecision
+              id={proposal.id}
+              approveLabel="Aprobar como tienda nueva"
+              duplicates={proposal.possibleDuplicates}
+              send={(body) =>
+                call(
+                  api.POST('/moderation/store-proposals/{proposalId}/decision', {
+                    params: { path: { proposalId: proposal.id } },
+                    body,
+                  }),
+                )
+              }
+              onDone={() => {
+                done(proposal.name);
+              }}
+              explain={explain}
+            />
+          </>
+        )
+      }
     />
   );
 }

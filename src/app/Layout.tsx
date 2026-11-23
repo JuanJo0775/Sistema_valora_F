@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router';
 import logoDark from '../assets/logo-horizontal-oscuro.png';
 import logoLight from '../assets/logo-horizontal-claro.png';
 import { useBasket } from '../features/basket/basketContext';
+import { useSession } from '../features/auth/session';
 import { VerifyEmailBanner } from '../features/auth/VerifyEmailBanner';
 import { BasketToast } from '../features/basket/BasketToast';
 import { InstallPrompt } from '../pwa/InstallPrompt';
@@ -28,6 +29,13 @@ const SECTIONS: { to: string; label: string; icon: IconName; primary?: boolean }
 
 export function Layout() {
   const { items } = useBasket();
+  const { session } = useSession();
+  const merchant = session.status === 'active' && session.role === 'comercio';
+  const sections = SECTIONS.map((section) =>
+    merchant && section.primary
+      ? { ...section, to: '/comercios', label: 'Precios oficiales' }
+      : section,
+  );
   const mainRef = useRef<HTMLElement>(null);
   const title = useRouteTitle(mainRef);
   const toBuy = items.filter(({ bought }) => !bought).length;
@@ -70,7 +78,7 @@ export function Layout() {
         </NavLink>
         <HeaderSearch />
         <nav className="tabbar" aria-label="Principal">
-          {SECTIONS.map(({ to, label, icon, primary }) => (
+          {sections.map(({ to, label, icon, primary }) => (
             <NavLink key={to} to={to} end className={primary ? 'tab primary' : 'tab'}>
               <Icon name={icon} />
               <span className="tab-label">{label}</span>

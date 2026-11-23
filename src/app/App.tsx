@@ -10,6 +10,7 @@ import { TodayBasket } from '../features/comparison/TodayBasket';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportInvite } from '../features/reports/ReportInvite';
 import { Layout } from './Layout';
+import { LegacyPlanRedirect } from './LegacyPlanRedirect';
 
 // H-26: el Inicio, la búsqueda, el detalle, la canasta y registrar quedan en el bloque inicial; el
 // resto (mapa con Leaflet, moderación, proponer, entrar, política…) se descarga al abrir la pantalla.
@@ -18,10 +19,17 @@ function screen<Name extends string>(load: () => Promise<Record<Name, ComponentT
   return lazy(() => load().then((module) => ({ default: module[name] })));
 }
 
+const MerchantPrices = screen(
+  () => import('../features/commerce/MerchantPrices'),
+  'MerchantPrices',
+);
+const MerchantRegistration = screen(
+  () => import('../features/commerce/MerchantRegistration'),
+  'MerchantRegistration',
+);
 const Profile = screen(() => import('../features/auth/Profile'), 'Profile');
 const PendingReports = screen(() => import('../pwa/PendingReports'), 'PendingReports');
 const BasketPage = screen(() => import('../features/basket/BasketPage'), 'BasketPage');
-const PlanPage = screen(() => import('../features/plan/PlanPage'), 'PlanPage');
 const SavedPlanPage = screen(() => import('../features/plan/SavedPlanPage'), 'SavedPlanPage');
 const ReportPrice = screen(() => import('../features/reports/ReportPrice'), 'ReportPrice');
 const InstallAndUninstall = screen(
@@ -33,6 +41,8 @@ const DeleteAccount = screen(() => import('../features/auth/DeleteAccount'), 'De
 const SignIn = screen(() => import('../features/auth/SignIn'), 'SignIn');
 const SignUp = screen(() => import('../features/auth/SignUp'), 'SignUp');
 const VerifyEmail = screen(() => import('../features/auth/VerifyEmail'), 'VerifyEmail');
+const ForgotPassword = screen(() => import('../features/auth/ForgotPassword'), 'ForgotPassword');
+const ResetPassword = screen(() => import('../features/auth/ResetPassword'), 'ResetPassword');
 const Welcome = screen(() => import('../features/auth/Welcome'), 'Welcome');
 const MyReports = screen(() => import('../features/contributions/MyReports'), 'MyReports');
 const ModerationPanel = screen(
@@ -137,13 +147,17 @@ export function App() {
                 />
                 <Route path="/pendientes" element={<PendingReports />} />
                 <Route path="/canasta" element={<BasketPage />} />
-                <Route path="/canasta/plan" element={<PlanPage />} />
+                <Route path="/canasta/plan" element={<LegacyPlanRedirect />} />
                 <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
                 <Route path="/yo" element={<Profile />} />
+                <Route path="/comercios/registro" element={<MerchantRegistration />} />
+                <Route path="/comercios" element={<MerchantPrices />} />
                 <Route path="/yo/ajustes" element={<Settings />} />
                 <Route path="/yo/eliminar-cuenta" element={<DeleteAccount />} />
                 <Route path="/yo/app" element={<InstallAndUninstall />} />
                 <Route path="/entrar" element={<SignIn />} />
+                <Route path="/olvide-contrasena" element={<ForgotPassword />} />
+                <Route path="/restablecer-contrasena" element={<ResetPassword />} />
                 <Route path="/crear-cuenta" element={<SignUp />} />
                 <Route path="/privacidad" element={<PrivacyPolicy />} />
                 <Route path="/verificar-correo" element={<VerifyEmail />} />

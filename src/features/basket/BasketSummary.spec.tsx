@@ -2,6 +2,8 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '../../test/fakeApi';
+import { planDraft } from '../../test/planFixtures';
+import { savePlan, toSavedPlan } from '../plan/savedPlan';
 import { BasketProvider } from './BasketProvider';
 import { BasketSummary } from './BasketSummary';
 
@@ -41,6 +43,11 @@ const prices = (productId: string, ...results: unknown[]) => ({
     body: { productId, criteria: { sort: 'unit_price', municipality: 'armenia' }, results },
   },
 });
+
+const saveLists = (count: number) => {
+  for (let i = 0; i < count; i++)
+    savePlan(toSavedPlan(planDraft(), new Date(`2026-11-0${String(i + 1)}T12:00:00Z`)));
+};
 
 const renderSummary = (...lines: ReturnType<typeof line>[]) => {
   localStorage.setItem('valora:canasta', JSON.stringify(lines));
@@ -93,5 +100,39 @@ describe('tu canasta, en el Inicio', () => {
     const card = screen.getByRole('region', { name: 'Tu canasta · 2 productos' });
     expect(await within(card).findByText('Ninguna tienda tiene todo.')).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: 'Ver mi canasta' })).toBeInTheDocument();
+  });
+
+  it('con listas guardadas, ofrece un enlace discreto a Guardadas con la cantidad', async () => {
+    stubApi({ ...prices('arroz', priceAt('Ara', 'a1', 2600)) });
+    saveLists(2);
+    renderSummary(line('arroz', 'a1'));
+
+    const card = screen.getByRole('region', { name: 'Tu canasta · 1 producto' });
+    const link = within(card).getByRole('link', { name: 'Mis listas guardadas (2)' });
+    expect(link).toHaveAttribute('href', '/canasta?tab=guardadas');
+    expect(within(card).getByRole('link', { name: 'Ver mi canasta' })).toBeInTheDocument();
+    await within(card).findByText('$2.600');
+  });
+
+  it('sin listas guardadas no aparece nada nuevo', async () => {
+    stubApi({ ...prices('arroz', priceAt('Ara', 'a1', 2600)) });
+    renderSummary(line('arroz', 'a1'));
+
+    await screen.findByText('$2.600');
+    expect(screen.queryByRole('link', { name: /Mis listas guardadas/ })).not.toBeInTheDocument();
+  });
+
+  it('con la canasta vacía y listas guardadas, invita a abrir una lista', () => {
+    stubApi({});
+    saveLists(1);
+    renderSummary();
+
+    const card = screen.getByRole('region', { name: 'Tu canasta' });
+    expect(card).toHaveTextContent('Tu canasta está vacía');
+    expect(within(card).getByRole('link', { name: 'Abre una lista guardada' })).toHaveAttribute(
+      'href',
+      '/canasta?tab=guardadas',
+    );
+    expect(within(card).queryByRole('link', { name: 'Ver mi canasta' })).not.toBeInTheDocument();
   });
 });

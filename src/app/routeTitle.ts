@@ -7,6 +7,8 @@ const FIXED: Record<string, string> = {
   '/': 'Inicio',
   '/mapa': 'Mapa',
   '/registrar': 'Registrar precio',
+  '/comercios/registro': 'Registrar mi tienda',
+  '/comercios': 'Precios oficiales',
   '/canasta': 'Canasta',
   '/yo': 'Tu cuenta',
   '/yo/ajustes': 'Ajustes',
@@ -14,6 +16,8 @@ const FIXED: Record<string, string> = {
   '/yo/eliminar-cuenta': 'Eliminar mi cuenta',
   '/entrar': 'Entrar',
   '/crear-cuenta': 'Crear cuenta',
+  '/olvide-contrasena': 'Olvidé mi contraseña',
+  '/restablecer-contrasena': 'Restablecer contraseña',
   '/privacidad': 'Privacidad',
   '/verificar-correo': 'Verificar correo',
   // F#154: quien entró con Google y aún no tiene cuenta.

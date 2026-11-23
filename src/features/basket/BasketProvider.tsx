@@ -80,13 +80,46 @@ export function BasketProvider({ children }: { children: ReactNode }) {
     save((current) => current.filter(({ bought }) => !bought));
   }, [save]);
 
+  const replaceAll = useCallback(
+    (next: BasketItem[]) => {
+      save(() => next);
+    },
+    [save],
+  );
+
+  // Suma las cantidades de lo que ya está (misma presentación) y agrega lo demás al final.
+  const addMany = useCallback(
+    (more: BasketItem[]) => {
+      save((current) => {
+        const next = current.map((saved) => ({ ...saved }));
+        for (const item of more) {
+          const known = next.find(({ presentationId }) => presentationId === item.presentationId);
+          if (known) known.quantity += item.quantity;
+          else next.push({ ...item });
+        }
+        return next;
+      });
+    },
+    [save],
+  );
+
   const dismiss = useCallback(() => {
     setNotice(null);
   }, []);
 
   const value = useMemo(
-    () => ({ items, add, notice, dismiss, setQuantity, toggleBought, removeBought }),
-    [items, add, notice, dismiss, setQuantity, toggleBought, removeBought],
+    () => ({
+      items,
+      add,
+      notice,
+      dismiss,
+      setQuantity,
+      toggleBought,
+      removeBought,
+      replaceAll,
+      addMany,
+    }),
+    [items, add, notice, dismiss, setQuantity, toggleBought, removeBought, replaceAll, addMany],
   );
   return <BasketContext value={value}>{children}</BasketContext>;
 }

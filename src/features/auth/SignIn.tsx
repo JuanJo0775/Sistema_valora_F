@@ -141,6 +141,11 @@ export function SignIn() {
         onValue={setPassword}
         error={problems.password}
       />
+      <p className="forgot-link">
+        <Link to={withReturn('/olvide-contrasena', volver)} state={{ email: email.trim() }}>
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </p>
       <button type="submit" className="btn" disabled={sending}>
         {sending ? 'Entrando…' : 'Entrar'}
       </button>

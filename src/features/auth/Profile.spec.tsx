@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { planDraft } from '../../test/planFixtures';
+import { savePlan, toSavedPlan } from '../plan/savedPlan';
 import { Profile } from './Profile';
 import { SessionProvider } from './SessionProvider';
 
@@ -26,6 +28,33 @@ describe('pestaña Yo', () => {
     renderProfile();
 
     expect(await screen.findByRole('button', { name: /Instalar la app/ })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['sin sesión', NO_SESSION],
+    ['con sesión', sessionAs('reportante')],
+  ])('%s, con listas guardadas ofrece el atajo a Guardadas con la cantidad', async (_, reply) => {
+    stubApi({
+      'GET /v1/auth/session': reply,
+      'GET /v1/me/reports': { status: 200, body: { items: [] } },
+    });
+    savePlan(toSavedPlan(planDraft(), new Date('2026-11-19T12:00:00Z')));
+    savePlan(toSavedPlan(planDraft(), new Date('2026-11-20T12:00:00Z')));
+
+    renderProfile();
+
+    const link = await screen.findByRole('link', { name: /Mis listas guardadas \(2\)/ });
+    expect(link).toHaveAttribute('href', '/canasta?tab=guardadas');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it('sin listas guardadas no muestra el atajo', async () => {
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+
+    renderProfile();
+
+    await screen.findByRole('link', { name: 'Iniciar sesión' });
+    expect(screen.queryByRole('link', { name: /Mis listas guardadas/ })).not.toBeInTheDocument();
   });
 
   it('sin sesión invita a iniciar sesión o a crear una cuenta', async () => {

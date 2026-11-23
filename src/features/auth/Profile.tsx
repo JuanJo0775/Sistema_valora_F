@@ -6,14 +6,20 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { type Role, useSession } from './session';
 import { SuspendedNotice } from './SuspendedNotice';
+import { usePlans } from '../plan/usePlans';
 import './auth.css';
 
-// La sección privada de cada rol. La del comercio llega en el Corte 3.
+// La sección privada de cada rol.
 const SECTION_OF: Partial<Record<Role, { to: string; label: string; text: string }>> = {
   reportante: {
     to: '/mis-aportes',
     label: 'Mis aportes',
     text: 'Los precios que registraste y su estado',
+  },
+  comercio: {
+    to: '/comercios',
+    label: 'Mi tienda',
+    text: 'Administra tus precios oficiales y consulta tus avisos',
   },
   moderador: { to: '/moderacion', label: 'Moderación', text: 'Revisa los reportes pendientes' },
 };
@@ -61,6 +67,22 @@ const PRIVACY_ROW = (
   />
 );
 
+// Lo que se guardó en este navegador no depende de la cuenta: el atajo sale con o sin sesión, y solo
+// cuando hay listas (sin ellas no hay a dónde llevar).
+function SavedListsGroup() {
+  const saved = usePlans().length;
+  if (saved === 0) return null;
+  return (
+    <Group id="listas" title="Mi canasta">
+      <NavRow
+        to="/canasta?tab=guardadas"
+        label={`Mis listas guardadas (${String(saved)})`}
+        text="Las que guardaste en este navegador"
+      />
+    </Group>
+  );
+}
+
 const ROLE_LABEL: Record<Role, string> = {
   reportante: 'Reportante',
   moderador: 'Moderador',
@@ -90,8 +112,16 @@ export function Profile() {
         {section && (
           <Group id="actividad" title="Mi actividad">
             <NavRow to={section.to} label={section.label} text={section.text} />
+            {session.role === 'reportante' && !session.suspendedUntil && (
+              <NavRow
+                to="/comercios/registro"
+                label="Registrar mi tienda"
+                text="Vincula tu cuenta con tu tienda"
+              />
+            )}
           </Group>
         )}
+        <SavedListsGroup />
         <Group id="preferencias" title="Preferencias">
           {SETTINGS_ROW}
         </Group>
@@ -136,6 +166,7 @@ export function Profile() {
           </div>
         }
       />
+      <SavedListsGroup />
       <Group id="preferencias" title="Preferencias">
         {SETTINGS_ROW}
       </Group>

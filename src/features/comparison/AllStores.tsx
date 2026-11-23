@@ -10,6 +10,7 @@ import { SkeletonList } from '../../shared/ui/Skeleton';
 import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, MUNICIPALITIES } from './criteria';
 import { ago, comparisonKey, readComparison, saveComparison } from './lastComparison';
+import { ComparisonPromotions } from './ComparisonPromotions';
 import { Offer } from './Offer';
 import { useWhere } from './useWhere';
 import { WherePicker } from './WherePicker';
@@ -211,11 +212,14 @@ export function AllStores({
         />
       )}
       {result && 'comparison' in result && (
-        <Results
-          comparison={result.comparison}
-          sizeOf={sizeOf}
-          register={`/registrar?producto=${productId}`}
-        />
+        <>
+          <Results
+            comparison={result.comparison}
+            sizeOf={sizeOf}
+            register={`/registrar?producto=${productId}`}
+          />
+          <ComparisonPromotions promotions={result.comparison.promotions} sizeOf={sizeOf} />
+        </>
       )}
     </section>
   );
@@ -303,7 +307,7 @@ function Results({
       <ol className="offer-list">
         {competing.map((offer, index) => (
           <Offer
-            key={offer.reportId}
+            key={offer.reportId ?? `${offer.establishment.id}:${offer.presentationId}`}
             offer={offer}
             size={sizeOf(offer.presentationId)}
             rank={rankOf(competing, index, criteria.sort)}
@@ -317,7 +321,7 @@ function Results({
           <ul className="offer-list">
             {others.map((offer) => (
               <Offer
-                key={offer.reportId}
+                key={offer.reportId ?? `${offer.establishment.id}:${offer.presentationId}`}
                 offer={offer}
                 size={sizeOf(offer.presentationId)}
                 sameName={names.get(offer.establishment.name.toLowerCase()) !== 1}

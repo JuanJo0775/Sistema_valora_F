@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { BasketPage } from './BasketPage';
 import { BasketProvider } from './BasketProvider';
+import { planDraft } from '../../test/planFixtures';
+import { savePlan, toSavedPlan } from '../plan/savedPlan';
 
 const RICE = '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d';
 const MILK = '4a2d3b75-6d2f-4c9b-8e72-1b8c2f3d4e5f';
@@ -92,12 +94,47 @@ describe('mi canasta', () => {
     expect(screen.getByText('Te decimos dónde te sale más barata.')).toBeInTheDocument();
   });
 
+  it('quien llega de usar una lista ve el aviso que trae', () => {
+    stubApi({});
+    localStorage.setItem('valora:canasta', JSON.stringify([rice]));
+    render(
+      <BasketProvider>
+        <MemoryRouter
+          initialEntries={[
+            { pathname: '/canasta', state: { notice: 'Listo: cargamos «Mercado»' } },
+          ]}
+        >
+          <BasketPage />
+        </MemoryRouter>
+      </BasketProvider>,
+    );
+
+    expect(screen.getByText('Listo: cargamos «Mercado»')).toBeInTheDocument();
+  });
+
   it('vacía invita a buscar productos', () => {
     stubApi({});
     renderBasket();
 
     expect(screen.getByRole('heading', { name: 'Tu canasta está vacía' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Buscar productos' })).toHaveAttribute('href', '/');
+  });
+
+  it('vacía y con listas guardadas, invita primero a abrir una lista y deja buscar productos', () => {
+    stubApi({});
+    savePlan(toSavedPlan(planDraft(), new Date('2026-11-20T12:00:00Z')));
+    renderBasket();
+
+    const panel = within(screen.getByRole('tabpanel'));
+    expect(panel.getByRole('link', { name: 'Abre una lista guardada' })).toHaveAttribute(
+      'href',
+      '/canasta?tab=guardadas',
+    );
+    expect(panel.getByRole('link', { name: 'Buscar productos' })).toHaveAttribute('href', '/');
+    expect(panel.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Abre una lista guardada',
+      'Buscar productos',
+    ]);
   });
 
   it('cada producto se ve con su presentación y su cantidad, y se cambia con − y +', () => {
@@ -166,7 +203,9 @@ describe('mi canasta', () => {
     const panel = await where();
 
     // Prototipo: «COMPRA TODO EN», la tienda, el total y la píldora del ahorro.
-    expect(await within(panel).findByText('Éxito')).toBeInTheDocument();
+    // La tienda sale en la recomendación, en la tarjeta naranja y en el detalle: aquí, la tarjeta naranja.
+    const names = await within(panel).findAllByText('Éxito');
+    expect(names.some((name) => name.classList.contains('cheapest-store-name'))).toBe(true);
     expect(within(panel).getByRole('heading', { name: 'Compra todo en' })).toBeInTheDocument();
     expect(panel).toHaveTextContent('$8.700');
     expect(within(panel).getByText('Ahorras $500')).toHaveClass('pill');
@@ -175,7 +214,7 @@ describe('mi canasta', () => {
     expect(await screen.findByText('500 g · Éxito')).toBeInTheDocument();
   });
 
-  it('si ninguna tienda tiene todo, lo dice y cuenta cuántos productos tiene cada una', async () => {
+  it('si ninguna tienda tiene todo, no muestra la tarjeta naranja: el panel avisa qué producto no tiene precio', async () => {
     stubApi({
       ...comparisonOf(RICE, offer(ara, 'arroz-500g', 2600), offer(d1, 'arroz-500g', 2300)),
       ...comparisonOf(MILK, offer(ara, 'leche-1l-otra', 4000)),
@@ -185,9 +224,10 @@ describe('mi canasta', () => {
     const panel = await where();
 
     expect(
-      await within(panel).findByText('Ninguna tienda tiene todos tus productos.'),
+      await within(panel).findByText(/Sin precio vigente cerca: Leche entera/),
     ).toBeInTheDocument();
-    expect(panel).toHaveTextContent('D1: tiene 1 de 2; le falta Leche entera');
+    expect(within(panel).queryByText('Ninguna tienda tiene todos tus productos.')).toBeNull();
+    expect(within(panel).queryByRole('heading', { name: /Dónde te sale más barata/ })).toBeNull();
   });
 
   it('lo comprado no entra al cálculo', async () => {
@@ -196,7 +236,8 @@ describe('mi canasta', () => {
     });
     renderBasket({ ...rice, bought: true }, milk);
 
-    expect(await within(await where()).findByText('Ara')).toHaveClass('cheapest-store-name');
+    const names = await within(await where()).findAllByText('Ara');
+    expect(names.some((name) => name.classList.contains('cheapest-store-name'))).toBe(true);
     expect(api.requested.map(({ pathname }) => pathname)).toEqual([
       `/v1/products/${MILK}/comparison`,
     ]);
@@ -249,7 +290,7 @@ describe('canasta: claridad', () => {
 
     const panel = await where();
 
-    expect(await within(panel).findByText('Carrera 14 # 5-20')).toBeInTheDocument();
+    expect((await within(panel).findAllByText('Carrera 14 # 5-20')).length).toBeGreaterThan(0);
     expect(panel).toHaveTextContent('Tiene 2 de 2 productos.');
   });
 });

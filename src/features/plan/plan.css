@@ -1,4 +1,4 @@
-/* Pantalla del plan de compra: tokens y clases del resto de la app, sin colores propios. */
+/* Opciones de reparto y lista guardada: tokens y clases del resto de la app, sin colores propios. */
 .plan {
   display: grid;
   gap: 16px;
@@ -8,39 +8,8 @@
 .plan h1,
 .plan h2,
 .plan h3,
-.plan p,
-.plan-side h2,
-.plan-side h3,
-.plan-side p {
+.plan p {
   margin: 0;
-}
-
-.plan-options {
-  display: grid;
-  gap: 16px;
-}
-
-/* El hueco del panel lateral donde se dibujan los supuestos: no es una caja. */
-.plan-slot {
-  display: contents;
-}
-
-/* Panel lateral oculto mientras no tiene nada (sin supuestos ni planes guardados). */
-.plan-side:not(:has(section)) {
-  display: none;
-}
-
-/* Computador: el plan a la izquierda y el panel fijo a la derecha, como /canasta. */
-@media (width >= 960px) {
-  .plan-layout > .plan {
-    max-width: none;
-    min-width: 0;
-  }
-}
-
-.plan-where {
-  display: grid;
-  gap: 12px;
 }
 
 .plan-assumptions,
@@ -99,9 +68,8 @@
   height: 24px;
 }
 
-/* Enlaces sueltos (Cómo llegar, Mis planes) con zona táctil de 44 px; el texto puede partirse. */
-.plan-store > .no-print > a,
-.saved-plans a {
+/* Enlaces sueltos (Cómo llegar) con zona táctil de 44 px; el texto puede partirse. */
+.plan-store > .no-print > a {
   display: inline-flex;
   align-items: center;
   min-height: var(--touch);
@@ -120,29 +88,6 @@
   border-radius: var(--r-m);
 }
 
-.plan-more > summary {
-  display: flex;
-  align-items: center;
-  min-height: var(--touch);
-  margin-bottom: 8px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.plan-more[open] > summary {
-  margin-bottom: 12px;
-}
-
-.plan-save {
-  display: grid;
-  gap: 8px;
-}
-
-.saved-plans {
-  display: grid;
-  gap: 8px;
-}
-
 /* Al imprimir solo queda el plan: sin navegación ni botones, y cada tienda en una sola página. */
 @media print {
   header,
@@ -150,7 +95,6 @@
   button,
   .btn,
   .no-print,
-  .saved-plans,
   .cookie-notice {
     display: none !important;
   }
@@ -159,4 +103,47 @@
   .plan-travel {
     break-inside: avoid;
   }
+}
+
+/* «Traslado y domicilio (estimado)»: plegado, con su flecha y una línea que lo separa del resto. */
+.plan-fold {
+  border-top: 1px solid var(--line);
+}
+
+.plan-fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--touch);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.plan-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.plan-fold > summary::after {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--ink-2);
+  border-bottom: 2px solid var(--ink-2);
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.plan-fold[open] > summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+/* El contenido de un details no siempre admite cuadrícula: el aire va como margen. */
+.plan-fold[open] {
+  padding-bottom: 4px;
+}
+
+.plan-fold > :not(summary) + :not(summary) {
+  margin-top: 16px;
 }

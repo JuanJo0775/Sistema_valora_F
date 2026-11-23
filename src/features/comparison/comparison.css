@@ -26,8 +26,7 @@
   max-width: 100%;
 }
 
-.stores-main .where,
-.plan-where .where {
+.stores-main .where {
   justify-items: start;
 }
 
@@ -46,10 +45,6 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-}
-
-.where-trigger:hover {
-  background: var(--bg-2);
 }
 
 .where-trigger[aria-expanded='true'] {
@@ -382,6 +377,17 @@
   cursor: pointer;
 }
 
+.category-count {
+  margin-inline-start: 6px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.more-progress,
+.more-end {
+  text-align: center;
+}
+
 .category-chip input {
   position: absolute;
   opacity: 0;
@@ -422,6 +428,9 @@
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: var(--r-l);
+  /* Listas largas: lo que está lejos de la pantalla no se pinta hasta que se acerca. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
 }
 
 .product-card-link {
@@ -586,4 +595,46 @@
   position: sticky;
   bottom: 0;
   box-shadow: 0 -8px 8px var(--bg);
+}
+
+.offer-discrepancy {
+  border-inline-start: 3px solid var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+  padding: 8px 12px;
+  border-radius: var(--r-m);
+}
+
+.offer-discrepancy p,
+.comparison-promotions :is(h3, h4, p) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.comparison-promotions {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.comparison-promotions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.comparison-promotions li {
+  display: grid;
+  gap: 8px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  background: var(--info-soft);
+  border-radius: var(--r-m);
+  padding: 12px;
+}
+
+.promotion-conditions {
+  grid-column: 1 / -1;
 }

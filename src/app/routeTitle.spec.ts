@@ -12,6 +12,8 @@ describe('título del documento por ruta', () => {
     ['/pendientes', 'Pendientes · Valora'],
     ['/privacidad', 'Privacidad · Valora'],
     ['/crear-cuenta', 'Crear cuenta · Valora'],
+    ['/olvide-contrasena', 'Olvidé mi contraseña · Valora'],
+    ['/restablecer-contrasena', 'Restablecer contraseña · Valora'],
     ['/bienvenida', 'Bienvenida · Valora'],
   ])('%s se llama «%s»', (path, title) => {
     expect(titleFor(path, '')).toBe(title);

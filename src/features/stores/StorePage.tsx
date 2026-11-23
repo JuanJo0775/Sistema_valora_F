@@ -12,6 +12,7 @@ import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
 import { Skeleton } from '../../shared/ui/Skeleton';
 import { ProductThumb } from '../catalog/ProductThumb';
 import { MUNICIPALITIES } from '../comparison/criteria';
+import { MerchantReport } from './MerchantReport';
 import { PinShape } from './pinShapes';
 import { StoreMap } from './StoreMap';
 import { STORE_TYPES } from './storeTypes';
@@ -94,6 +95,24 @@ export function StorePage() {
           </p>
           <p className="store-address">{store.address ?? 'Sin dirección registrada'}</p>
           <p className="muted store-place">{place}</p>
+          {store.phone && (
+            <p>
+              <a href={`tel:${store.phone}`}>Teléfono: {store.phone}</a>
+            </p>
+          )}
+          {store.openingHours && (
+            <details>
+              <summary>Horario semanal</summary>
+              <dl>
+                {Object.entries(store.openingHours).map(([day, range]) => (
+                  <div key={day}>
+                    <dt>{day === 'miercoles' ? 'miércoles' : day === 'sabado' ? 'sábado' : day}</dt>
+                    <dd>{range ? `${range.opens} a ${range.closes}` : 'Cerrado'}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          )}
           <div className="store-head-actions">
             <a
               href={directionsTo(store)}
@@ -109,7 +128,11 @@ export function StorePage() {
               <Icon name="plus" />
               Registrar un precio aquí
             </Link>
+            <Link to={`/comercios/registro?tienda=${store.id}`} className="btn ghost">
+              ¿Eres el dueño? Registra tu tienda
+            </Link>
           </div>
+          <MerchantReport key={store.id} establishmentId={store.id} />
         </header>
       </div>
       <aside className="side store-side" aria-labelledby="tienda-ubicacion">
@@ -144,7 +167,7 @@ export function StorePage() {
         ) : (
           <ul className="offers store-offers">
             {prices.map((price) => (
-              <li key={price.reportId} className="offer store-offer">
+              <li key={price.presentationId} className="offer store-offer">
                 <ProductThumb size="row" />
                 <div className="store-offer-body">
                   <h3>
@@ -152,7 +175,7 @@ export function StorePage() {
                   </h3>
                   <p className="badges">
                     <FreshnessBadge freshness={price.freshness} observedAt={price.observedAt} />
-                    <ReliabilityBadge level={price.reliability} />
+                    {price.reliability && <ReliabilityBadge level={price.reliability} />}
                   </p>
                 </div>
                 <div className="store-offer-price">

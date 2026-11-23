@@ -86,10 +86,6 @@
   stroke-linecap: round;
 }
 
-.overlay-close:hover {
-  background: var(--bg-2);
-}
-
 .overlay-body {
   display: grid;
   gap: 12px;

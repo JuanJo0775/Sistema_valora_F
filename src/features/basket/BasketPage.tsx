@@ -1,68 +1,140 @@
-import { Link } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { type BasketItem, useBasket } from './basketContext';
 import { ProductThumb } from '../catalog/ProductThumb';
 import { useWhere } from '../comparison/useWhere';
 import { WhereToBuy } from './WhereToBuy';
+import { nearbyTotals } from '../plan/nearby';
 import { useStoreTotals } from './useStoreTotals';
+import { BasketTabs, type BasketTab, panelId, tabId } from './BasketTabs';
+import { SavedLists } from './SavedLists';
+import type { SavedPlan } from '../plan/savedPlan';
+import type { UseMode } from './UseListButton';
+import { useApplyList } from './useApplyList';
+import { usePlans } from '../plan/usePlans';
 import './basket.css';
 
 // #31: la canasta es una lista de compras. Lo que falta por comprar va primero; lo comprado se
 // tacha y baja al final, para ir marcando en la tienda.
 export function BasketPage() {
   const { items, setQuantity, toggleBought, removeBought } = useBasket();
+  const applyList = useApplyList();
+  // «Mi lista» o «Guardadas»: la pestaña vive en la dirección (?tab=guardadas), para poder enlazarla.
+  const [params, setParams] = useSearchParams();
+  const tab: BasketTab = params.get('tab') === 'guardadas' ? 'guardadas' : 'lista';
+  const saved = usePlans().length;
+  // Quien usó una lista desde su página llega con el aviso de lo que se hizo (la región «status» lo
+  // anuncia; al cambiar de pantalla el foco ya va al contenido).
+  const { state } = useLocation() as { state: { notice?: string } | null };
+  const arrived = state?.notice ?? '';
+  const [notice, setNotice] = useState(arrived);
+  const panel = useRef<HTMLDivElement>(null);
+  const wantFocus = useRef(false);
+  const choose = (next: BasketTab) => {
+    setParams(next === 'lista' ? {} : { tab: next }, { replace: true });
+  };
+  // Usar una lista guardada: reemplaza o suma a «Mi lista», y se pasa a verla.
+  const use = (plan: SavedPlan, mode: UseMode) => {
+    setNotice(applyList(plan, mode));
+    wantFocus.current = true;
+    choose('lista');
+  };
+  useEffect(() => {
+    if (wantFocus.current && tab === 'lista') {
+      wantFocus.current = false;
+      panel.current?.focus();
+    }
+  }, [tab]);
   // Dónde buscar (municipio guardado, o la ubicación del momento con su radio) manda en las fichas de
   // «Dónde comprar» y en el «dónde sale más barato» de cada producto: las mismas cuentas para todo.
   const where = useWhere();
-  const { municipality, totals } = useStoreTotals(where.ready ? items : [], where.query);
+  // ADR-031: se consulta siempre por municipio (misma URL para todos, caché compartida); la cercanía
+  // se calcula aquí, en el dispositivo, con la ubicación en memoria.
+  const { totals: all } = useStoreTotals(items, { municipality: where.municipality });
+  const totals = nearbyTotals(all, where.point, where.radiusKm);
   const bestStore = totals.status === 'ready' ? totals.best?.store.name : undefined;
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="Tu canasta está vacía"
-        level={1}
-        text="Agrega productos desde su página para armar tu lista de compras."
-        action={
-          <Link to="/" className="btn">
-            Buscar productos
-          </Link>
-        }
-      />
-    );
-  }
   const ordered = [...items].sort((a, b) => Number(a.bought) - Number(b.bought));
   return (
-    <div className="with-side">
+    <div className={tab === 'guardadas' ? 'with-side saved-view' : 'with-side'}>
       <section className="basket">
         <h1>Mi canasta</h1>
-        <p className="muted">Te decimos dónde te sale más barata.</p>
-        <ul className="basket-list">
-          {ordered.map((item) => (
-            <BasketRow
-              key={item.presentationId}
-              item={item}
-              store={bestStore}
-              onQuantity={(quantity) => {
-                setQuantity(item.presentationId, quantity);
-              }}
-              onBought={() => {
-                toggleBought(item.presentationId);
+        <BasketTabs value={tab} onChange={choose} saved={saved} />
+        <p role="status" className="basket-notice">
+          {notice}
+        </p>
+        <div
+          ref={panel}
+          role="tabpanel"
+          id={panelId(tab)}
+          aria-labelledby={tabId(tab)}
+          tabIndex={-1}
+          className="basket-panel"
+        >
+          {tab === 'guardadas' ? (
+            <SavedLists
+              basketCount={items.length}
+              onUse={use}
+              onGoToList={() => {
+                choose('lista');
               }}
             />
-          ))}
-        </ul>
-        {items.some(({ bought }) => bought) && (
-          <button type="button" className="btn ghost" onClick={removeBought}>
-            Quitar lo comprado
-          </button>
-        )}
+          ) : items.length === 0 ? (
+            <EmptyState
+              title="Tu canasta está vacía"
+              text={
+                saved > 0
+                  ? 'Abre una de tus listas guardadas o agrega productos desde su página.'
+                  : 'Agrega productos desde su página para armar tu lista de compras.'
+              }
+              action={
+                <div className="actions">
+                  {saved > 0 && (
+                    <Link to="/canasta?tab=guardadas" className="btn">
+                      Abre una lista guardada
+                    </Link>
+                  )}
+                  <Link to="/" className={saved > 0 ? 'btn ghost' : 'btn'}>
+                    Buscar productos
+                  </Link>
+                </div>
+              }
+            />
+          ) : (
+            <>
+              <p className="muted">Te decimos dónde te sale más barata.</p>
+              <ul className="basket-list">
+                {ordered.map((item) => (
+                  <BasketRow
+                    key={item.presentationId}
+                    item={item}
+                    store={bestStore}
+                    onQuantity={(quantity) => {
+                      setQuantity(item.presentationId, quantity);
+                    }}
+                    onBought={() => {
+                      toggleBought(item.presentationId);
+                    }}
+                  />
+                ))}
+              </ul>
+              {items.some(({ bought }) => bought) && (
+                <button type="button" className="btn ghost" onClick={removeBought}>
+                  Quitar lo comprado
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </section>
-      <WhereToBuy
-        where={where}
-        municipality={municipality}
-        totals={totals}
-        items={items.filter(({ bought }) => !bought)}
-      />
+      {tab === 'lista' && items.length > 0 && (
+        <WhereToBuy
+          where={where}
+          municipality={where.municipality}
+          totals={all}
+          items={items.filter(({ bought }) => !bought)}
+        />
+      )}
     </div>
   );
 }

@@ -178,7 +178,12 @@ describe('detalle del producto', () => {
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
       [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([
         offer('D1', 2100),
-        offer('Ara', 2000, true),
+        {
+          ...offer('Ara', 2000, true),
+          source: 'oficial' as const,
+          reportId: undefined,
+          reliability: undefined,
+        },
       ]),
     });
 
@@ -188,6 +193,7 @@ describe('detalle del producto', () => {
     const cheapest = await within(side).findByRole('region', { name: 'Más barato en Armenia' });
     expect(cheapest).toHaveTextContent('$2.000');
     expect(cheapest).toHaveTextContent('Ara');
+    expect(cheapest).toHaveTextContent('Precio oficial');
     expect(cheapest).toHaveTextContent('$400 por 100 g');
     expect(
       within(side).getByRole('link', { name: 'Registrar un precio de Arroz blanco' }),

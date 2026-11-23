@@ -18,6 +18,21 @@ export const MUNICIPALITIES: Record<Municipality, string> = {
   salento: 'Salento',
 };
 
+export const MUNICIPALITY_CENTERS: Record<Municipality, [number, number]> = {
+  armenia: [4.5339, -75.6811],
+  buenavista: [4.3608, -75.7395],
+  calarca: [4.5196, -75.6436],
+  circasia: [4.6188, -75.6358],
+  cordoba: [4.3915, -75.6876],
+  filandia: [4.6747, -75.6583],
+  genova: [4.2071, -75.7898],
+  'la-tebaida': [4.4525, -75.7881],
+  montenegro: [4.5664, -75.7509],
+  pijao: [4.3338, -75.7045],
+  quimbaya: [4.6232, -75.7626],
+  salento: [4.6377, -75.5706],
+};
+
 // Para elegir el municipio (comparación, mapa y propuestas de tienda).
 export const MUNICIPALITY_OPTIONS = (Object.keys(MUNICIPALITIES) as Municipality[]).map(
   (value) => ({

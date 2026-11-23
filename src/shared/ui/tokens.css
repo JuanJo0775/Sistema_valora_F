@@ -34,6 +34,17 @@
   --promo: #7b3a8c;
   --promo-soft: #f5eaf8;
   --shadow: 0 1px 2px rgb(23 20 15 / 5%), 0 8px 24px rgb(23 20 15 / 6%);
+  /* Sistema de resaltes: fondos translúcidos del color de la tinta (se ven sobre cualquier superficie
+     del tema), sombras difusas de dos capas y el respiro que rodea al texto resaltado. */
+  --hover-bg: rgb(23 20 15 / 4%);
+  --press-bg: rgb(23 20 15 / 8%);
+  --hover-ring: 0 0 0 1px var(--line-2);
+  --shadow-1: 0 1px 2px rgb(23 20 15 / 4%), 0 2px 8px rgb(23 20 15 / 5%);
+  --shadow-2: 0 2px 4px rgb(23 20 15 / 5%), 0 10px 28px rgb(23 20 15 / 10%);
+  /* Fondo de una tarjeta elevada: en claro no cambia; en oscuro sube un escalón (la sombra negra no se ve). */
+  --lift-bg: var(--bg);
+  --hl-pad: 6px;
+  --press-ms: 100ms;
   --f-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
   --f-body: 'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --r-s: 10px;
@@ -72,6 +83,12 @@
     --promo: #dda8ec;
     --promo-soft: #2a1531;
     --shadow: 0 1px 2px rgb(0 0 0 / 50%);
+    --hover-bg: rgb(244 242 239 / 5%);
+    --press-bg: rgb(244 242 239 / 10%);
+    --hover-ring: 0 0 0 1px var(--line-2);
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 35%);
+    --shadow-2: 0 2px 4px rgb(0 0 0 / 30%), 0 10px 28px rgb(0 0 0 / 40%);
+    --lift-bg: var(--bg-2);
   }
 }
 
@@ -103,4 +120,10 @@
   --promo: #dda8ec;
   --promo-soft: #2a1531;
   --shadow: 0 1px 2px rgb(0 0 0 / 50%);
+  --hover-bg: rgb(244 242 239 / 5%);
+  --press-bg: rgb(244 242 239 / 10%);
+  --hover-ring: 0 0 0 1px var(--line-2);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 35%);
+  --shadow-2: 0 2px 4px rgb(0 0 0 / 30%), 0 10px 28px rgb(0 0 0 / 40%);
+  --lift-bg: var(--bg-2);
 }

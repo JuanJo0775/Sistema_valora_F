@@ -1,11 +1,10 @@
-import { useState } from 'react';
-import { SelectField } from '../../shared/ui/SelectField';
+import { useId, useState } from 'react';
 import type { TravelAssumptions } from './travel';
 
 const MODES: { value: TravelAssumptions['mode']; label: string }[] = [
-  { value: 'none', label: 'A pie (sin costo en pesos)' },
-  { value: 'fare', label: 'Pasaje' },
-  { value: 'perKm', label: 'Costo por km' },
+  { value: 'none', label: 'Voy a pie' },
+  { value: 'fare', label: 'Pago pasaje' },
+  { value: 'perKm', label: 'Gasto por km' },
 ];
 
 // Lo que escribe la persona: vacío o inválido no cambia el supuesto.
@@ -30,21 +29,18 @@ function withMoney(
   return next;
 }
 
-// Los supuestos del traslado, siempre a la vista y editables. Sin valor en pesos por defecto.
+// «¿Cuánto te cuesta ir?»: plegado y opcional. El factor de rodeo (1,3) y la velocidad a pie (4,5 km/h)
+// son fijos (DEFAULT_ASSUMPTIONS) y ya no se piden. Sin pesos por defecto: sin ese dato solo se
+// muestran kilómetros y minutos.
 export function AssumptionsForm({
   value,
   onChange,
-  level = 2,
 }: {
   value: TravelAssumptions;
   onChange: (next: TravelAssumptions) => void;
-  // Nivel del título: 3 cuando va dentro de un panel que ya tiene su h2.
-  level?: 2 | 3;
 }) {
-  const Title = `h${String(level)}` as 'h2' | 'h3';
+  const name = useId();
   // Se escribe como texto para poder borrar y teclear; solo lo válido sube a los supuestos.
-  const [detour, setDetour] = useState(String(value.detour));
-  const [kmh, setKmh] = useState(String(value.kmh));
   const [fare, setFare] = useState(value.fareCop === undefined ? '' : String(value.fareCop));
   const [perKm, setPerKm] = useState(value.perKmCop === undefined ? '' : String(value.perKmCop));
 
@@ -54,88 +50,61 @@ export function AssumptionsForm({
   };
 
   return (
-    <section className="plan-assumptions" aria-labelledby="plan-assumptions-title">
-      <Title id="plan-assumptions-title">Supuestos del traslado</Title>
-      <p className="muted">
-        Todo traslado es estimado. Cambia estos supuestos y los cálculos se actualizan.
-      </p>
-      <div className="plan-fields">
+    <details className="plan-fold plan-assumptions">
+      <summary>¿Cuánto te cuesta ir?</summary>
+      <fieldset role="radiogroup" className="category-chips" aria-label="Cómo te desplazas">
+        {MODES.map(({ value: mode, label }) => (
+          <label key={mode} className="category-chip">
+            <input
+              type="radio"
+              name={`traslado-${name}`}
+              value={mode}
+              checked={value.mode === mode}
+              onChange={() => {
+                onChange({ ...value, mode });
+              }}
+            />
+            {label}
+          </label>
+        ))}
+      </fieldset>
+      {value.mode === 'fare' && (
         <label className="field">
-          Factor de rodeo
+          Pasaje por viaje (COP)
           <input
             type="number"
-            inputMode="decimal"
-            min="1"
-            step="0.1"
-            value={detour}
+            inputMode="numeric"
+            min="0"
+            step="100"
+            value={fare}
             onChange={(event) => {
-              setDetour(event.target.value);
-              const next = toNumber(event.target.value);
-              if (next !== null && next >= 1) onChange({ ...value, detour: next });
+              setFare(event.target.value);
+              onChange(withMoney(value, 'fareCop', money(event.target.value)));
             }}
           />
         </label>
+      )}
+      {value.mode === 'perKm' && (
         <label className="field">
-          Velocidad a pie (km/h)
+          Gasto por km (COP)
           <input
             type="number"
-            inputMode="decimal"
-            min="0.5"
-            step="0.5"
-            value={kmh}
+            inputMode="numeric"
+            min="0"
+            step="100"
+            value={perKm}
             onChange={(event) => {
-              setKmh(event.target.value);
-              const next = toNumber(event.target.value);
-              if (next !== null && next > 0) onChange({ ...value, kmh: next });
+              setPerKm(event.target.value);
+              onChange(withMoney(value, 'perKmCop', money(event.target.value)));
             }}
           />
         </label>
-        <SelectField
-          label="Cómo cuentas el traslado"
-          value={value.mode}
-          options={MODES}
-          onChange={(mode) => {
-            onChange({ ...value, mode });
-          }}
-        />
-        {value.mode === 'fare' && (
-          <label className="field">
-            Pasaje por tramo (COP)
-            <input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              step="100"
-              value={fare}
-              onChange={(event) => {
-                setFare(event.target.value);
-                onChange(withMoney(value, 'fareCop', money(event.target.value)));
-              }}
-            />
-          </label>
-        )}
-        {value.mode === 'perKm' && (
-          <label className="field">
-            Costo por km (COP)
-            <input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              step="100"
-              value={perKm}
-              onChange={(event) => {
-                setPerKm(event.target.value);
-                onChange(withMoney(value, 'perKmCop', money(event.target.value)));
-              }}
-            />
-          </label>
-        )}
-      </div>
+      )}
       <p className="muted">
         {value.mode === 'none'
-          ? 'Sin pasaje ni costo por km, mostramos solo kilómetros y minutos.'
+          ? 'Sin pasaje ni gasto por km, mostramos solo kilómetros y minutos.'
           : 'El valor en pesos es el que escribiste; no lo inventamos.'}
       </p>
-    </section>
+    </details>
   );
 }

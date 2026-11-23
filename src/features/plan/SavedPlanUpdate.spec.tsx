@@ -149,18 +149,18 @@ describe('actualizar precios del plan guardado', () => {
     expect(saved?.stores).toEqual(plan.stores);
     expect(saved?.summary.productsCop).toBe(2350 * 2 + 9000);
     expect(saved?.summary).toMatchObject({ baselineCop: null, netCop: null });
-    // La ubicación solo viajó en la consulta (EC-08).
-    expect(requested[0]?.searchParams.get('lat')).toBe('4.51234');
-    expect(requested[0]?.searchParams.get('radiusKm')).toBe('1.5');
+    // Ya no se pide la ubicación: se consulta por el municipio de las tiendas del plan (ADR-031).
+    expect(requested[0]?.searchParams.get('municipality')).toBe('armenia');
+    expect(requested[0]?.searchParams.has('lat')).toBe(false);
+    expect(requested[0]?.searchParams.has('radiusKm')).toBe(false);
     const raw = localStorage.getItem('valora:planes') ?? '';
     for (const secret of ['distanceM', '4.51234', '-75.61234']) expect(raw).not.toContain(secret);
 
     expect(await screen.findByText('Precios actualizados')).toBeInTheDocument();
-    expect(screen.getByText('Recalcula el plan para ver el ahorro')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Recalcular en el plan de compra' })).toHaveAttribute(
-      'href',
-      '/canasta/plan',
-    );
+    expect(
+      screen.getByText('Para ver el ahorro con precios de hoy, usa esta lista en «Dónde comprar».'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Recalcular/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Ahorro neto/)).not.toBeInTheDocument();
     expect(screen.getByText('$13.700')).toBeInTheDocument();
     expect(screen.queryByText('Puede estar desactualizado')).not.toBeInTheDocument();
@@ -196,17 +196,19 @@ describe('actualizar precios del plan guardado', () => {
     expect(readPlans()[0]).toEqual(plan);
   });
 
-  it('con ubicación negada lo dice y no consulta ni rompe nada', async () => {
+  it('un plan de «cerca de mí» no pide la ubicación: consulta el municipio de sus tiendas', async () => {
     stubLocation('deny');
     const { requested } = stubApi(unchanged());
     renderAt(stored().id);
     update();
 
-    expect(
-      await screen.findByText('No pudimos obtener tu ubicación; arma el plan de nuevo'),
-    ).toBeInTheDocument();
-    expect(requested).toHaveLength(0);
-    expect(screen.getByRole('button', { name: 'Actualizar precios' })).toBeEnabled();
+    expect(await screen.findByText(/Los precios siguen igual/)).toBeInTheDocument();
+    expect(requested.length).toBeGreaterThan(0);
+    for (const url of requested) {
+      expect(url.searchParams.get('municipality')).toBe('armenia');
+      expect(url.searchParams.has('lat')).toBe(false);
+      expect(url.searchParams.has('lng')).toBe(false);
+    }
   });
 
   it('si la consulta falla, avisa con Reintentar y no cambia el plan', async () => {
@@ -227,17 +229,15 @@ describe('actualizar precios del plan guardado', () => {
     expect(screen.queryByText(/No pudimos consultar/)).not.toBeInTheDocument();
   });
 
-  it('sin conexión, los dos botones quedan deshabilitados y ligados a un solo texto', () => {
+  it('sin conexión, actualizar queda deshabilitado y ligado a su texto', () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     renderAt(stored(municipio).id);
 
     const text = screen.getByText('Necesitas conexión para actualizar');
-    for (const name of ['Actualizar precios', 'Armar de nuevo con precios de hoy']) {
-      const button = screen.getByRole('button', { name });
-      expect(button).toBeDisabled();
-      expect(button).toHaveAccessibleDescription('Necesitas conexión para actualizar');
-      expect(button).toHaveAttribute('aria-describedby', text.id);
-    }
+    const button = screen.getByRole('button', { name: 'Actualizar precios' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription('Necesitas conexión para actualizar');
+    expect(button).toHaveAttribute('aria-describedby', text.id);
   });
 
   it('un plan sin productos con precio no tiene nada que actualizar', async () => {
