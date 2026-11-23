@@ -6,6 +6,7 @@ describe('título del documento por ruta', () => {
     ['/', 'Inicio · Valora'],
     ['/mapa', 'Mapa · Valora'],
     ['/canasta', 'Canasta · Valora'],
+    ['/canasta/donde-comprar', 'Dónde comprar · Valora'],
     ['/registrar', 'Registrar precio · Valora'],
     ['/yo', 'Tu cuenta · Valora'],
     ['/yo/ajustes', 'Ajustes · Valora'],

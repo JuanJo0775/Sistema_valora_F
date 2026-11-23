@@ -167,7 +167,7 @@ describe('accesibilidad de los flujos críticos (axe, WCAG 2.2 AA)', () => {
     expect(await seriousViolations()).toEqual([]);
   });
 
-  it('la canasta con «Dónde comprar» y sus recomendaciones', async () => {
+  it('la canasta con su resumen de «Dónde comprar» y la pantalla de recomendaciones', async () => {
     localStorage.setItem(
       'valora:canasta',
       JSON.stringify([
@@ -181,9 +181,14 @@ describe('accesibilidad de los flujos críticos (axe, WCAG 2.2 AA)', () => {
         },
       ]),
     );
-    visit('/canasta');
-    await screen.findByRole('radiogroup', { name: 'Recomendaciones' });
+    const first = visit('/canasta');
+    await screen.findByRole('link', { name: 'Ver dónde comprar' });
+    expect(await seriousViolations()).toEqual([]);
+    first.unmount();
 
+    // Y su pantalla propia, con las recomendaciones y «Guardar lista».
+    visit('/canasta/donde-comprar');
+    await screen.findByRole('radiogroup', { name: 'Recomendaciones' });
     expect(await seriousViolations()).toEqual([]);
   });
 
