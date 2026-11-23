@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { seriousViolations } from '../../test/axe';
 import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { stubLocation, stubNoGeolocation } from '../../test/location';
 import type { components } from '../../shared/api/schema';
@@ -143,6 +144,7 @@ describe('todas las tiendas, en el detalle del producto', () => {
       [...container.querySelectorAll('ol.offer-list h3')].map((heading) => heading.textContent),
     ).toEqual(['Tienda A', 'Tienda B']);
     expect(region.closest('ol')).toBeNull();
+    expect(await seriousViolations(region)).toEqual([]);
   });
 
   it('cada resultado dice la tienda, la presentación con su precio y el precio por unidad', async () => {

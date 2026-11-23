@@ -36,8 +36,8 @@ test.describe('Registro de comercios (F#165)', () => {
     await page.getByRole('link', { name: 'Volver a Yo' }).click();
     await expect(page.getByText('Comercio', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: /Mi tienda/ }).click();
-    await verifyOfficialPrices(page);
-    await verifyPromotions(page);
+    const productId = await verifyOfficialPrices(page);
+    await verifyPromotions(page, productId);
   });
 
   test('desde Yo propone una tienda nueva y recupera la preaprobación al recargar', async ({
@@ -94,9 +94,10 @@ async function verifyOfficialPrices(page: Page) {
   const download = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Descargar filas con errores' }).click();
   expect((await download).suggestedFilename()).toBe('precios-por-corregir.csv');
+  return product.id;
 }
 
-async function verifyPromotions(page: Page) {
+async function verifyPromotions(page: Page, productId: string) {
   await page.getByRole('button', { name: 'Promociones' }).click();
   const section = page.getByRole('region', { name: 'Promociones' });
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
@@ -107,6 +108,18 @@ async function verifyPromotions(page: Page) {
   await section.getByRole('button', { name: 'Publicar promoción' }).click();
   await expect(section.getByText('Promoción publicada.')).toBeVisible();
   await expect(section.getByText('Activa', { exact: true })).toBeVisible();
+
+  await page.goto(`/productos/${productId}`);
+  const comparison = page.getByRole('region', { name: 'Todas las tiendas' });
+  const promotions = comparison.getByRole('region', { name: 'Promociones' });
+  await expect(promotions.getByText('10 % de descuento', { exact: true })).toBeVisible();
+  await expect(
+    comparison.locator('ol.offer-list').getByText('Precio oficial', { exact: true }),
+  ).toBeVisible();
+  await expect(comparison.locator('ol.offer-list').getByText('10 % de descuento')).toHaveCount(0);
+
+  await page.goto('/comercios');
+  await page.getByRole('button', { name: 'Promociones' }).click();
   await section.getByRole('button', { name: 'Retirar promoción' }).click();
   await section.getByRole('button', { name: 'Confirmar retiro' }).click();
   await expect(section.getByText('Promoción retirada.')).toBeVisible();
