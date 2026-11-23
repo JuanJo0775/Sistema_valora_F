@@ -29,15 +29,18 @@
   font-size: 0.9rem;
 }
 
+/* La tabla de datos se acomoda al ancho: las palabras largas se parten en vez de crear un scroll
+   horizontal escondido dentro de la página. */
 .legal table {
-  display: block;
-  overflow-x: auto;
+  width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
 
 .legal th,
 .legal td {
+  overflow-wrap: anywhere;
   padding: 8px 10px;
   border: 1px solid var(--line);
   text-align: left;
