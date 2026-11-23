@@ -3,15 +3,11 @@ import { formatDistance } from '../../shared/location';
 import { formatCop } from '../../shared/money';
 import { radiusLabel } from '../comparison/radius';
 import { AT_STORE_M } from '../plan/nearby';
-import { DEFAULT_ASSUMPTIONS } from '../plan/travel';
 import type { Kind, Notice, Recommendation } from '../plan/recommend';
 
 const KM = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const km = (value: number) => `${KM.format(value)} km`;
 const walk = (minutes: number) => `≈ ${String(minutes)} min a pie`;
-// Minutos a pie de una distancia en línea recta, con los supuestos fijos (rodeo y velocidad).
-const walkMin = (meters: number) =>
-  Math.round(((meters / 1000) * DEFAULT_ASSUMPTIONS.detour * 60) / DEFAULT_ASSUMPTIONS.kmh);
 
 const LABELS: Record<Kind, (municipality: string) => string> = {
   cheapest: () => 'La más barata',
@@ -94,20 +90,19 @@ export function noticeText(notice: Notice): string {
   }
 }
 
-// Las recomendaciones como tarjetas seleccionables: un grupo de radios con el aspecto de tarjeta y
-// flechas para moverse (como las fichas del radio de búsqueda).
+// Las recomendaciones como opciones de un grupo (radiogroup con aspecto segmentado): se ve una a la
+// vez en detalle. Si no caben en una fila, se envuelven; nunca se desplazan de lado. Flechas para
+// moverse (como las fichas del radio de búsqueda).
 export function RecommendationCards({
   items,
   selectedId,
   onSelect,
   municipality,
-  located,
 }: {
   items: Recommendation[];
   selectedId: string;
   onSelect: (id: string) => void;
   municipality: string;
-  located: boolean;
 }) {
   const name = useId();
   const group = useRef<HTMLFieldSetElement>(null);
@@ -128,50 +123,46 @@ export function RecommendationCards({
     <fieldset
       ref={group}
       role="radiogroup"
-      className="rec-cards"
+      className="rec-seg"
       aria-label="Recomendaciones"
       onKeyDown={move}
     >
       {items.map((rec) => (
-        <Card
+        <Option
           key={rec.id}
           rec={rec}
           group={name}
           checked={rec.id === selectedId}
           onSelect={onSelect}
           municipality={municipality}
-          located={located}
         />
       ))}
     </fieldset>
   );
 }
 
-function Card({
+function Option({
   rec,
   group,
   checked,
   onSelect,
   municipality,
-  located,
 }: {
   rec: Recommendation;
   group: string;
   checked: boolean;
   onSelect: (id: string) => void;
   municipality: string;
-  located: boolean;
 }) {
   const id = useId();
-  const gain = gainSentence(rec, located);
   return (
-    <label className="rec-card">
+    <label className="rec-option">
       <input
         type="radio"
         name={`recomendacion-${group}`}
         checked={checked}
         aria-labelledby={`${id}-label`}
-        aria-describedby={`${id}-body`}
+        aria-describedby={`${id}-total`}
         onChange={() => {
           onSelect(rec.id);
         }}
@@ -179,31 +170,27 @@ function Card({
       <span id={`${id}-label`} className="rec-label">
         {labelOf(rec.kinds, municipality)}
       </span>
-      <strong className="rec-total">{formatCop(rec.productsCop)}</strong>
-      <span id={`${id}-body`} className="rec-body">
-        <span className="rec-stores">
-          {[...rec.option.shares]
-            .map(({ store }) => store)
-            .sort((x, y) => (x.distanceM ?? 0) - (y.distanceM ?? 0) || x.name.localeCompare(y.name))
-            .map((store) => (
-              <span key={store.id}>
-                {store.name}
-                {store.distanceM !== undefined &&
-                  (store.distanceM < AT_STORE_M
-                    ? ' · a pasos de ti'
-                    : ` · a ${formatDistance(store.distanceM)} (${walk(walkMin(store.distanceM))})`)}
-              </span>
-            ))}
-        </span>
-        {rec.covered < rec.total && (
-          <span className="muted">{`Cubre ${String(rec.covered)} de ${String(rec.total)} productos`}</span>
-        )}
-        {rec.option.stores > 1 && <span className="muted">{spread(rec)}</span>}
-        {gain && <span>{gain}</span>}
-        {rec.notes.includes('maybeNotCheapest') && (
-          <span className="muted">Puede no ser la más barata.</span>
-        )}
-      </span>
+      <strong id={`${id}-total`} className="rec-total">
+        {formatCop(rec.productsCop)}
+      </strong>
     </label>
+  );
+}
+
+// Lo que dice la recomendación elegida: cuánto se gana o se paga de más, cuánto cubre y si hay que
+// desplazarse entre tiendas. Las tiendas, con sus productos, van debajo (OptionCard).
+export function RecommendationDetail({ rec, located }: { rec: Recommendation; located: boolean }) {
+  const gain = gainSentence(rec, located);
+  return (
+    <div className="rec-detail">
+      {gain && <p className="rec-gain">{gain}</p>}
+      {rec.covered < rec.total && (
+        <p className="muted">{`Cubre ${String(rec.covered)} de ${String(rec.total)} productos`}</p>
+      )}
+      {rec.option.stores > 1 && <p className="muted">{spread(rec)}</p>}
+      {rec.notes.includes('maybeNotCheapest') && (
+        <p className="muted">Puede no ser la más barata.</p>
+      )}
+    </div>
   );
 }

@@ -1,5 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { directionsTo } from '../../shared/directions';
 import { seriousViolations } from '../../test/axe';
@@ -20,8 +19,7 @@ import {
   shop,
 } from '../../test/planFixtures';
 import { readPlans, toggleBought } from '../plan/savedPlan';
-import { BasketPage } from './BasketPage';
-import { BasketProvider } from './BasketProvider';
+import { renderCanasta } from '../../test/renderCanasta';
 
 // «Dónde comprar» dentro de la canasta: recomendaciones que calcula el sistema y la persona elige.
 // Tiendas A y B: arroz×2 y leche×1. Una tienda: B = $8.000 (A = $9.000); arroz en A y leche en B = $7.000.
@@ -32,38 +30,35 @@ const routesFor = (s: typeof far) => ({
 
 const renderBasket = (...items: (typeof rice)[]) => {
   localStorage.setItem('valora:canasta', JSON.stringify(items));
-  return render(
-    <BasketProvider>
-      <MemoryRouter>
-        <BasketPage />
-      </MemoryRouter>
-    </BasketProvider>,
-  );
+  return renderCanasta('/canasta/donde-comprar');
 };
 
-const panel = async () =>
-  within(await screen.findByRole('complementary', { name: 'Dónde comprar' }));
-// Las tarjetas de recomendación (no los radios de «¿Cuánto te cuesta ir?»).
+// La pantalla propia: todo se busca en ella (no hay panel lateral de recomendaciones).
+const panel = async () => {
+  await screen.findByRole('heading', { level: 1, name: 'Dónde comprar' });
+  return within(document.body);
+};
+// Las opciones de recomendación (no los radios de «¿Cuánto te cuesta ir?»).
 const cards = (side: Awaited<ReturnType<typeof panel>>) =>
   within(side.getByRole('radiogroup', { name: 'Recomendaciones' })).getAllByRole('radio');
 const pick = (name: string) => {
   fireEvent.click(screen.getByRole('radio', { name }));
 };
 
-describe('canasta: dónde comprar', () => {
+describe('pantalla «Dónde comprar»', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     Reflect.deleteProperty(navigator, 'geolocation');
     localStorage.clear();
   });
 
-  it('es un solo panel con tarjetas de recomendación; sin ubicación, la más barata y todo en una tienda', async () => {
+  it('es una pantalla con un grupo de opciones; sin ubicación, la más barata y todo en una tienda', async () => {
     stubApi(routesFor(far));
     renderBasket(rice, milk);
 
     const side = await panel();
     await side.findByRole('radio', { name: 'La más barata' });
-    expect(side.getByRole('heading', { name: 'Dónde comprar' })).toBeInTheDocument();
+    expect(side.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/canasta');
     expect(side.getByRole('radiogroup', { name: 'Recomendaciones' })).toBeInTheDocument();
     expect(cards(side)).toHaveLength(2);
     expect(side.getByRole('radio', { name: 'La más barata' })).toBeChecked();
@@ -74,21 +69,28 @@ describe('canasta: dónde comprar', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
-  it('cada tarjeta dice total, tiendas y una frase de lo que se gana y se paga', async () => {
+  it('cada opción dice su total; solo la elegida se ve en detalle, con su frase de lo que se gana y se paga', async () => {
     stubApi(routesFor(far));
     renderBasket(rice, milk);
 
     const side = await panel();
     const cheapest = (await side.findByRole('radio', { name: 'La más barata' })).closest('label');
     expect(cheapest).toHaveTextContent('$7.000');
-    expect(cheapest).toHaveTextContent('Tienda ATienda B');
-    expect(cheapest).toHaveTextContent('Ahorras $1.000.');
-    expect(cheapest).toHaveTextContent(
+    expect(
+      side.getByRole('radio', { name: 'Todo en una tienda' }).closest('label'),
+    ).toHaveTextContent('$8.000');
+    const detail = document.querySelector('.rec-detail');
+    expect(detail).toHaveTextContent('Ahorras $1.000.');
+    expect(detail).toHaveTextContent(
       /Estas dos tiendas tienen todos tus productos, pero están separadas por \d,\d km \(≈ \d+ min a pie\)\. Tú decides si te desplazas\./,
     );
-    const single = side.getByRole('radio', { name: 'Todo en una tienda' }).closest('label');
-    expect(single).toHaveTextContent('$8.000');
-    expect(single).toHaveTextContent('Cuesta $1.000 más, pero compras en un solo lugar.');
+    expect(side.getAllByRole('group', { name: /^Tienda / })).toHaveLength(2);
+
+    pick('Todo en una tienda');
+    expect(document.querySelector('.rec-detail')).toHaveTextContent(
+      'Cuesta $1.000 más, pero compras en un solo lugar.',
+    );
+    expect(side.getAllByRole('group', { name: /^Tienda / })).toHaveLength(1);
   });
 
   it('sin ubicación avisa que no sabe cuál es la más cercana', async () => {
@@ -193,10 +195,12 @@ describe('canasta: dónde comprar', () => {
     renderBasket(rice, milk);
 
     const side = await panel();
-    const nearest = (await side.findByRole('radio', { name: 'La más cercana' })).closest('label');
-    expect(nearest).toHaveTextContent('Tienda A · a 400 m (≈ 7 min a pie)');
-    expect(nearest).toHaveTextContent('Cuesta $2.000 más, pero está a 400 m.');
-    expect(nearest).toHaveTextContent('Puede no ser la más barata.');
+    await side.findByRole('radio', { name: 'La más cercana' });
+    pick('La más cercana');
+    const detail = document.querySelector('.rec-detail');
+    expect(detail).toHaveTextContent('Cuesta $2.000 más, pero está a 400 m.');
+    expect(detail).toHaveTextContent('Puede no ser la más barata.');
+    expect(side.getByText(/a 400 m de ti/)).toBeInTheDocument();
     expect(side.getByRole('radio', { name: 'La más barata' })).toBeInTheDocument();
     expect(side.queryByText('Comparte tu ubicación para ver la más cercana.')).toBeNull();
     expect(api.requested).toHaveLength(2);
@@ -215,10 +219,11 @@ describe('canasta: dónde comprar', () => {
     renderBasket(rice, milk);
 
     const side = await panel();
-    const nearest = (await side.findByRole('radio', { name: 'La más cercana' })).closest('label');
-    expect(nearest).toHaveTextContent('Tienda A · a pasos de ti');
-    expect(nearest).toHaveTextContent('pero está a pasos de ti.');
-    expect(nearest).not.toHaveTextContent(/a 0 m/);
+    await side.findByRole('radio', { name: 'La más cercana' });
+    pick('La más cercana');
+    expect(document.querySelector('.rec-detail')).toHaveTextContent('pero está a pasos de ti.');
+    expect(side.getByText(/a pasos de ti/, { selector: '.plan-store p' })).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/a 0 m/);
   });
 
   it('fusiona las etiquetas cuando la más barata es también la más cercana', async () => {
@@ -304,7 +309,9 @@ describe('canasta: dónde comprar', () => {
     const side = await panel();
     const cheapest = (await side.findByRole('radio', { name: 'La más barata' })).closest('label');
     expect(cheapest).toHaveTextContent('$7.500');
-    expect(cheapest).toHaveTextContent('Estas tres tiendas tienen todos tus productos');
+    expect(document.querySelector('.rec-detail')).toHaveTextContent(
+      'Estas tres tiendas tienen todos tus productos',
+    );
     expect(side.getAllByRole('heading', { level: 3, name: /^Tienda / })).toHaveLength(3);
   });
 
@@ -327,10 +334,9 @@ describe('canasta: dónde comprar', () => {
     renderBasket(rice, milk);
 
     const side = await panel();
-    const wide = (await side.findByRole('radio', { name: 'La más barata en Armenia' })).closest(
-      'label',
-    );
-    expect(wide).toHaveTextContent(
+    await side.findByRole('radio', { name: 'La más barata en Armenia' });
+    pick('La más barata en Armenia');
+    expect(document.querySelector('.rec-detail')).toHaveTextContent(
       /Ahorras \$3\.500 frente a lo más barato cerca de ti, pero queda \d,\d km más lejos/,
     );
     expect(side.getByRole('radio', { name: 'La más barata y la más cercana' })).toBeInTheDocument();
@@ -359,8 +365,9 @@ describe('canasta: dónde comprar', () => {
     renderBasket(rice, milk);
 
     const side = await panel();
-    const partial = (await side.findByRole('radio', { name: 'La que más cubre' })).closest('label');
-    expect(partial).toHaveTextContent('Cubre 1 de 2 productos');
+    await side.findByRole('radio', { name: 'La que más cubre' });
+    pick('La que más cubre');
+    expect(document.querySelector('.rec-detail')).toHaveTextContent('Cubre 1 de 2 productos');
     expect(side.getByRole('radio', { name: 'La más barata en Armenia' })).toBeInTheDocument();
     // Una sola explicación, coherente con lo que se ve.
     expect(side.getAllByText(/ninguna tienda .*tiene (toda|todos)/i)).toHaveLength(1);
@@ -411,7 +418,7 @@ describe('canasta: dónde comprar', () => {
     const side = await panel();
     await side.findByRole('radio', { name: 'La más barata' });
     expect(side.queryByText(/a 0 m de ti/)).not.toBeInTheDocument();
-    expect(side.getAllByText(/a pasos de ti/).length).toBeGreaterThan(1);
+    expect(side.getAllByText(/a pasos de ti/).length).toBeGreaterThan(0);
   });
 
   it('si ningún producto tiene precio, lo dice', async () => {
@@ -430,6 +437,7 @@ describe('canasta: dónde comprar', () => {
 
     const side = await panel();
     expect(side.getByRole('status')).toHaveTextContent('Buscando precios…');
+    expect(side.queryByRole('complementary')).toBeNull();
   });
 
   it('si los precios no cargan, avisa', async () => {
@@ -456,12 +464,28 @@ describe('canasta: dónde comprar', () => {
     expect(api.requested[0]?.searchParams.get('municipality')).toBe('armenia');
   });
 
-  it('con la canasta vacía no hay panel', () => {
+  it('con la canasta vacía no hay recomendaciones: invita a volver a la canasta', async () => {
     stubApi({});
     renderBasket();
 
+    await screen.findByRole('heading', { level: 1, name: 'Dónde comprar' });
+    expect(screen.getByRole('heading', { name: 'No hay nada por comprar' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ir a mi canasta' })).toHaveAttribute(
+      'href',
+      '/canasta',
+    );
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it('si todo está comprado tampoco hay nada que recomendar', async () => {
+    stubApi({});
+    renderBasket({ ...rice, bought: true });
+
+    expect(
+      await screen.findByRole('heading', { name: 'No hay nada por comprar' }),
+    ).toBeInTheDocument();
   });
 
   it('no escribe nada en localStorage salvo los supuestos', async () => {
@@ -490,7 +514,7 @@ describe('canasta: dónde comprar', () => {
     expect(document.body).not.toHaveTextContent('NaN');
   });
 
-  it('no ofrece ir a otra pantalla para ver el plan: guardar está en el panel', async () => {
+  it('no ofrece ir a otra pantalla para ver el plan: guardar está en la pantalla', async () => {
     stubApi(routesFor(far));
     renderBasket(rice, milk);
 
@@ -650,7 +674,7 @@ describe('canasta: dónde comprar', () => {
     });
   });
 
-  it('el selector «Dónde buscar» está en el panel', async () => {
+  it('el selector «Dónde buscar» está en la pantalla', async () => {
     stubApi(routesFor(far));
     renderBasket(rice, milk);
 
@@ -658,7 +682,7 @@ describe('canasta: dónde comprar', () => {
     expect(side.getByRole('button', { name: 'Dónde buscar: Armenia' })).toBeInTheDocument();
   });
 
-  it('en computador sigue siendo un solo panel y no tiene fallas de accesibilidad (axe)', async () => {
+  it('tiene un solo h1, un solo complementary y no tiene fallas de accesibilidad (axe)', async () => {
     stubMatchMedia(true);
     stubApi(routesFor(far));
     renderBasket(rice, milk);

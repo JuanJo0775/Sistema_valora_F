@@ -273,6 +273,13 @@ button {
   /* Una sola barra de desplazamiento, discreta y sin flechas de botones. Chrome y Safari: barra de
      WebKit; Firefox, que no la tiene, usa la fina estándar. No se mezclan: con scrollbar-width Chrome
      ignora la de WebKit y vuelve a pintar las flechas. */
+  /* Un panel corto que siempre cabe (.fit: el resumen de la canasta y guardar la lista) no se
+     desplaza por dentro: sin barra ni scroll anidado. */
+  .side.fit {
+    max-height: none;
+    overflow: visible;
+  }
+
   .side::-webkit-scrollbar {
     width: 8px;
   }
