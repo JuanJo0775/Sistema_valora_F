@@ -30,8 +30,13 @@ function parse(raw: string | null): TravelAssumptions | null {
   return out;
 }
 
-export const readAssumptions = (): TravelAssumptions =>
-  parse(readStored(KEY)) ?? DEFAULT_ASSUMPTIONS;
+// El rodeo y la velocidad son fijos (ya no se piden): lo que quedó guardado de antes se ignora.
+export const readAssumptions = (): TravelAssumptions => {
+  const saved = parse(readStored(KEY));
+  return saved
+    ? { ...saved, detour: DEFAULT_ASSUMPTIONS.detour, kmh: DEFAULT_ASSUMPTIONS.kmh }
+    : DEFAULT_ASSUMPTIONS;
+};
 
 export const saveAssumptions = (a: TravelAssumptions) => {
   writeStored(KEY, JSON.stringify({ v: VERSION, ...a }));

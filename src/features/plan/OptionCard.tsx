@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { formatCop } from '../../shared/money';
 import { formatDistance, type Point } from '../../shared/location';
+import { AT_STORE_M } from './nearby';
 import { type Delivery, PlanStoreSection } from './PlanStoreSection';
 import type { OptionView } from './planView';
 import {
@@ -31,6 +32,9 @@ export function OptionCard({
   onDelivery,
   action,
   fold,
+  panel = false,
+  hideTotal = false,
+  quietSingle = false,
 }: {
   view: OptionView;
   names: Map<string, { name: string; label: string }>;
@@ -40,6 +44,12 @@ export function OptionCard({
   onDelivery: (id: string, next: Delivery) => void;
   action?: ReactNode;
   fold?: ReactNode;
+  // Dentro de «Dónde comprar»: sin título ni caja propia, con el traslado plegado.
+  panel?: boolean;
+  // El total ya se dice en otra parte del panel (la tarjeta naranja).
+  hideTotal?: boolean;
+  // El panel ya explica por qué ninguna tienda sola tiene todo: no se repite aquí.
+  quietSingle?: boolean;
 }) {
   const titleId = useId();
   const { option, covered, total, route, shown, savingsCop, netCop, deliveryCop } = view;
@@ -50,7 +60,7 @@ export function OptionCard({
   const unlocated = option.shares.filter(
     ({ store }) => !deliveryOf(store.id).on && !hasLocation(store),
   ).length;
-  const assumed = `Supuestos: línea recta × ${NUM.format(assumptions.detour)}; ${NUM.format(assumptions.kmh)} km/h a pie.`;
+  const assumed = `Cómo estimamos esto: contamos ${NUM.format(assumptions.detour)} veces la distancia en línea recta, caminando a ${NUM.format(assumptions.kmh)} km/h.`;
   const travel = (
     <>
       {origin && <p>{travelSentence(shown, km(shown.km), cost(shown))}</p>}
@@ -85,15 +95,19 @@ export function OptionCard({
   );
   const body = (
     <>
-      <p className="plan-total">
-        <strong>{formatCop(option.productsCop)}</strong> en productos
-      </p>
+      {!hideTotal && (
+        <p className="plan-total">
+          <strong>{formatCop(option.productsCop)}</strong> en productos
+        </p>
+      )}
       {covered < total && (
         <p className="muted">{`Total de ${String(covered)} de ${String(total)} productos`}</p>
       )}
       {split &&
         (option.savingsVsBestSingleCop === null ? (
-          <p className="muted">{`Ninguna tienda sola tiene todo; con ${String(option.stores)} tiendas cubres ${String(covered)} de ${String(total)}.`}</p>
+          quietSingle ? null : (
+            <p className="muted">{`Ninguna tienda sola tiene todo; con ${String(option.stores)} tiendas cubres ${String(covered)} de ${String(total)}.`}</p>
+          )
         ) : option.savingsVsBestSingleCop > 0 ? (
           <p>
             <span className="pill ok">{`Ahorras ${formatCop(option.savingsVsBestSingleCop)} frente a comprar todo en ${view.baselineName ?? 'una tienda'}`}</span>
@@ -108,7 +122,9 @@ export function OptionCard({
           travelLabel={
             share.store.distanceM === undefined
               ? undefined
-              : `a ${formatDistance(share.store.distanceM)} de ti`
+              : share.store.distanceM < AT_STORE_M
+                ? 'a pasos de ti'
+                : `a ${formatDistance(share.store.distanceM)} de ti`
           }
           names={names}
           delivery={deliveryOf(share.store.id)}
@@ -131,7 +147,7 @@ export function OptionCard({
       {!origin && <p className="muted">Sin tu ubicación, el neto no cuenta el traslado.</p>}
     </div>
   );
-  if (fold) {
+  if (panel || fold) {
     return (
       <div className="plan-option">
         {body}

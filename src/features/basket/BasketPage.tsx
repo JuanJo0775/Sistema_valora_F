@@ -4,6 +4,7 @@ import { type BasketItem, useBasket } from './basketContext';
 import { ProductThumb } from '../catalog/ProductThumb';
 import { useWhere } from '../comparison/useWhere';
 import { WhereToBuy } from './WhereToBuy';
+import { nearbyTotals } from '../plan/nearby';
 import { useStoreTotals } from './useStoreTotals';
 import './basket.css';
 
@@ -14,7 +15,10 @@ export function BasketPage() {
   // Dónde buscar (municipio guardado, o la ubicación del momento con su radio) manda en las fichas de
   // «Dónde comprar» y en el «dónde sale más barato» de cada producto: las mismas cuentas para todo.
   const where = useWhere();
-  const { municipality, totals } = useStoreTotals(where.ready ? items : [], where.query);
+  // ADR-031: se consulta siempre por municipio (misma URL para todos, caché compartida); la cercanía
+  // se calcula aquí, en el dispositivo, con la ubicación en memoria.
+  const { totals: all } = useStoreTotals(items, { municipality: where.municipality });
+  const totals = nearbyTotals(all, where.point, where.radiusKm);
   const bestStore = totals.status === 'ready' ? totals.best?.store.name : undefined;
   if (items.length === 0) {
     return (
@@ -59,8 +63,8 @@ export function BasketPage() {
       </section>
       <WhereToBuy
         where={where}
-        municipality={municipality}
-        totals={totals}
+        municipality={where.municipality}
+        totals={all}
         items={items.filter(({ bought }) => !bought)}
       />
     </div>

@@ -9,6 +9,8 @@ import { useWide } from '../../shared/useWide';
 import { type BasketItem, useBasket } from '../basket/basketContext';
 import { type Area, useStoreTotals } from '../basket/useStoreTotals';
 import type { BasketLine } from '../basket/totals';
+import { nearbyTotals } from './nearby';
+import type { Municipality } from '../comparison/criteria';
 import { useWhere } from '../comparison/useWhere';
 import { WherePicker } from '../comparison/WherePicker';
 import { AssumptionsForm } from './AssumptionsForm';
@@ -94,6 +96,8 @@ export function PlanPage({
           <PlanContent
             pending={pending}
             area={where.query}
+            municipality={where.municipality}
+            radiusKm={where.radiusKm}
             origin={where.point}
             renderAction={action}
             wide={wide}
@@ -117,20 +121,27 @@ export function PlanPage({
 function PlanContent({
   pending,
   area,
+  municipality,
+  radiusKm,
   origin,
   renderAction,
   wide,
   assumptionsSlot,
 }: {
   pending: BasketItem[];
+  // Lo que se guarda con el plan (la ubicación nunca se guarda).
   area: Area;
+  // De dónde salen los precios: siempre el municipio (ADR-031); el radio se aplica aquí.
+  municipality: Municipality;
+  radiusKm: number;
   origin: Point | null;
   renderAction?: (choice: PlanChoice) => ReactNode;
   // En computador el formulario de supuestos va al panel lateral; si no, en línea.
   wide: boolean;
   assumptionsSlot: HTMLElement | null;
 }) {
-  const { totals } = useStoreTotals(pending, area);
+  const { totals: all } = useStoreTotals(pending, { municipality });
+  const totals = nearbyTotals(all, origin, radiusKm);
   const settings = usePlanSettings();
   const { assumptions, choose, deliveryOf, setDelivery } = settings;
 

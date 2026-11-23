@@ -132,4 +132,31 @@ describe('useStoreTotals: dónde se busca (#plan-de-compra)', () => {
     });
     expect(stored()).toBe(before);
   });
+
+  it('ADR-031: una solicitud por producto, todas con la misma URL por municipio y nunca con lat/lng', async () => {
+    const { requested } = stubApi({
+      ...comparison('arroz', priceAt('Ara', 'a1', 2600)),
+      ...comparison('leche', priceAt('Ara', 'l1', 4000)),
+      ...comparison('sal', priceAt('Ara', 's1', 1000)),
+    });
+    const items = [item('arroz', 'a1'), item('leche', 'l1'), item('sal', 's1')];
+    const { result, rerender } = renderHook(() =>
+      useStoreTotals(items, { municipality: 'armenia' }),
+    );
+    await waitFor(() => {
+      expect(result.current.totals.status).toBe('ready');
+    });
+
+    expect(requested).toHaveLength(3);
+    const queries = requested.map((url) => url.search.slice(1).split('&').sort().join('&'));
+    expect(new Set(queries)).toEqual(
+      new Set(['municipality=armenia&onlyCurrent=true&sort=unit_price']),
+    );
+    expect(
+      requested.some((url) => url.searchParams.has('lat') || url.searchParams.has('lng')),
+    ).toBe(false);
+    // Volver a dibujar (el radio, la tarjeta elegida…) no consulta de nuevo: solo cambia el municipio o la canasta.
+    rerender();
+    expect(requested).toHaveLength(3);
+  });
 });

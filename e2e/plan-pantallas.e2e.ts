@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { basketOf, fakeApi, PRODUCTS, savedPlan, seed } from './support/planFake';
-import { chooseOption } from './support/screens';
+import { choose } from './support/screens';
 
 // Pantallas del plan de compra (/canasta, /canasta/plan, /canasta/plan/:id) en computador, tableta
 // y celular: sin desbordamiento horizontal, objetivos táctiles de 24 px o más (WCAG 2.5.8) y textos
@@ -90,16 +90,16 @@ for (const size of SIZES) {
       await seed(page, 'valora:canasta', basketOf(PRODUCTS));
     });
 
-    test('/canasta: tarjeta «Compra todo en» y enlace del plan', async ({ page }) => {
+    test('/canasta: recomendaciones y enlace del plan', async ({ page }) => {
       test.skip(size.onlyPlan, 'La horizontal solo se revisa en /canasta/plan');
-      // Sin el producto que nadie vende, una tienda tiene todo y sale «Compra todo en».
+      // Sin el producto que nadie vende, hay recomendaciones: la más barata y todo en una tienda.
       await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
       await fakeApi(page);
       await page.goto('/canasta');
       await expect(
         page.getByRole('link', { name: 'Ver el plan completo y guardarlo' }),
       ).toBeVisible();
-      await check(page, 'canasta', size.name, ['Compra todo en'], 'aside');
+      await check(page, 'canasta', size.name, ['La más barata'], 'aside');
     });
 
     test('/canasta/plan: por municipio, con 3 tiendas y domicilio', async ({ page }) => {
@@ -109,10 +109,12 @@ for (const size of SIZES) {
       await page.getByText('Probar con 3 tiendas').click();
       await page.getByRole('switch', { name: 'Me lo llevan a casa' }).first().check();
       await page.getByLabel('¿Cuánto cobra el domicilio?').first().fill('1234567');
-      await chooseOption(page, 'Cómo cuentas el traslado', 'Pasaje');
-      await page.getByLabel('Pasaje por tramo (COP)').fill('1500');
+      // «¿Cuánto te cuesta ir?» va plegada: se abre y se elige «Pago pasaje».
+      await page.getByText('¿Cuánto te cuesta ir?').click();
+      await choose(page.getByRole('radio', { name: 'Pago pasaje' }));
+      await page.getByLabel('Pasaje por viaje (COP)').fill('1500');
       await expect(page.getByRole('button', { name: 'Guardar plan' }).first()).toBeVisible();
-      await check(page, 'plan-municipio', size.name, ['Plan de compra', 'Supuestos del traslado']);
+      await check(page, 'plan-municipio', size.name, ['Plan de compra', '¿Cuánto te cuesta ir?']);
     });
 
     test('/canasta/plan: con ubicación, radio y plan guardado', async ({ page, context }) => {
@@ -139,7 +141,7 @@ for (const size of SIZES) {
       await fakeApi(page);
       await page.goto('/canasta/plan');
       await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
-      const assumptions = page.getByRole('region', { name: 'Supuestos del traslado' });
+      const assumptions = page.locator('.plan-assumptions');
       const option = page.getByRole('region', { name: '1 tienda' });
       const title = page.getByRole('heading', { name: 'Plan de compra', level: 1 });
       const [side, first, head] = await Promise.all([
@@ -208,11 +210,12 @@ for (const size of SIZES) {
       }
       const names = stops.map(({ name }) => name);
       expect(names.length, 'se recorrió algo').toBeGreaterThan(5);
-      const firstField = stops.findIndex(({ name }) => /rodeo/i.test(name));
+      const firstField = stops.findIndex(({ name }) => /cuesta ir/i.test(name));
       const firstSave = stops.findIndex(({ name }) => name === 'Guardar plan');
-      expect(firstField, `Factor de rodeo en el recorrido: ${names.join(' | ')}`).toBeGreaterThan(
-        -1,
-      );
+      expect(
+        firstField,
+        `«¿Cuánto te cuesta ir?» en el recorrido: ${names.join(' | ')}`,
+      ).toBeGreaterThan(-1);
       expect(firstField, 'los supuestos antes de «Guardar plan»').toBeLessThan(firstSave);
       for (let i = 1; i < stops.length; i++) {
         const prev = stops[i - 1];
@@ -230,9 +233,12 @@ for (const size of SIZES) {
       await fakeApi(page);
       await page.goto('/canasta/plan');
       await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
-      await page.getByLabel('Factor de rodeo').fill('1.5');
+      await page.getByText('¿Cuánto te cuesta ir?').click();
+      await choose(page.getByRole('radio', { name: 'Pago pasaje' }));
+      await page.getByLabel('Pasaje por viaje (COP)').fill('1500');
       await page.setViewportSize({ width: 390, height: 844 });
-      await expect(page.getByLabel('Factor de rodeo')).toHaveValue('1.5');
+      await page.getByText('¿Cuánto te cuesta ir?').click();
+      await expect(page.getByLabel('Pasaje por viaje (COP)')).toHaveValue('1500');
       await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
       await expect(
         page.getByRole('complementary', { name: 'Supuestos del traslado y planes guardados' }),
@@ -291,7 +297,7 @@ test.describe('modo oscuro', () => {
       await fakeApi(page);
       await page.goto('/canasta/plan');
       await expect(page.getByRole('heading', { name: '2 tiendas' })).toBeVisible();
-      await check(page, 'plan-oscuro', size.name, ['Supuestos del traslado']);
+      await check(page, 'plan-oscuro', size.name, ['¿Cuánto te cuesta ir?']);
     });
   }
 });

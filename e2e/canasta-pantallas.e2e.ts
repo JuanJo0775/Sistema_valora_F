@@ -119,19 +119,19 @@ for (const size of SIZES) {
   });
 }
 
-// «Dónde comprar»: el panel de la canasta con las fichas 1, 2 y 3 tiendas. A la derecha de la lista en
+// «Dónde comprar»: el panel de la canasta con las tarjetas de recomendación. A la derecha de la lista en
 // computador (desde 960 px) y debajo de ella en tableta y celular, con el foco en el orden en que se ve.
-// Con CANASTA_EVIDENCIA se guarda una captura (escala 1) del panel por ficha.
+// Con CANASTA_EVIDENCIA se guarda una captura (escala 1) del panel por estado.
 const WIDE = 960;
 const PLAN_LINK = 'Ver el plan completo y guardarlo';
 
 // Lo que se puede tocar dentro del panel y mide menos de 24 px (WCAG 2.5.8). Las casillas de radio
-// van escondidas dentro de su ficha: se mide la ficha (la etiqueta).
+// van escondidas dentro de su tarjeta o ficha: se mide la etiqueta.
 const smallTargets = (panel: Locator) =>
   panel.evaluate((root, min) => {
     const small: string[] = [];
     for (const el of root.querySelectorAll(
-      'a[href], button, summary, input, label.category-chip',
+      'a[href], button, summary, input, label.category-chip, label.rec-card',
     )) {
       if (el.matches('input[type=radio]')) continue;
       const r = el.getBoundingClientRect();
@@ -166,7 +166,7 @@ const tabStops = async (page: Page) => {
     const stop = await page.evaluate(() => {
       const el = document.activeElement;
       if (!el?.closest('main')) return null;
-      // La casilla de radio va escondida: lo que se ve es su ficha.
+      // La casilla de radio va escondida: lo que se ve es su tarjeta.
       const t = (
         el.matches('input[type=radio]') ? (el.closest('label') ?? el) : el
       ).getBoundingClientRect();
@@ -192,15 +192,16 @@ for (const size of SIZES) {
       await page.goto('/canasta');
     });
 
-    test('el panel con sus fichas queda a la derecha (computador) o debajo (tableta y celular)', async ({
+    test('el panel con sus tarjetas queda a la derecha (computador) o debajo (tableta y celular)', async ({
       page,
     }) => {
       const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
-      await expect(panel.getByRole('radiogroup', { name: 'Cuántas tiendas' })).toBeVisible();
-      for (const name of ['1 tienda', '2 tiendas', '3 tiendas'])
-        await expect(panel.locator('label.category-chip', { hasText: name })).toBeVisible();
-      await expect(panel.getByRole('radio', { name: '1 tienda' })).toBeChecked();
-      await expect(panel.getByText('Compra todo en')).toBeVisible();
+      const cards = panel.getByRole('radiogroup', { name: 'Recomendaciones' });
+      await expect(cards).toBeVisible();
+      for (const name of ['La más barata', 'Todo en una tienda'])
+        await expect(cards.locator('label.rec-card', { hasText: name }).first()).toBeVisible();
+      await expect(cards.getByRole('radio', { name: 'La más barata' })).toBeChecked();
+      await expect(panel.getByText('Comparte tu ubicación para ver la más cercana.')).toBeVisible();
       await expect(page.locator('main').getByRole('complementary')).toHaveCount(1);
       const [p, l] = [await box(panel), await box(page.locator('.basket'))];
       if (size.width >= WIDE)
@@ -209,54 +210,57 @@ for (const size of SIZES) {
       expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
       expect(await smallTargets(panel), 'objetivos menores de 24 px').toEqual([]);
       if (size.width < 600) {
-        const chip = await box(panel.locator('label.category-chip').first());
-        expect(chip.height, 'ficha de 44 px en celular').toBeGreaterThanOrEqual(44);
+        const card = await box(cards.locator('label.rec-card').first());
+        expect(card.height, 'tarjeta de 44 px en celular').toBeGreaterThanOrEqual(44);
       }
       if (EVIDENCIA) {
-        await shot(page, `panel-${size.name}-1-tienda.png`);
+        await shot(page, `panel-${size.name}-sin-ubicacion.png`);
+        if (size.width === 1440) {
+          await page.emulateMedia({ colorScheme: 'dark' });
+          await shot(page, `panel-${size.name}-sin-ubicacion-oscuro.png`);
+        }
       }
     });
 
-    test('«2 tiendas» muestra tiendas con «Cómo llegar» y el traslado plegado', async ({
+    test('«Todo en una tienda» conserva la tarjeta naranja; la más barata muestra tiendas con «Cómo llegar» y el traslado plegado', async ({
       page,
     }) => {
       const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
-      await choose(panel.getByRole('radio', { name: '2 tiendas' }));
       const ways = panel.getByRole('link', { name: /^Cómo llegar a/ });
       await expect(ways.first()).toBeVisible();
       expect(await ways.count()).toBeGreaterThanOrEqual(2);
       const fold = panel.getByText('Traslado y domicilio (estimado)');
       await expect(fold).toBeVisible();
-      await expect(panel.getByText('Supuestos del traslado')).toBeHidden();
+      const how = panel.getByText(/^Cómo estimamos esto:/);
+      await expect(how).toBeHidden();
       await fold.click();
-      await expect(panel.getByText('Supuestos del traslado')).toBeVisible();
+      await expect(how).toBeVisible();
+      await expect(panel.getByText('Factor de rodeo')).toHaveCount(0);
+      await panel.getByText('¿Cuánto te cuesta ir?').click();
+      await expect(panel.getByRole('radio', { name: 'Voy a pie' })).toBeChecked();
       await expect(panel.getByRole('link', { name: PLAN_LINK })).toBeVisible();
       expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
       expect(await smallTargets(panel), 'objetivos menores de 24 px').toEqual([]);
-      if (EVIDENCIA) {
-        await shot(page, `panel-${size.name}-2-tiendas.png`);
-        if (size.width === 1440) {
-          await page.emulateMedia({ colorScheme: 'dark' });
-          await shot(page, `panel-${size.name}-2-tiendas-oscuro.png`);
-          await choose(panel.getByRole('radio', { name: '1 tienda' }));
-          await shot(page, `panel-${size.name}-1-tienda-oscuro.png`);
-        }
-      }
+      await choose(panel.getByRole('radio', { name: 'Todo en una tienda' }));
+      await expect(panel.getByText('Compra todo en')).toBeVisible();
+      expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+      expect(await smallTargets(panel), 'objetivos menores de 24 px').toEqual([]);
+      if (EVIDENCIA) await shot(page, `panel-${size.name}-todo-en-una-tienda.png`);
     });
 
-    test('las flechas cambian de ficha sin saltarse ninguna', async ({ page }) => {
+    test('las flechas cambian de tarjeta sin saltarse ninguna', async ({ page }) => {
       const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
-      await panel.getByRole('radio', { name: '1 tienda' }).focus();
+      await panel.getByRole('radio', { name: 'La más barata' }).focus();
       await page.keyboard.press('ArrowRight');
-      await expect(panel.getByRole('radio', { name: '2 tiendas' })).toBeChecked();
-      await expect(panel.getByRole('radio', { name: '2 tiendas' })).toBeFocused();
+      await expect(panel.getByRole('radio', { name: 'Todo en una tienda' })).toBeChecked();
+      await expect(panel.getByRole('radio', { name: 'Todo en una tienda' })).toBeFocused();
       await page.keyboard.press('ArrowLeft');
-      await expect(panel.getByRole('radio', { name: '1 tienda' })).toBeChecked();
+      await expect(panel.getByRole('radio', { name: 'La más barata' })).toBeChecked();
     });
 
     test('el orden de foco es el orden visual: la lista y luego el panel', async ({ page }) => {
       test.skip(size.width >= WIDE, 'En computador son dos columnas, de izquierda a derecha');
-      await expect(page.getByText('Compra todo en')).toBeVisible();
+      await expect(page.getByRole('radio', { name: 'La más barata' })).toBeVisible();
       const stops = await tabStops(page);
       const inPanel = stops.filter((s) => s.inPanel);
       expect(inPanel.length, 'el panel recibe el foco').toBeGreaterThanOrEqual(3);
@@ -275,6 +279,124 @@ for (const size of SIZES) {
       expect(stops[firstPanel - 1]?.cy ?? 0, 'la lista queda arriba').toBeLessThan(
         inPanel[0]?.cy ?? 0,
       );
+    });
+  });
+}
+
+// ADR-031: la consulta es siempre por municipio y con la misma URL para todos (caché compartida); la
+// cercanía se calcula en el dispositivo. Con N productos hay exactamente N solicitudes a /comparison,
+// todas con la misma query, sin lat ni lng, también con «Cerca de mí», y cambiar de tarjeta o de radio
+// no hace ninguna más.
+test.describe('«Dónde comprar»: solicitudes', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  const QUERY = 'municipality=armenia&sort=unit_price&onlyCurrent=true';
+  // La CI compila el frontend con NODE_ENV=development (el backend lo necesita en ese trabajo): React
+  // corre con StrictMode y monta los efectos dos veces, así que cada producto se pide dos veces en el
+  // mismo instante. En producción es una vez. Lo que vigila el ADR-033 es que no se pida NADA más al
+  // activar la ubicación, cambiar de tarjeta o de radio, y que nunca viajen lat ni lng.
+  const MOUNTS = process.env['NODE_ENV'] === 'development' ? 2 : 1;
+
+  test('N productos, N solicitudes con la misma URL y ninguna con lat/lng, aun con «Cerca de mí»', async ({
+    page,
+    context,
+  }) => {
+    const products = PRODUCTS.slice(0, 3);
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation({ latitude: 4.5339, longitude: -75.6811 });
+    const seen: URL[] = [];
+    await seed(page, 'valora:canasta', basketOf(products));
+    await fakeApi(page, 'ok', seen);
+    await page.goto('/canasta');
+    const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
+    await expect(panel.getByRole('radio', { name: 'La más barata' })).toBeChecked();
+
+    const comparisons = () => seen.filter(({ pathname }) => pathname.endsWith('/comparison'));
+    const expectSame = (label: string) => {
+      const found = comparisons();
+      expect(found, `${label}: una solicitud por producto`).toHaveLength(products.length * MOUNTS);
+      expect(
+        [...new Set(found.map(({ search }) => search.slice(1)))],
+        `${label}: la misma query para todos`,
+      ).toEqual([QUERY]);
+      expect(
+        found.some(({ searchParams }) => searchParams.has('lat') || searchParams.has('lng')),
+        `${label}: sin lat ni lng`,
+      ).toBe(false);
+    };
+    expectSame('por municipio');
+
+    // «Cerca de mí»: la ubicación se usa solo en el dispositivo.
+    await panel.getByRole('button', { name: /^Dónde buscar:/ }).click();
+    await page.getByRole('button', { name: 'Usar mi ubicación' }).click();
+    await expect(panel.getByRole('radio', { name: /más cercana/ })).toBeVisible();
+    expectSame('con ubicación');
+
+    // Cambiar de tarjeta, de radio o de tarjeta otra vez: ninguna solicitud nueva.
+    await choose(panel.getByRole('radio', { name: 'Todo en una tienda' }));
+    await panel.getByRole('button', { name: /^Dónde buscar: Cerca de mí/ }).click();
+    await choose(page.getByRole('radio', { name: '0,5 km' }));
+    await page.keyboard.press('Escape');
+    await expect(panel.getByRole('radiogroup', { name: 'Recomendaciones' })).toBeVisible();
+    await choose(
+      panel.getByRole('radiogroup', { name: 'Recomendaciones' }).getByRole('radio').first(),
+    );
+    expectSame('tras cambiar tarjeta y radio');
+  });
+});
+
+// Evidencia visual (solo con CANASTA_EVIDENCIA): con ubicación, varias tarjetas; y sin tienda con todo.
+// Las capturas van a esa carpeta, que debe quedar fuera del repo.
+for (const size of SIZES.filter(({ width }) => [360, 768, 1440].includes(width))) {
+  test.describe(`evidencia con ubicación a ${size.name}`, () => {
+    test.skip(!EVIDENCIA, 'Solo con CANASTA_EVIDENCIA');
+    test.use({ viewport: { width: size.width, height: size.height } });
+
+    test('con ubicación: varias tarjetas', async ({ page, context }) => {
+      await context.grantPermissions(['geolocation']);
+      await context.setGeolocation({ latitude: 4.5439, longitude: -75.6811 });
+      await seed(page, 'valora:donde', 'ubicacion');
+      await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
+      await fakeApi(page);
+      await page.goto('/canasta');
+      const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
+      await expect(panel.getByRole('radio', { name: /más cercana/ })).toBeVisible();
+      expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+      await shot(page, `panel-${size.name}-con-ubicacion.png`);
+      if (size.width === 1440) {
+        await page.emulateMedia({ colorScheme: 'dark' });
+        await shot(page, `panel-${size.name}-con-ubicacion-oscuro.png`);
+      }
+    });
+
+    test('sin tienda con todo dentro del radio', async ({ page, context }) => {
+      const original = PRODUCTS.slice(0, 3).map((p) => p.prices);
+      const prices = [
+        [1_234_567, 1_300_000, null],
+        [null, 3900, null],
+        [15_000, null, 12_000],
+      ];
+      PRODUCTS.slice(0, 3).forEach((p, i) => {
+        p.prices = prices[i] ?? p.prices;
+      });
+      try {
+        await context.grantPermissions(['geolocation']);
+        await context.setGeolocation({ latitude: 4.5339, longitude: -75.6811 });
+        await seed(page, 'valora:donde', 'ubicacion');
+        await seed(page, 'valora:radio', '0.5');
+        await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
+        await fakeApi(page);
+        await page.goto('/canasta');
+        const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
+        await expect(
+          panel.getByText(/ninguna tienda sola tiene toda tu lista/i).first(),
+        ).toBeVisible();
+        expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+        await shot(page, `panel-${size.name}-sin-tienda-con-todo.png`);
+      } finally {
+        PRODUCTS.slice(0, 3).forEach((p, i) => {
+          p.prices = original[i] ?? p.prices;
+        });
+      }
     });
   });
 }
