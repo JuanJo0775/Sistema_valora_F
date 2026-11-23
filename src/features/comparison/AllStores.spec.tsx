@@ -79,6 +79,72 @@ describe('todas las tiendas, en el detalle del producto', () => {
     localStorage.clear();
   });
 
+  it('identifica el oficial y muestra la discrepancia junto a la mediana reportada', async () => {
+    stubCompare(
+      comparison([
+        result({
+          reportId: undefined,
+          reliability: undefined,
+          source: 'oficial',
+          establishment: store('of', 'Tienda Oficial'),
+        }),
+        result({
+          discrepancy: {
+            officialPriceCop: 1800,
+            reportedPriceCop: 2000,
+            reports: 2,
+            since: '2026-11-20T12:00:00Z',
+          },
+        }),
+      ]),
+    );
+    renderCompare();
+    const official = (await screen.findByRole('heading', { name: 'Tienda Oficial' })).closest('li');
+    expect(official).toHaveTextContent('Precio oficial');
+    expect(official).not.toHaveTextContent(/Marcar|Confiabilidad/);
+    expect(await screen.findByText(/Oficial \$1.800 · Reportado \$2.000/)).toBeInTheDocument();
+    expect(screen.getByText(/2 reportes desde el 20 nov/)).toBeInTheDocument();
+  });
+
+  it('muestra las promociones aparte sin cambiar el orden de las ofertas', async () => {
+    const reply = comparison([
+      result({ establishment: store('a', 'Tienda A') }),
+      result({ reportId: 'otro', establishment: store('b', 'Tienda B') }),
+    ]);
+    stubCompare({
+      ...reply,
+      body: {
+        ...reply.body,
+        promotions: [
+          {
+            id: 'promo',
+            establishment: store('b', 'Tienda B'),
+            presentationId: rice.presentations[0]?.id,
+            type: 'pague_x_lleve_y',
+            takeY: 3,
+            payX: 2,
+            officialPriceCop: 2000,
+            promotedPriceCop: 1333,
+            conditions: { paymentMethod: 'efectivo', maxPerCustomer: 2, whileStocksLast: true },
+            validFrom: '2026-11-20',
+            validUntil: '2026-11-25',
+          },
+        ],
+      },
+    });
+    const { container } = renderCompare();
+    const region = await screen.findByRole('region', { name: 'Promociones' });
+    expect(region).toHaveTextContent('Lleve 3, pague 2');
+    expect(region).toHaveTextContent('Antes $2.000');
+    expect(region).toHaveTextContent('$1.333 por unidad en promedio');
+    expect(region).toHaveTextContent('Solo efectivo');
+    expect(region).toHaveTextContent('Hasta agotar existencias');
+    expect(
+      [...container.querySelectorAll('ol.offer-list h3')].map((heading) => heading.textContent),
+    ).toEqual(['Tienda A', 'Tienda B']);
+    expect(region.closest('ol')).toBeNull();
+  });
+
   it('cada resultado dice la tienda, la presentación con su precio y el precio por unidad', async () => {
     stubCompare(comparison([result()]));
 
