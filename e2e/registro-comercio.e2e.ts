@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { newAccount, register, signIn, someProducts } from './support/api';
+import { eventually } from './support/screens';
 
 type Shop = { id: string; name: string; lat: number; lng: number };
 
@@ -94,7 +95,21 @@ async function verifyOfficialPrices(page: Page) {
   const download = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Descargar filas con errores' }).click();
   expect((await download).suggestedFilename()).toBe('precios-por-corregir.csv');
-  return product.id;
+  const official = await page.request.get('/v1/commerce/prices');
+  expect(official.ok()).toBe(true);
+  const { items } = (await official.json()) as { items: { presentationId: string }[] };
+  const published = items[0];
+  if (!published) throw new Error('No se encontró el precio publicado.');
+  const search = await page.request.get('/v1/products', { params: { q: product.name } });
+  expect(search.ok()).toBe(true);
+  const catalog = (await search.json()) as {
+    items: { id: string; presentations: { id: string }[] }[];
+  };
+  const match = catalog.items.find(({ presentations }) =>
+    presentations.some(({ id }) => id === published.presentationId),
+  );
+  if (!match) throw new Error('No se encontró el producto de la presentación publicada.');
+  return match.id;
 }
 
 async function verifyPromotions(page: Page, productId: string) {
@@ -112,7 +127,11 @@ async function verifyPromotions(page: Page, productId: string) {
   await page.goto(`/productos/${productId}`);
   const comparison = page.getByRole('region', { name: 'Todas las tiendas' });
   const promotions = comparison.getByRole('region', { name: 'Promociones' });
-  await expect(promotions.getByText('10 % de descuento', { exact: true })).toBeVisible();
+  await eventually(page, async () => {
+    await expect(promotions.getByText('10 % de descuento', { exact: true })).toBeVisible({
+      timeout: 1000,
+    });
+  });
   await expect(
     comparison.locator('ol.offer-list').getByText('Precio oficial', { exact: true }),
   ).toBeVisible();
