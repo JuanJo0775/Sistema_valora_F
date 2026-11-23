@@ -9,6 +9,7 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { RequireRole } from '../auth/RequireRole';
 import { MerchantPriceEditor, type PriceSelection } from './MerchantPriceEditor';
+import { MerchantStoreEditor } from './MerchantStoreEditor';
 import { MerchantPromotions } from './MerchantPromotions';
 import { MerchantPriceUpload } from './MerchantPriceUpload';
 import './merchant-prices.css';
@@ -374,6 +375,13 @@ function PricePanel() {
               <Link className="btn ghost" to={`/tiendas/${merchant.establishment.id}`}>
                 Ver ficha pública
               </Link>
+              {merchant.status === 'verificado' && (
+                <MerchantStoreEditor
+                  key={merchant.establishment.id}
+                  storeId={merchant.establishment.id}
+                  onChanged={refresh}
+                />
+              )}
             </>
           )}
           {profile && 'data' in profile && !merchant && (
