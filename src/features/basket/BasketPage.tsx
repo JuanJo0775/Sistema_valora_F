@@ -82,11 +82,22 @@ export function BasketPage() {
           ) : items.length === 0 ? (
             <EmptyState
               title="Tu canasta está vacía"
-              text="Agrega productos desde su página para armar tu lista de compras."
+              text={
+                saved > 0
+                  ? 'Abre una de tus listas guardadas o agrega productos desde su página.'
+                  : 'Agrega productos desde su página para armar tu lista de compras.'
+              }
               action={
-                <Link to="/" className="btn">
-                  Buscar productos
-                </Link>
+                <div className="actions">
+                  {saved > 0 && (
+                    <Link to="/canasta?tab=guardadas" className="btn">
+                      Abre una lista guardada
+                    </Link>
+                  )}
+                  <Link to="/" className={saved > 0 ? 'btn ghost' : 'btn'}>
+                    Buscar productos
+                  </Link>
+                </div>
               }
             />
           ) : (

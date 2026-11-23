@@ -6,6 +6,7 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { type Role, useSession } from './session';
 import { SuspendedNotice } from './SuspendedNotice';
+import { usePlans } from '../plan/usePlans';
 import './auth.css';
 
 // La sección privada de cada rol.
@@ -66,6 +67,22 @@ const PRIVACY_ROW = (
   />
 );
 
+// Lo que se guardó en este navegador no depende de la cuenta: el atajo sale con o sin sesión, y solo
+// cuando hay listas (sin ellas no hay a dónde llevar).
+function SavedListsGroup() {
+  const saved = usePlans().length;
+  if (saved === 0) return null;
+  return (
+    <Group id="listas" title="Mi canasta">
+      <NavRow
+        to="/canasta?tab=guardadas"
+        label={`Mis listas guardadas (${String(saved)})`}
+        text="Las que guardaste en este navegador"
+      />
+    </Group>
+  );
+}
+
 const ROLE_LABEL: Record<Role, string> = {
   reportante: 'Reportante',
   moderador: 'Moderador',
@@ -104,6 +121,7 @@ export function Profile() {
             )}
           </Group>
         )}
+        <SavedListsGroup />
         <Group id="preferencias" title="Preferencias">
           {SETTINGS_ROW}
         </Group>
@@ -148,6 +166,7 @@ export function Profile() {
           </div>
         }
       />
+      <SavedListsGroup />
       <Group id="preferencias" title="Preferencias">
         {SETTINGS_ROW}
       </Group>

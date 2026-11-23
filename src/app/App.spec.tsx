@@ -2,6 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
 import { openReportQueue } from '../pwa/reportQueue';
+import { planDraft } from '../test/planFixtures';
+import { savePlan, toSavedPlan } from '../features/plan/savedPlan';
 import { App } from './App';
 
 // Leaflet necesita un navegador de verdad para dibujar el mapa.
@@ -309,6 +311,37 @@ describe('inicio', () => {
     fireEvent.click(nav.getByRole('link', { name: 'Canasta, 1 por comprar' }));
 
     expect(await screen.findByRole('heading', { name: 'Mi canasta' })).toBeInTheDocument();
+    localStorage.clear();
+  });
+
+  it('con listas guardadas, el Inicio las enlaza y la barra no cambia de nombre ni suma otra insignia', async () => {
+    localStorage.setItem(
+      'valora:canasta',
+      JSON.stringify([
+        {
+          productId: rice.id,
+          productName: 'Arroz blanco',
+          presentationId: 'arroz-500g',
+          presentationLabel: '500 g',
+          quantity: 1,
+          bought: false,
+        },
+      ]),
+    );
+    savePlan(toSavedPlan(planDraft(), new Date('2026-11-20T12:00:00Z')));
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+    render(<App />);
+    const nav = within(screen.getByRole('navigation', { name: 'Principal' }));
+
+    expect(nav.getByRole('link', { name: 'Canasta, 1 por comprar' })).toBeInTheDocument();
+    expect(nav.queryByRole('link', { name: /Guardadas|listas/ })).not.toBeInTheDocument();
+    // La insignia es la de siempre (una por barra): no hay una segunda para las listas.
+    for (const badge of document.querySelectorAll('.badge')) expect(badge).toHaveTextContent(/^1$/);
+    expect(await screen.findByRole('link', { name: 'Mis listas guardadas (1)' })).toHaveAttribute(
+      'href',
+      '/canasta?tab=guardadas',
+    );
+    expect(within(screen.getByRole('main')).getAllByRole('complementary')).toHaveLength(1);
     localStorage.clear();
   });
 
