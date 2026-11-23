@@ -10,6 +10,7 @@ import { TodayBasket } from '../features/comparison/TodayBasket';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportInvite } from '../features/reports/ReportInvite';
 import { Layout } from './Layout';
+import { LegacyPlanRedirect } from './LegacyPlanRedirect';
 
 // H-26: el Inicio, la búsqueda, el detalle, la canasta y registrar quedan en el bloque inicial; el
 // resto (mapa con Leaflet, moderación, proponer, entrar, política…) se descarga al abrir la pantalla.
@@ -29,7 +30,6 @@ const MerchantRegistration = screen(
 const Profile = screen(() => import('../features/auth/Profile'), 'Profile');
 const PendingReports = screen(() => import('../pwa/PendingReports'), 'PendingReports');
 const BasketPage = screen(() => import('../features/basket/BasketPage'), 'BasketPage');
-const PlanPage = screen(() => import('../features/plan/PlanPage'), 'PlanPage');
 const SavedPlanPage = screen(() => import('../features/plan/SavedPlanPage'), 'SavedPlanPage');
 const ReportPrice = screen(() => import('../features/reports/ReportPrice'), 'ReportPrice');
 const InstallAndUninstall = screen(
@@ -147,7 +147,7 @@ export function App() {
                 />
                 <Route path="/pendientes" element={<PendingReports />} />
                 <Route path="/canasta" element={<BasketPage />} />
-                <Route path="/canasta/plan" element={<PlanPage />} />
+                <Route path="/canasta/plan" element={<LegacyPlanRedirect />} />
                 <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
                 <Route path="/yo" element={<Profile />} />
                 <Route path="/comercios/registro" element={<MerchantRegistration />} />

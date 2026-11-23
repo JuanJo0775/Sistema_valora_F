@@ -483,6 +483,12 @@
   justify-self: start;
 }
 
+.save-list-result a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+}
+
 .save-list-result:empty {
   display: none;
 }

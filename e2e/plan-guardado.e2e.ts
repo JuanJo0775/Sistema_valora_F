@@ -2,8 +2,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 
-// Plan de compra guardado (Corte 3): (A) la pantalla abre sin conexión y (B) al imprimir solo queda
-// el contenido del plan. Todos los datos son inventados; la prueba no depende del backend.
+// Lista guardada con su plan de compra (Corte 3): (A) la pantalla abre sin conexión y (B) al imprimir
+// solo queda el contenido de la lista. Todos los datos son inventados; la prueba no depende del backend.
 const EVIDENCE_DIR = process.env['E2E_EVIDENCE_DIR'] ?? join(process.cwd(), '..', 'e2e-evidencia');
 
 const PLAN_ID = '00000000-aaaa-4bbb-8ccc-000000000001';
@@ -118,9 +118,7 @@ test('un plan guardado se abre sin conexión', async ({ page, context }) => {
   // Navegación real por URL completa: depende del respaldo de rutas del service worker.
   await page.goto(planUrl(PLAN_ID));
 
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Plan de compra guardado' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Lista guardada' })).toBeVisible();
   await expect(
     page.getByRole('heading', { level: 2, name: 'Tienda La Esquina de Prueba' }),
   ).toBeVisible();
@@ -145,14 +143,10 @@ test('un plan guardado se abre sin conexión', async ({ page, context }) => {
   await expect(page.getByText(/en productos/)).toContainText(/36\.700/);
   await expect(page.getByText(/Domicilio \(estimado\): \$\s?5\.000/)).toBeVisible();
 
-  // Sin red no se puede volver a armar con precios de hoy.
-  await expect(
-    page.getByRole('button', { name: 'Armar de nuevo con precios de hoy' }),
-  ).toBeDisabled();
+  // Sin red no se pueden actualizar los precios, pero la lista sí se puede usar (no pide nada a la red).
+  await expect(page.getByRole('button', { name: 'Actualizar precios' })).toBeDisabled();
   await expect(page.getByText('Necesitas conexión para actualizar')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Armar de nuevo con precios de hoy' })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole('button', { name: /^Usar esta lista/ })).toBeEnabled();
 
   // «Comprado» funciona sin red y persiste al recargar (también sin red).
   const bought = page.getByRole('checkbox', { name: 'Comprado: Arroz blanco' });
@@ -171,7 +165,7 @@ test('un plan que no existe muestra el estado vacío sin conexión', async ({ pa
 
   await page.goto(planUrl('no-existe-0000'));
 
-  await expect(page.getByRole('heading', { name: 'No encontramos este plan' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No encontramos esta lista' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Volver a mi canasta' })).toBeVisible();
 });
 
@@ -180,17 +174,15 @@ test('al imprimir solo queda el contenido del plan', async ({ page }) => {
   await page.goto('/');
   await seedPlan(page);
   await page.goto(planUrl(PLAN_ID));
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Plan de compra guardado' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Lista guardada' })).toBeVisible();
 
   // En pantalla lo que se va a esconder sí está visible: así la prueba no pasa en vacío.
   const hidden = [
     page.getByRole('button', { name: 'Compartir' }),
     page.getByRole('button', { name: 'Descargar' }),
     page.getByRole('button', { name: 'Imprimir' }),
-    page.getByRole('button', { name: 'Borrar este plan' }),
-    page.getByRole('link', { name: 'Armar de nuevo con precios de hoy' }),
+    page.getByRole('button', { name: 'Borrar esta lista' }),
+    page.getByRole('button', { name: /^Usar esta lista/ }),
     page.getByRole('link', { name: 'Cómo llegar a Tienda La Esquina de Prueba' }),
     page.getByRole('link', { name: 'Cómo llegar a Minimercado El Ahorro de Prueba' }),
   ];
@@ -208,9 +200,7 @@ test('al imprimir solo queda el contenido del plan', async ({ page }) => {
   for (const locator of hidden) await expect(locator).toBeHidden();
   // Navegación y cabecera: ningún header/nav visible.
   for (const el of await page.locator('header, nav').all()) await expect(el).toBeHidden();
-  await expect(page.locator('.saved-plans')).toBeHidden();
   await expect(page.locator('.cookie-notice')).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Mis planes guardados' })).toHaveCount(0);
 
   // Visible: tiendas, productos con precio, totales y aviso del domicilio.
   for (const name of ['Tienda La Esquina de Prueba', 'Minimercado El Ahorro de Prueba']) {

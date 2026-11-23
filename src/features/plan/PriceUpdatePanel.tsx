@@ -42,13 +42,13 @@ export function PriceUpdatePanel({
           <p>No pudimos consultar los precios. Revisa tu conexión e inténtalo de nuevo.</p>
         )}
         {state.status === 'ready' && diffs.length === 0 && (
-          <p>Este plan no tiene productos con precio para actualizar.</p>
+          <p>Esta lista no tiene productos con precio para actualizar.</p>
         )}
         {diffs.length > 0 && (
           <>
             <p>
               {changed === 0
-                ? 'Los precios siguen igual que cuando guardaste el plan.'
+                ? 'Los precios siguen igual que cuando guardaste la lista.'
                 : `Cambiaron ${String(changed)} ${changed === 1 ? 'precio' : 'precios'}. Revisa antes de guardar.`}
             </p>
             <ul className="plan-lines">

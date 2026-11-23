@@ -1,5 +1,8 @@
 import { useState, useSyncExternalStore } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { useBasket } from '../basket/basketContext';
+import { UseListButton, type UseMode } from '../basket/UseListButton';
+import { useApplyList } from '../basket/useApplyList';
 import { directionsTo } from '../../shared/directions';
 import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
@@ -31,7 +34,7 @@ const subscribeOnline = (notify: () => void) => {
 };
 const isOnline = () => navigator.onLine;
 
-// El plan que guardaste, sin pedir nada a la red: solo lee lo guardado en este teléfono.
+// La lista que guardaste, sin pedir nada a la red: solo lee lo guardado en este teléfono.
 export function SavedPlanPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -44,13 +47,15 @@ export function SavedPlanPage() {
   const [copied, setCopied] = useState<'none' | 'copied' | 'manual'>('none');
   const [notice, setNotice] = useState<string | null>(null);
   const update = usePriceUpdate(plan);
+  const { items } = useBasket();
+  const applyList = useApplyList();
 
   if (!plan) {
     return (
       <section className="plan">
         <EmptyState
           level={1}
-          title="No encontramos este plan"
+          title="No encontramos esta lista"
           text="Puede que lo hayas borrado o que se guardó en otro navegador."
           action={
             <Link to="/canasta" className="btn">
@@ -105,6 +110,11 @@ export function SavedPlanPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Usarla lleva a «Mi lista», con el aviso de lo que se hizo.
+  const use = (saved: SavedPlan, mode: UseMode) => {
+    void navigate('/canasta', { state: { notice: applyList(saved, mode) } });
+  };
+
   const check = () => {
     setNotice(null);
     void update.run();
@@ -125,13 +135,13 @@ export function SavedPlanPage() {
 
   const remove = () => {
     deletePlan(plan.id);
-    void navigate('/canasta/plan');
+    void navigate('/canasta?tab=guardadas');
   };
 
   return (
     <section className="plan saved-plan">
-      <h1>Plan de compra guardado</h1>
-      <p className="muted">{`Plan guardado el ${shortDay(plan.savedAt) ?? ''}`}</p>
+      <h1>Lista guardada</h1>
+      <p className="muted">{`Guardada el ${shortDay(plan.savedAt) ?? ''}`}</p>
       <div role="status" className="banner warn">
         <p>Los precios cambian y vencen; actualízalo antes de salir.</p>
         {stale && (
@@ -224,8 +234,7 @@ export function SavedPlanPage() {
         {s.pricesUpdatedAt !== undefined && (
           <p className="muted">
             {`Precios actualizados el ${shortDay(s.pricesUpdatedAt) ?? ''}. `}
-            <span>Recalcula el plan para ver el ahorro</span>{' '}
-            <Link to="/canasta/plan">Recalcular en el plan de compra</Link>
+            <span>Para ver el ahorro con precios de hoy, usa esta lista en «Dónde comprar».</span>
           </p>
         )}
         {hasDelivery && (
@@ -256,7 +265,7 @@ export function SavedPlanPage() {
       <div role="status" className="no-print">
         {copied !== 'none' && (
           <p>
-            {copied === 'copied' ? 'Plan copiado. ' : 'No se pudo copiar. '}
+            {copied === 'copied' ? 'Lista copiada. ' : 'No se pudo copiar. '}
             <a
               href={`https://wa.me/?text=${encodeURIComponent(text)}`}
               target="_blank"
@@ -269,31 +278,23 @@ export function SavedPlanPage() {
       </div>
 
       <div className="actions no-print">
+        <UseListButton plan={plan} ask={items.length > 0} onUse={use} />
         <button
           type="button"
-          className="btn"
+          className="btn ghost"
           disabled={!online || update.state.status === 'loading'}
           aria-describedby={online ? undefined : 'sin-conexion'}
           onClick={check}
         >
           Actualizar precios
         </button>
-        {online ? (
-          <Link to="/canasta/plan" className="btn ghost">
-            Armar de nuevo con precios de hoy
-          </Link>
-        ) : (
-          <>
-            <button type="button" className="btn ghost" disabled aria-describedby="sin-conexion">
-              Armar de nuevo con precios de hoy
-            </button>
-            <p id="sin-conexion" className="muted">
-              Necesitas conexión para actualizar
-            </p>
-          </>
+        {!online && (
+          <p id="sin-conexion" className="muted">
+            Necesitas conexión para actualizar
+          </p>
         )}
         <button type="button" className="btn ghost" onClick={remove}>
-          Borrar este plan
+          Borrar esta lista
         </button>
       </div>
       <PriceUpdatePanel

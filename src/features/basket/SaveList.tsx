@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react';
 import { Link } from 'react-router';
-import type { PlanChoice } from '../plan/PlanPage';
-import { areaOf, draftOf, unpricedLine } from '../plan/SavePlanButton';
+import type { PlanChoice } from '../plan/planChoice';
+import { areaOf, draftOf, unpricedLine } from '../plan/planDraft';
 import {
   defaultListName,
   MAX_PLANS,

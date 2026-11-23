@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { basketOf, fakeApi, PRODUCTS, seed } from './support/planFake';
+import { basketOf, fakeApi, PRODUCTS, savedPlan, seed } from './support/planFake';
 import { choose } from './support/screens';
 
 // Lista de compras (/canasta) con nombres muy largos y cortos: sin desborde horizontal, el selector de
@@ -55,9 +55,8 @@ for (const size of SIZES) {
     // (d) Textos clave visibles.
     await expect(page.getByRole('heading', { name: 'Mi canasta' })).toBeVisible();
     await expect(page.getByText('Te decimos dónde te sale más barata.')).toBeVisible();
-    await expect(
-      page.getByRole('link', { name: 'Ver el plan completo y guardarlo' }),
-    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Guardar lista' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /plan completo/ })).toHaveCount(0);
     for (const name of NAMES) await expect(page.getByRole('link', { name })).toBeVisible();
 
     const problemas: string[] = [];
@@ -123,7 +122,6 @@ for (const size of SIZES) {
 // computador (desde 960 px) y debajo de ella en tableta y celular, con el foco en el orden en que se ve.
 // Con CANASTA_EVIDENCIA se guarda una captura (escala 1) del panel por estado.
 const WIDE = 960;
-const PLAN_LINK = 'Ver el plan completo y guardarlo';
 
 // Lo que se puede tocar dentro del panel y mide menos de 24 px (WCAG 2.5.8). Las casillas de radio
 // van escondidas dentro de su tarjeta o ficha: se mide la etiqueta.
@@ -157,11 +155,11 @@ const shot = async (page: Page, file: string) => {
   await page.screenshot({ path: join(EVIDENCIA ?? '.', file), fullPage: true });
 };
 
-// Dónde está cada elemento que recibe el foco con Tab, desde el primer producto hasta el enlace del plan.
+// Dónde está cada elemento que recibe el foco con Tab, desde el primer producto hasta el final del panel.
 const tabStops = async (page: Page) => {
   await page.locator('.basket-row').first().getByRole('checkbox').focus();
   const stops: { inPanel: boolean; cy: number; name: string }[] = [];
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 80; i++) {
     await page.keyboard.press('Tab');
     const stop = await page.evaluate(() => {
       const el = document.activeElement;
@@ -178,7 +176,6 @@ const tabStops = async (page: Page) => {
     });
     if (!stop) break;
     stops.push(stop);
-    if (stop.name === PLAN_LINK) break;
   }
   return stops;
 };
@@ -238,7 +235,8 @@ for (const size of SIZES) {
       await expect(panel.getByText('Factor de rodeo')).toHaveCount(0);
       await panel.getByText('¿Cuánto te cuesta ir?').click();
       await expect(panel.getByRole('radio', { name: 'Voy a pie' })).toBeChecked();
-      await expect(panel.getByRole('link', { name: PLAN_LINK })).toBeVisible();
+      await expect(panel.getByRole('button', { name: 'Guardar lista' })).toBeVisible();
+      await expect(panel.getByRole('link', { name: /plan completo/ })).toHaveCount(0);
       expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
       expect(await smallTargets(panel), 'objetivos menores de 24 px').toEqual([]);
       await choose(panel.getByRole('radio', { name: 'Todo en una tienda' }));
@@ -264,7 +262,7 @@ for (const size of SIZES) {
       const stops = await tabStops(page);
       const inPanel = stops.filter((s) => s.inPanel);
       expect(inPanel.length, 'el panel recibe el foco').toBeGreaterThanOrEqual(3);
-      expect(stops.at(-1)?.name).toBe(PLAN_LINK);
+      expect(stops.at(-1)?.inPanel, 'el recorrido termina en el panel').toBe(true);
       // Toda la lista antes que el panel, y dentro del panel, de arriba abajo.
       const firstPanel = stops.findIndex((s) => s.inPanel);
       expect(
@@ -280,6 +278,129 @@ for (const size of SIZES) {
         inPanel[0]?.cy ?? 0,
       );
     });
+  });
+}
+
+// Casos extremos de «Dónde comprar» que antes se revisaban en /canasta/plan: valores enormes, sin
+// precios, con error, al cambiar de ancho, con ubicación y con las guardadas llenas. Todo vive en
+// /canasta: sin desborde horizontal y con objetivos táctiles de 24 px o más dentro del panel.
+for (const size of SIZES) {
+  test.describe(`«Dónde comprar», casos extremos a ${size.name}`, () => {
+    test.use({ viewport: { width: size.width, height: size.height } });
+    const panelOf = (page: Page) => page.getByRole('complementary', { name: 'Dónde comprar' });
+
+    test('con domicilio y pasaje de valores enormes y un producto sin precio', async ({ page }) => {
+      await seed(page, 'valora:canasta', basketOf(PRODUCTS));
+      await fakeApi(page);
+      await page.goto('/canasta');
+      const panel = panelOf(page);
+      await expect(panel.getByRole('radio', { name: 'La más barata' })).toBeChecked();
+      await expect(
+        panel.getByText(/Sin precio vigente cerca: Producto que nadie vende/),
+      ).toBeVisible();
+      await panel.getByRole('switch', { name: 'Me lo llevan a casa' }).first().check();
+      await panel.getByLabel('¿Cuánto cobra el domicilio?').first().fill('1234567');
+      // «¿Cuánto te cuesta ir?» va plegada: se abre y se elige «Pago pasaje».
+      await panel.getByText('¿Cuánto te cuesta ir?').click();
+      await choose(panel.getByRole('radio', { name: 'Pago pasaje' }));
+      await panel.getByLabel('Pasaje por viaje (COP)').fill('1500');
+      await expect(panel.getByRole('button', { name: 'Guardar lista' })).toBeVisible();
+      expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+      expect(await smallTargets(panel), 'objetivos menores de 24 px').toEqual([]);
+      if (EVIDENCIA) await shot(page, `extremos-${size.name}.png`);
+    });
+
+    test('sin precios cerca o con error, lo dice y deja guardar la lista', async ({ page }) => {
+      await seed(page, 'valora:canasta', basketOf(PRODUCTS));
+      await fakeApi(page, 'empty');
+      await page.goto('/canasta');
+      const panel = panelOf(page);
+      await expect(
+        panel.getByText(/Ningún producto de tu canasta tiene precio vigente/),
+      ).toBeVisible();
+      await expect(panel.getByRole('button', { name: 'Guardar solo la lista' })).toBeVisible();
+      expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+      expect(await smallTargets(panel), 'objetivos menores de 24 px').toEqual([]);
+      if (EVIDENCIA) await shot(page, `sin-precio-${size.name}.png`);
+      await page.unrouteAll();
+      await fakeApi(page, 'error');
+      await page.reload();
+      await expect(panel.getByText('No pudimos calcular dónde te sale más barata.')).toBeVisible();
+      expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+      if (EVIDENCIA) await shot(page, `error-${size.name}.png`);
+    });
+
+    test('con ubicación, radio y una lista guardada', async ({ page, context }) => {
+      await context.grantPermissions(['geolocation']);
+      await context.setGeolocation({ latitude: 4.5339, longitude: -75.6811 });
+      await seed(page, 'valora:donde', 'ubicacion');
+      await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
+      await seed(page, 'valora:planes', { v: 1, plans: [savedPlan('plan-uno', 2)] });
+      await fakeApi(page);
+      await page.goto('/canasta');
+      const panel = panelOf(page);
+      await expect(panel.getByRole('radio', { name: /más cercana/ })).toBeVisible();
+      await panel.getByRole('button', { name: 'Guardar lista' }).click();
+      await expect(panel.getByText('Lista guardada')).toBeVisible();
+      await expect(page.getByRole('tab', { name: 'Guardadas (2)' })).toBeVisible();
+      // El radio vive dentro del «¿Dónde?»: se abre (popover, o hoja inferior en celular) para verlo.
+      await panel.getByRole('button', { name: /^Dónde buscar: Cerca de mí/ }).click();
+      await expect(page.getByText('Radio').first()).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+      expect(await smallTargets(panel), 'objetivos menores de 24 px').toEqual([]);
+      if (EVIDENCIA) await shot(page, `ubicacion-guardada-${size.name}.png`);
+    });
+
+    test('con 20 listas guardadas avisa que está lleno y lleva a «Guardadas»', async ({ page }) => {
+      const plans = Array.from({ length: 20 }, (_, i) => savedPlan(`plan-${String(i)}`, 2));
+      await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
+      await seed(page, 'valora:planes', { v: 1, plans });
+      await fakeApi(page);
+      await page.goto('/canasta');
+      const panel = panelOf(page);
+      await panel.getByRole('button', { name: 'Guardar lista' }).click();
+      await expect(panel.getByText(/Ya tienes 20 listas guardadas/)).toBeVisible();
+      await panel.getByRole('link', { name: 'Ir a Guardadas' }).click();
+      await expect(page).toHaveURL(/\/canasta\?tab=guardadas$/);
+      await expect(page.getByRole('tab', { name: 'Guardadas (20)' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+    });
+  });
+}
+
+test('cambiar de ancho conserva los supuestos del panel', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
+  await fakeApi(page);
+  await page.goto('/canasta');
+  const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
+  await panel.getByText('¿Cuánto te cuesta ir?').click();
+  await choose(panel.getByRole('radio', { name: 'Pago pasaje' }));
+  await panel.getByLabel('Pasaje por viaje (COP)').fill('1500');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(panel.getByLabel('Pasaje por viaje (COP)')).toHaveValue('1500');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+  expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+});
+
+for (const size of [SIZES[0], SIZES[5]]) {
+  if (!size) continue;
+  test(`/canasta en modo oscuro a ${size.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await seed(page, 'valora:canasta', basketOf(PRODUCTS));
+    await fakeApi(page);
+    await page.goto('/canasta');
+    const panel = page.getByRole('complementary', { name: 'Dónde comprar' });
+    await expect(panel.getByRole('radio', { name: 'La más barata' })).toBeChecked();
+    expect(await noOverflow(page), 'sin desborde horizontal').toBe(true);
+    expect(await smallTargets(panel), 'objetivos menores de 24 px').toEqual([]);
+    if (EVIDENCIA) await shot(page, `oscuro-${size.name}.png`);
   });
 }
 

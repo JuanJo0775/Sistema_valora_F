@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
 import { Loading } from '../../shared/ui/Loading';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import type { Where } from '../comparison/useWhere';
@@ -19,8 +18,7 @@ import './whereToBuy.css';
 
 // «Dónde comprar», en la canasta: el sistema calcula recomendaciones y la persona elige una. Las
 // ofertas llegan de una consulta por municipio (la misma para todos, ADR-031); la cercanía se calcula
-// aquí, en el dispositivo, así que cambiar el radio o de tarjeta no pide nada a la red. Guardar el
-// plan sigue en /canasta/plan.
+// aquí, en el dispositivo, así que cambiar el radio o de tarjeta no pide nada a la red.
 export function WhereToBuy({
   where,
   municipality,
@@ -74,11 +72,6 @@ export function WhereToBuy({
             settings={settings}
           />
         )
-      )}
-      {where.ready && totals.status === 'ready' && (
-        <Link to="/canasta/plan" className="btn ghost">
-          Ver el plan completo y guardarlo
-        </Link>
       )}
     </aside>
   );

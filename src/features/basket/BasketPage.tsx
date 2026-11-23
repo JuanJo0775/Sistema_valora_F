@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { type BasketItem, useBasket } from './basketContext';
 import { ProductThumb } from '../catalog/ProductThumb';
@@ -8,21 +8,27 @@ import { WhereToBuy } from './WhereToBuy';
 import { nearbyTotals } from '../plan/nearby';
 import { useStoreTotals } from './useStoreTotals';
 import { BasketTabs, type BasketTab, panelId, tabId } from './BasketTabs';
-import { SavedLists, type UseMode } from './SavedLists';
-import { planName, type SavedPlan } from '../plan/savedPlan';
-import { toBasketItems } from '../plan/savedListView';
+import { SavedLists } from './SavedLists';
+import type { SavedPlan } from '../plan/savedPlan';
+import type { UseMode } from './UseListButton';
+import { useApplyList } from './useApplyList';
 import { usePlans } from '../plan/usePlans';
 import './basket.css';
 
 // #31: la canasta es una lista de compras. Lo que falta por comprar va primero; lo comprado se
 // tacha y baja al final, para ir marcando en la tienda.
 export function BasketPage() {
-  const { items, setQuantity, toggleBought, removeBought, replaceAll, addMany } = useBasket();
+  const { items, setQuantity, toggleBought, removeBought } = useBasket();
+  const applyList = useApplyList();
   // «Mi lista» o «Guardadas»: la pestaña vive en la dirección (?tab=guardadas), para poder enlazarla.
   const [params, setParams] = useSearchParams();
   const tab: BasketTab = params.get('tab') === 'guardadas' ? 'guardadas' : 'lista';
   const saved = usePlans().length;
-  const [notice, setNotice] = useState('');
+  // Quien usó una lista desde su página llega con el aviso de lo que se hizo (la región «status» lo
+  // anuncia; al cambiar de pantalla el foco ya va al contenido).
+  const { state } = useLocation() as { state: { notice?: string } | null };
+  const arrived = state?.notice ?? '';
+  const [notice, setNotice] = useState(arrived);
   const panel = useRef<HTMLDivElement>(null);
   const wantFocus = useRef(false);
   const choose = (next: BasketTab) => {
@@ -30,13 +36,7 @@ export function BasketPage() {
   };
   // Usar una lista guardada: reemplaza o suma a «Mi lista», y se pasa a verla.
   const use = (plan: SavedPlan, mode: UseMode) => {
-    if (mode === 'replace') replaceAll(toBasketItems(plan));
-    else addMany(toBasketItems(plan));
-    setNotice(
-      mode === 'replace'
-        ? `Listo: cargamos «${planName(plan)}» en tu canasta`
-        : `Listo: agregamos «${planName(plan)}» a tu canasta`,
-    );
+    setNotice(applyList(plan, mode));
     wantFocus.current = true;
     choose('lista');
   };

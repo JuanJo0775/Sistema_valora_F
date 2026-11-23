@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { seriousViolations } from '../../test/axe';
 import { directionsTo } from '../../shared/directions';
+import { BasketProvider } from '../basket/BasketProvider';
 import { planDraft } from '../../test/planFixtures';
 import { planToText } from './planText';
 import { SavedPlanPage } from './SavedPlanPage';
@@ -17,14 +18,30 @@ const stored = (now = new Date()): SavedPlan => {
   return plan;
 };
 
+// La canasta: dice a dónde se llegó y el aviso que viaja con la navegación.
+function Basket() {
+  const { pathname, search, state } = useLocation() as {
+    pathname: string;
+    search: string;
+    state: { notice?: string } | null;
+  };
+  return <p>{`canasta:${pathname}${search}:${state?.notice ?? ''}`}</p>;
+}
+
 const renderAt = (id: string) =>
   render(
-    <MemoryRouter initialEntries={[`/canasta/plan/${id}`]}>
-      <Routes>
-        <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
-        <Route path="/canasta/plan" element={<p>pantalla del plan</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <BasketProvider>
+      <MemoryRouter initialEntries={[`/canasta/plan/${id}`]}>
+        <Routes>
+          <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
+          <Route path="/canasta" element={<Basket />} />
+        </Routes>
+      </MemoryRouter>
+    </BasketProvider>,
+  );
+const basketNames = () =>
+  (JSON.parse(localStorage.getItem('valora:canasta') ?? '[]') as { productName: string }[]).map(
+    (i) => i.productName,
   );
 
 describe('plan guardado', () => {
@@ -40,7 +57,7 @@ describe('plan guardado', () => {
   it('muestra tiendas, dirección, cómo llegar, precios con fecha y sin precio aparte', () => {
     renderAt(stored(NOW).id);
 
-    expect(screen.getByText(/Plan guardado el 17 nov/)).toBeInTheDocument();
+    expect(screen.getByText(/Guardada el 17 nov/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'D1 Calle 50' })).toBeInTheDocument();
     expect(screen.getByText('Cl. 50 # 14-20')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cómo llegar a D1 Calle 50' })).toHaveAttribute(
@@ -77,24 +94,67 @@ describe('plan guardado', () => {
     expect(readPlans()[0]?.lines.map((l) => l.bought)).toEqual([true, false, false]);
   });
 
-  it('sin conexión se ve igual y armar de nuevo está deshabilitado', () => {
+  it('sin conexión se ve igual, actualizar está deshabilitado y usar la lista sigue disponible', () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     renderAt(stored(NOW).id);
 
     expect(screen.getByRole('heading', { name: 'D1 Calle 50' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Armar de nuevo/ })).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Armar de nuevo con precios de hoy/ }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Actualizar precios' })).toBeDisabled();
     expect(screen.getByText('Necesitas conexión para actualizar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Usar esta lista/ })).toBeEnabled();
+    expect(screen.queryByText(/Armar de nuevo/)).not.toBeInTheDocument();
   });
 
-  it('con conexión armar de nuevo enlaza al plan', () => {
+  it('«Usar esta lista» con la canasta vacía la carga sin preguntar y lleva a la canasta', () => {
     renderAt(stored(NOW).id);
-    expect(screen.getByRole('link', { name: 'Armar de nuevo con precios de hoy' })).toHaveAttribute(
-      'href',
-      '/canasta/plan',
+
+    fireEvent.click(screen.getByRole('button', { name: /Usar esta lista/ }));
+
+    expect(basketNames()).toEqual(['Arroz blanco', 'Aceite', 'Sal marina']);
+    expect(
+      screen.getByText(/^canasta:\/canasta:Listo: cargamos «Plan del 17 nov» en tu canasta/),
+    ).toBeInTheDocument();
+  });
+
+  it('«Usar esta lista» con productos en la canasta pregunta: reemplazar o agregar', () => {
+    localStorage.setItem(
+      'valora:canasta',
+      JSON.stringify([
+        {
+          productId: 'x',
+          productName: 'Panela',
+          presentationId: 'px',
+          presentationLabel: '1 kg',
+          quantity: 1,
+          bought: false,
+        },
+      ]),
     );
+    const { unmount } = renderAt(stored(NOW).id);
+    fireEvent.click(screen.getByRole('button', { name: /Usar esta lista/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reemplazar mi lista' }));
+    expect(basketNames()).toEqual(['Arroz blanco', 'Aceite', 'Sal marina']);
+    expect(screen.getByText(/Listo: cargamos/)).toBeInTheDocument();
+    unmount();
+
+    localStorage.setItem(
+      'valora:canasta',
+      JSON.stringify([
+        {
+          productId: 'x',
+          productName: 'Panela',
+          presentationId: 'px',
+          presentationLabel: '1 kg',
+          quantity: 1,
+          bought: false,
+        },
+      ]),
+    );
+    renderAt(readPlans()[0]?.id ?? '');
+    fireEvent.click(screen.getByRole('button', { name: /Usar esta lista/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar a mi lista' }));
+    expect(basketNames()).toEqual(['Panela', 'Arroz blanco', 'Aceite', 'Sal marina']);
+    expect(screen.getByText(/Listo: agregamos/)).toBeInTheDocument();
   });
 
   it('con más de 7 días avisa que puede estar desactualizado', () => {
@@ -131,6 +191,9 @@ describe('plan guardado', () => {
 
   it('un id desconocido muestra el estado vacío con enlace a la canasta', () => {
     renderAt('no-existe');
+    expect(
+      screen.getByRole('heading', { name: 'No encontramos esta lista', level: 1 }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /canasta/i })).toHaveAttribute('href', '/canasta');
   });
 
@@ -191,11 +254,18 @@ describe('plan guardado', () => {
     expect(print).toHaveBeenCalledTimes(1);
   });
 
-  it('Borrar este plan lo quita y vuelve al plan', () => {
+  it('Borrar esta lista la quita y vuelve a «Guardadas»', () => {
     renderAt(stored(NOW).id);
-    fireEvent.click(screen.getByRole('button', { name: 'Borrar este plan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar esta lista' }));
     expect(readPlans()).toEqual([]);
-    expect(screen.getByText('pantalla del plan')).toBeInTheDocument();
+    expect(screen.getByText(/^canasta:\/canasta\?tab=guardadas:/)).toBeInTheDocument();
+  });
+
+  it('un solo h1 y los textos hablan de «lista»', () => {
+    renderAt(stored(NOW).id);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1, name: 'Lista guardada' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Recalcular/ })).not.toBeInTheDocument();
   });
 
   it('no tiene fallas graves de accesibilidad', async () => {
