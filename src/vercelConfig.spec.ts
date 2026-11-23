@@ -64,4 +64,18 @@ describe('vercel.json (ADR-012)', () => {
       '/index.html',
     );
   });
+
+  // El enlace de restablecer trae un token de un solo uso: ni caché ni Referer.
+  it('la pantalla de restablecer la contraseña no se guarda ni envía Referer', () => {
+    const { headers } = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'vercel.json'), 'utf-8'),
+    ) as { headers: { source: string; headers: { key: string; value: string }[] }[] };
+    const rule = headers.find(({ source }) => source === '/restablecer-contrasena');
+    expect(rule?.headers).toEqual(
+      expect.arrayContaining([
+        { key: 'Cache-Control', value: 'no-store' },
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+      ]),
+    );
+  });
 });

@@ -20,6 +20,8 @@ export type Session =
       emailVerified: boolean;
       // ADR-029: si el servidor exige el correo verificado; con false no se muestra el aviso.
       emailVerificationRequired: boolean;
+      // false: cuenta creada con Google, sin contraseña (no puede cambiarla ni confirmarla con ella).
+      hasPassword: boolean;
     };
 
 export interface SessionState {
@@ -29,6 +31,8 @@ export interface SessionState {
   signOut: () => Promise<void>;
   // La cuenta ya no existe: la sesión local se da por cerrada sin llamar a /auth/logout.
   endSession: () => void;
+  // Se acaba de crear la primera contraseña: la sesión local ya la tiene, sin volver a pedirla.
+  passwordCreated: () => void;
   reload: () => void;
   refreshRole: (expectedRole: Role) => void;
 }
@@ -39,6 +43,7 @@ export const SessionContext = createContext<SessionState>({
   restoreAccount: () => Promise.resolve(),
   signOut: () => Promise.resolve(),
   endSession: () => undefined,
+  passwordCreated: () => undefined,
   reload: () => undefined,
   refreshRole: () => undefined,
 });

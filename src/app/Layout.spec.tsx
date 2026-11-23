@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NO_SESSION, stubApi } from '../test/fakeApi';
+import { NO_SESSION, sessionAs, stubApi } from '../test/fakeApi';
 import { App } from './App';
 
 // Leaflet necesita un navegador de verdad para dibujar el mapa.
@@ -10,6 +10,17 @@ describe('encabezado', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     window.history.pushState({}, '', '/');
+  });
+
+  it('lleva al comercio a sus precios oficiales desde la navegación principal', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('comercio') });
+    render(<App />);
+
+    expect(await screen.findByRole('link', { name: 'Precios oficiales' })).toHaveAttribute(
+      'href',
+      '/comercios',
+    );
+    expect(screen.queryByRole('link', { name: 'Registrar precio' })).not.toBeInTheDocument();
   });
 
   it('el logo lleva a inicio y el enlace (no las imágenes) trae el nombre accesible', () => {

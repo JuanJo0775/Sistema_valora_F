@@ -48,10 +48,6 @@
   cursor: pointer;
 }
 
-.where-trigger:hover {
-  background: var(--bg-2);
-}
-
 .where-trigger[aria-expanded='true'] {
   border-color: var(--accent);
 }
@@ -600,4 +596,46 @@
   position: sticky;
   bottom: 0;
   box-shadow: 0 -8px 8px var(--bg);
+}
+
+.offer-discrepancy {
+  border-inline-start: 3px solid var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+  padding: 8px 12px;
+  border-radius: var(--r-m);
+}
+
+.offer-discrepancy p,
+.comparison-promotions :is(h3, h4, p) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.comparison-promotions {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.comparison-promotions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.comparison-promotions li {
+  display: grid;
+  gap: 8px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  background: var(--info-soft);
+  border-radius: var(--r-m);
+  padding: 12px;
+}
+
+.promotion-conditions {
+  grid-column: 1 / -1;
 }

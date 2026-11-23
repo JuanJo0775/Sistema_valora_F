@@ -34,6 +34,10 @@ export function CheapestCard({
           <span className="muted">{formatDistance(establishment.distanceM)}</span>
         )}
         <FreshnessBadge freshness={cheapest.freshness} observedAt={cheapest.observedAt} />
+        {cheapest.source === 'oficial' && <span className="pill mute">Precio oficial</span>}
+        {cheapest.discrepancy && (
+          <span className="pill warn">Precio reportado con discrepancia</span>
+        )}
       </p>
       {/* B#128: el ahorro lo calcula el backend con el precio por unidad. */}
       {comparison.savingsPercent !== undefined && comparison.savingsPercent > 0 && (

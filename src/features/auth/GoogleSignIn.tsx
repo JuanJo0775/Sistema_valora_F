@@ -1,7 +1,15 @@
+import { POLICY_VERSION } from '../legal/policy';
+
 // ADR-029, fase 2 (F#154): un enlace normal y no el Link del router, porque el navegador debe salir de
 // la PWA hacia el servidor (/v1/* va a la API), que lo lleva a Google y lo trae de vuelta. Sin el
 // JavaScript de Google: nada de terceros se carga en la página (EC-08).
 export const GOOGLE_START = '/v1/auth/google/start';
+
+// Volver a entrar con Google para confirmar que es la misma persona (crear la contraseña desde
+// Ajustes). Navegación completa; el servidor devuelve a `returnTo`, una ruta de la app.
+export function googleReauthUrl(returnTo: string): string {
+  return `${GOOGLE_START}?${new URLSearchParams({ acceptPolicy: POLICY_VERSION, returnTo }).toString()}`;
+}
 
 // La «G» de colores que pide Google en sus botones de inicio de sesión. Va dentro de la página (no se
 // descarga de Google) y es decorativa: el nombre del botón lo da el texto.
@@ -45,7 +53,7 @@ const GOOGLE_ERRORS: Record<string, string> = {
     'Google no ha verificado ese correo. Verifícalo en Google o crea una cuenta con contraseña.',
   // B#188: restaurar con Google una cuenta sin contraseña llega después.
   'eliminacion-pendiente':
-    'Tu cuenta está programada para eliminarse. Si tiene contraseña, entra con tu correo y contraseña para restaurarla.',
+    'Tu cuenta está programada para eliminarse. Si tiene contraseña, entra con tu correo y contraseña para restaurarla. Si no, vuelve a entrar con Google durante los 10 días.',
 };
 
 export function GoogleError({ code }: { code: string | null }) {

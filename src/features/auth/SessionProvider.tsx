@@ -29,18 +29,28 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     request.current = controller;
     fetchSession(controller.signal, attempt.expectedRole)
-      .then(({ role, suspendedUntil, displayName, emailVerified, emailVerificationRequired }) => {
-        if (controller.signal.aborted) return;
-        saveLastRole(role);
-        setSession({
-          status: 'active',
+      .then(
+        ({
           role,
           suspendedUntil,
           displayName,
           emailVerified,
           emailVerificationRequired,
-        });
-      })
+          hasPassword,
+        }) => {
+          if (controller.signal.aborted) return;
+          saveLastRole(role);
+          setSession({
+            status: 'active',
+            role,
+            suspendedUntil,
+            displayName,
+            emailVerified,
+            emailVerificationRequired,
+            hasPassword,
+          });
+        },
+      )
       .catch((error: unknown) => {
         // Solo un 401 dice que no hay sesión; sin red no se sabe.
         const anonymous = error instanceof ApiError && error.status === 401;
@@ -100,6 +110,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         request.current?.abort();
         saveLastRole(null);
         setSession({ status: 'anonymous' });
+      },
+      passwordCreated: () => {
+        setSession((now) => (now.status === 'active' ? { ...now, hasPassword: true } : now));
       },
       reload: () => {
         setSession({ status: 'loading' });

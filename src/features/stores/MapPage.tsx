@@ -92,7 +92,12 @@ export function MapPage() {
         {subtitle && <p className="muted">{subtitle}</p>}
         <WherePicker where={where} showRadius={false} />
         <div className="map-panel">
-          <StoreMap stores={stores} label={`Mapa de las tiendas ${place}`} around={around} />
+          <StoreMap
+            stores={stores}
+            label={`Mapa de las tiendas ${place}`}
+            around={around}
+            municipality={where.municipality}
+          />
           <ul className="map-legend" aria-label="Leyenda del mapa">
             {Object.entries(STORE_TYPES).map(([type, name]) => (
               <li key={type} className={`type-${type}`}>

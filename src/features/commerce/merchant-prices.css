@@ -1,0 +1,154 @@
+.merchant-prices {
+  display: grid;
+  gap: 20px;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.merchant-prices section,
+.merchant-price-form,
+.merchant-price-list {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.merchant-prices section {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  padding: clamp(12px, 3vw, 20px);
+}
+
+.merchant-prices :is(h1, h2, h3, p) {
+  margin-block: 0;
+  overflow-wrap: anywhere;
+}
+
+.merchant-price-form,
+.merchant-price-list {
+  width: 100%;
+}
+
+.merchant-price-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.merchant-price-list li {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.merchant-portal-header {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.merchant-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.merchant-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.merchant-metrics div {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--bg);
+}
+
+.merchant-metrics dt {
+  overflow-wrap: anywhere;
+}
+
+.merchant-metrics dd {
+  margin: 4px 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.merchant-tabs [aria-pressed='true'] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.merchant-tab-content:not([hidden]) {
+  display: grid;
+  gap: 16px;
+}
+
+.merchant-inline-editor {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .merchant-price-list .merchant-price-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .merchant-price-row > :is(p:first-of-type, button) {
+    justify-self: end;
+  }
+}
+
+.merchant-promotion-fields {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.merchant-promotion-fields select {
+  min-width: 0;
+  min-height: var(--touch);
+  padding: 0 12px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.merchant-stock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .merchant-promotion-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.merchant-store-hours {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}

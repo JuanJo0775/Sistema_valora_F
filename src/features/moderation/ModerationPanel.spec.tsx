@@ -29,7 +29,7 @@ describe('panel del moderador', () => {
 
     expect(screen.getByRole('heading', { name: 'Moderación' })).toBeInTheDocument();
     const tabs = screen.getAllByRole('tab').map(({ textContent }) => textContent);
-    expect(tabs).toEqual(['Precios', 'Tiendas', 'Productos', 'Roles']);
+    expect(tabs).toEqual(['Precios', 'Tiendas', 'Productos', 'Comercios', 'Roles']);
     expect(screen.getByRole('tab', { name: 'Precios' })).toHaveAttribute('aria-selected', 'true');
     expect(
       await screen.findByRole('heading', { name: 'No hay precios en revisión' }),

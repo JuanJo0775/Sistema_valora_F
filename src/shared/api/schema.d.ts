@@ -408,6 +408,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    // TODO(regenerar): rutas de contraseña escritas a mano según el contrato del servidor; regenerar con el OpenAPI real.
+    "/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pedir el enlace para crear una contraseña nueva (TODO(regenerar))
+         */
+        post: operations["forgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear una contraseña nueva con el token del enlace (TODO(regenerar))
+         */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar o crear la contraseña de la propia cuenta (TODO(regenerar))
+         */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -790,7 +848,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getMerchantReportEligibility"];
         put?: never;
         /**
          * Denunciar un comercio («no es de quien dice») (RF-015, D2)
@@ -2407,6 +2465,70 @@ export interface operations {
             };
         };
     };
+    // TODO(regenerar): operaciones de contraseña escritas a mano según el contrato del servidor.
+    forgotPassword: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Siempre 202 sin cuerpo: no revela si el correo tiene cuenta. */
+            202: { headers: { [name: string]: unknown }; content?: never };
+            400: components["responses"]["BadRequest"];
+            429: {
+                headers: { "Retry-After": components["headers"]["RetryAfter"]; [name: string]: unknown };
+                content: { "application/json": components["schemas"]["Error"] };
+            };
+        };
+    };
+    resetPassword: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Contraseña creada; no abre sesión. */
+            204: { headers: { [name: string]: unknown }; content?: never };
+            400: components["responses"]["BadRequest"];
+            /** @description code INVALID_TOKEN: inexistente, vencido o ya usado. */
+            422: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["Error"] } };
+            429: {
+                headers: { "Retry-After": components["headers"]["RetryAfter"]; [name: string]: unknown };
+                content: { "application/json": components["schemas"]["Error"] };
+            };
+        };
+    };
+    changePassword: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never };
+        requestBody: {
+            content: {
+                "application/json":
+                    | { currentPassword: string; newPassword: string }
+                    | { newPassword: string };
+            };
+        };
+        responses: {
+            204: { headers: { [name: string]: unknown }; content?: never };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description code INVALID_PASSWORD (la actual no coincide) o REAUTH_REQUIRED (cuenta sin contraseña con sesión de más de 10 minutos). */
+            403: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["Error"] } };
+            429: {
+                headers: { "Retry-After": components["headers"]["RetryAfter"]; [name: string]: unknown };
+                content: { "application/json": components["schemas"]["Error"] };
+            };
+        };
+    };
     listMyReports: {
         parameters: {
             query?: {
@@ -2717,6 +2839,8 @@ export interface operations {
                         emailVerified: boolean;
                         /** @description ADR-029: si el servidor exige el correo verificado para registrar precios (REQUIRE_VERIFIED_EMAIL). Con false la app no muestra el aviso de verificación. */
                         emailVerificationRequired: boolean;
+                        /** @description TODO(regenerar): false en las cuentas creadas con Google que aún no tienen contraseña. */
+                        hasPassword: boolean;
                         /** @description El nombre visible de la propia cuenta (#133). No viene en las cuentas creadas antes de que se pidiera. Es la única respuesta que lo incluye (EC-08). */
                         displayName?: string;
                         /** @description Va en la cabecera X-CSRF-Token de las rutas con sesión que modifican datos. El frontend lo guarda en memoria. */
@@ -3434,6 +3558,33 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    getMerchantReportEligibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                establishmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Indica si la tienda tiene un comercio ajeno registrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        canReport: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     reportMerchant: {

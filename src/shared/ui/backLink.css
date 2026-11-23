@@ -21,10 +21,6 @@ a.back-link .ico {
   height: 20px;
 }
 
-a.back-link:hover {
-  color: var(--ink);
-}
-
 a.back-link:focus-visible {
   outline: 2px solid var(--accent-ink);
   outline-offset: 2px;
