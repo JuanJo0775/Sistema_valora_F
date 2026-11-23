@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
 import { BasketPage } from './BasketPage';
 import { BasketProvider } from './BasketProvider';
+import { planDraft } from '../../test/planFixtures';
+import { savePlan, toSavedPlan } from '../plan/savedPlan';
 
 const RICE = '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d';
 const MILK = '4a2d3b75-6d2f-4c9b-8e72-1b8c2f3d4e5f';
@@ -116,6 +118,23 @@ describe('mi canasta', () => {
 
     expect(screen.getByRole('heading', { name: 'Tu canasta está vacía' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Buscar productos' })).toHaveAttribute('href', '/');
+  });
+
+  it('vacía y con listas guardadas, invita primero a abrir una lista y deja buscar productos', () => {
+    stubApi({});
+    savePlan(toSavedPlan(planDraft(), new Date('2026-11-20T12:00:00Z')));
+    renderBasket();
+
+    const panel = within(screen.getByRole('tabpanel'));
+    expect(panel.getByRole('link', { name: 'Abre una lista guardada' })).toHaveAttribute(
+      'href',
+      '/canasta?tab=guardadas',
+    );
+    expect(panel.getByRole('link', { name: 'Buscar productos' })).toHaveAttribute('href', '/');
+    expect(panel.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Abre una lista guardada',
+      'Buscar productos',
+    ]);
   });
 
   it('cada producto se ve con su presentación y su cantidad, y se cambia con − y +', () => {
