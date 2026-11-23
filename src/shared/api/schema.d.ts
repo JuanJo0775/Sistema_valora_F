@@ -848,7 +848,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getMerchantReportEligibility"];
         put?: never;
         /**
          * Denunciar un comercio («no es de quien dice») (RF-015, D2)
@@ -3558,6 +3558,33 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    getMerchantReportEligibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                establishmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Indica si la tienda tiene un comercio ajeno registrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        canReport: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     reportMerchant: {

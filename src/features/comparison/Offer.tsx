@@ -31,6 +31,7 @@ export function Offer({
   sameName?: boolean;
 }) {
   const { address, distanceM } = offer.establishment;
+  const { discrepancy } = offer;
   const homonym = sameName && !address;
   // Un dato inicial vigente no es «Hoy» en verde: es una referencia que aún nadie confirma. Si su
   // vigencia es de advertencia (por confirmar, desactualizado), esa advertencia se conserva.
@@ -67,6 +68,15 @@ export function Offer({
           <ReliabilityBadge level={offer.reliability} />
           {!neutralInitial && <span className="pill mute">{SOURCE[offer.source]}</span>}
         </p>
+        {discrepancy && (
+          <div className="offer-discrepancy">
+            <p>
+              <strong>Discrepancia corroborada</strong>
+            </p>
+            <p>{`Oficial ${formatCop(discrepancy.officialPriceCop)} · Reportado ${formatCop(discrepancy.reportedPriceCop)}`}</p>
+            <p>{`${String(discrepancy.reports)} reportes desde el ${dayInColombia(discrepancy.since)}`}</p>
+          </div>
+        )}
         <p className="offer-links">
           <a
             href={directionsTo(offer.establishment)}

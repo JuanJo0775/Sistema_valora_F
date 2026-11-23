@@ -27,6 +27,52 @@ const renderMap = () =>
 
 // Leaflet de verdad sobre jsdom: no descarga teselas, pero dibuja los marcadores y sus ventanas.
 describe('mapa de Leaflet', () => {
+  it('centra Calarcá aunque lleguen tiendas y se mueve al cambiar a Córdoba sin tiendas', () => {
+    const view = vi.spyOn(L.Map.prototype, 'setView');
+    const draw = (municipality: 'calarca' | 'cordoba', items = stores) => (
+      <MemoryRouter>
+        <StoreMap stores={items} label="Mapa" municipality={municipality} />
+      </MemoryRouter>
+    );
+    try {
+      const { rerender } = render(draw('calarca'));
+      expect(view).toHaveBeenLastCalledWith(
+        [4.5196, -75.6436],
+        14,
+        expect.objectContaining({ animate: false }),
+      );
+      rerender(draw('cordoba', []));
+      expect(view).toHaveBeenLastCalledWith(
+        [4.3915, -75.6876],
+        14,
+        expect.objectContaining({ animate: false }),
+      );
+    } finally {
+      view.mockRestore();
+    }
+  });
+
+  it('usa primero la ubicación compartida y vuelve al municipio al quitarla', () => {
+    const view = vi.spyOn(L.Map.prototype, 'setView');
+    const draw = (around: { lat: number; lng: number; radiusKm: number } | null) => (
+      <MemoryRouter>
+        <StoreMap stores={stores} label="Mapa" municipality="calarca" around={around} />
+      </MemoryRouter>
+    );
+    try {
+      const { rerender } = render(draw({ lat: 4.63, lng: -75.57, radiusKm: 1 }));
+      expect(view.mock.calls[0]?.[0]).toEqual([4.63, -75.57]);
+      rerender(draw(null));
+      expect(view).toHaveBeenLastCalledWith(
+        [4.5196, -75.6436],
+        14,
+        expect.objectContaining({ animate: false }),
+      );
+    } finally {
+      view.mockRestore();
+    }
+  });
+
   // La rueda del ratón hace zoom. El gesto táctil no cambia: dos dedos hacen zoom y uno desplaza la página.
   it('la rueda del ratón hace zoom sobre el mapa', () => {
     const create = vi.spyOn(L, 'map');

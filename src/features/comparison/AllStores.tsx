@@ -10,6 +10,7 @@ import { SkeletonList } from '../../shared/ui/Skeleton';
 import { formatPresentation } from '../catalog/presentation';
 import { describeCriteria, MUNICIPALITIES } from './criteria';
 import { ago, comparisonKey, readComparison, saveComparison } from './lastComparison';
+import { ComparisonPromotions } from './ComparisonPromotions';
 import { Offer } from './Offer';
 import { useWhere } from './useWhere';
 import { WherePicker } from './WherePicker';
@@ -211,11 +212,14 @@ export function AllStores({
         />
       )}
       {result && 'comparison' in result && (
-        <Results
-          comparison={result.comparison}
-          sizeOf={sizeOf}
-          register={`/registrar?producto=${productId}`}
-        />
+        <>
+          <Results
+            comparison={result.comparison}
+            sizeOf={sizeOf}
+            register={`/registrar?producto=${productId}`}
+          />
+          <ComparisonPromotions promotions={result.comparison.promotions} sizeOf={sizeOf} />
+        </>
       )}
     </section>
   );

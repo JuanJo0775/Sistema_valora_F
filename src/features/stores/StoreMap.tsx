@@ -3,6 +3,7 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { directionsTo } from '../../shared/directions';
+import { MUNICIPALITY_CENTERS, type Municipality } from '../comparison/criteria';
 import { clusterPoints } from './cluster';
 import { pinHtml } from './pinShapes';
 import { usePinShapes } from './pinShapePref';
@@ -29,9 +30,6 @@ export interface Around {
 const PIN = 36;
 const CLUSTER_PX = 44;
 
-// Centro de Armenia: el mapa arranca en el municipio, no en la ubicación de la persona (ADR-019).
-const ARMENIA: L.LatLngExpression = [4.5339, -75.6811];
-
 // ADR-019: Leaflet sobre teselas de OpenStreetMap, con su atribución visible. El mapa es una ayuda
 // visual; la lista de tiendas de la pantalla es su equivalente accesible.
 // H-33: con «reducir movimiento» el mapa no anima el zoom, los marcadores ni los fundidos.
@@ -49,15 +47,19 @@ export function StoreMap({
   onPick,
   picked = null,
   around = null,
+  municipality,
 }: {
   stores: MapStore[];
   label: string;
   onPick?: (point: { lat: number; lng: number }) => void;
   picked?: { lat: number; lng: number } | null;
   around?: Around | null;
+  municipality?: Municipality;
 }) {
   // Solo importa si hay círculo, no cuánto mide: arrastrar la barra no vuelve a dibujar las tiendas.
   const hasAround = around !== null;
+  const lat = around?.lat;
+  const lng = around?.lng;
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const pins = useRef<L.LayerGroup | null>(null);
@@ -78,10 +80,7 @@ export function StoreMap({
     if (!element.current) return;
     // La rueda del ratón hace zoom. En el celular no hay rueda: un dedo sigue desplazando la página y
     // dos dedos hacen zoom en el mapa.
-    const created = L.map(element.current, { scrollWheelZoom: true, ...motionOptions() }).setView(
-      ARMENIA,
-      14,
-    );
+    const created = L.map(element.current, { scrollWheelZoom: true, ...motionOptions() });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -99,6 +98,14 @@ export function StoreMap({
       map.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const center =
+      lat === undefined || lng === undefined
+        ? MUNICIPALITY_CENTERS[municipality ?? 'armenia']
+        : ([lat, lng] as [number, number]);
+    map.current?.setView(center, 14, { animate: false });
+  }, [lat, lng, municipality]);
 
   useEffect(() => {
     const layer = pins.current;
@@ -211,8 +218,8 @@ export function StoreMap({
     draw();
     // Al acercar o alejar los grupos se rehacen.
     current.on('zoomend', draw);
-    // Con el radio, el mapa encuadra el círculo (abajo); sin él, las tiendas.
-    if (stores.length > 0 && !hasAround) {
+    // Los mapas sin municipio explícito encuadran sus tiendas si no hay radio.
+    if (stores.length > 0 && !hasAround && !municipality) {
       current.fitBounds(L.latLngBounds(stores.map(({ lat, lng }) => [lat, lng])), {
         padding: [24, 24],
         maxZoom: 16,
@@ -221,11 +228,9 @@ export function StoreMap({
     return () => {
       current.off('zoomend', draw);
     };
-  }, [stores, navigate, hasAround, shaped]);
+  }, [stores, navigate, hasAround, shaped, municipality]);
 
   // La persona y su círculo: se vuelven a dibujar solo si cambia dónde está.
-  const lat = around?.lat;
-  const lng = around?.lng;
   useEffect(() => {
     const layer = aroundLayer.current;
     if (!map.current || !layer) return;

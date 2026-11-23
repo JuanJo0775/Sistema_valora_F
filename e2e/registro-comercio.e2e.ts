@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test';
-import { newAccount, register, signIn } from './support/api';
+import { expect, type Page, test } from '@playwright/test';
+import { newAccount, register, signIn, someProducts } from './support/api';
+import { eventually } from './support/screens';
 
 type Shop = { id: string; name: string; lat: number; lng: number };
 
@@ -12,7 +13,10 @@ async function fillResponsible(page: import('@playwright/test').Page) {
 test.describe('Registro de comercios (F#165)', () => {
   test.use({ permissions: ['geolocation'], geolocation: { latitude: 4.535, longitude: -75.6811 } });
 
-  test('desde la ficha registra una tienda del mapa y cambia el rol', async ({ page, context }) => {
+  test('registra una tienda del mapa, publica precios, reconfirma y descarga errores CSV', async ({
+    page,
+    context,
+  }) => {
     const account = newAccount('Comercio de prueba');
     await register(page.request, account);
     await signIn(page.request, account);
@@ -32,6 +36,9 @@ test.describe('Registro de comercios (F#165)', () => {
     await expect(page.getByRole('heading', { name: 'Tu tienda quedó verificada' })).toBeVisible();
     await page.getByRole('link', { name: 'Volver a Yo' }).click();
     await expect(page.getByText('Comercio', { exact: true })).toBeVisible();
+    await page.getByRole('link', { name: /Mi tienda/ }).click();
+    const productId = await verifyOfficialPrices(page);
+    await verifyPromotions(page, productId);
   });
 
   test('desde Yo propone una tienda nueva y recupera la preaprobación al recargar', async ({
@@ -55,3 +62,85 @@ test.describe('Registro de comercios (F#165)', () => {
     await expect(pending).toBeVisible();
   });
 });
+
+async function verifyOfficialPrices(page: Page) {
+  const [product] = await someProducts(page.request, 1);
+  if (!product) throw new Error('La semilla no tiene productos para la prueba');
+
+  await page
+    .getByRole('searchbox', { name: 'Buscar producto o código de barras' })
+    .fill(product.name);
+  await page.getByRole('button', { name: 'Buscar en el catálogo' }).click();
+  const editor = page.getByRole('region', { name: 'Publicar o editar un precio' });
+  await editor.getByRole('button').filter({ hasText: product.name }).first().click();
+  await editor.getByLabel('Precio oficial en pesos').fill('2300');
+  await editor.getByRole('button', { name: 'Publicar precio' }).click();
+  await expect(page.getByText('Precio oficial publicado.')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Mis precios' }).getByText('Vigente'),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Todos mis precios siguen igual' }).click();
+  await expect(page.getByText('Precios reconfirmados: 1.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Carga masiva' }).click();
+  await page.getByLabel('Archivo CSV').setInputFiles({
+    name: 'precios.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('codigo_barras;precio\n01234567;invalido\n'),
+  });
+  await page.getByRole('button', { name: 'Cargar precios' }).click();
+  await expect(page.getByText('Filas publicadas: 0.')).toBeVisible();
+  await expect(page.getByText('Fila 2', { exact: true })).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Descargar filas con errores' }).click();
+  expect((await download).suggestedFilename()).toBe('precios-por-corregir.csv');
+  const official = await page.request.get('/v1/commerce/prices');
+  expect(official.ok()).toBe(true);
+  const { items } = (await official.json()) as { items: { presentationId: string }[] };
+  const published = items[0];
+  if (!published) throw new Error('No se encontró el precio publicado.');
+  const search = await page.request.get('/v1/products', { params: { q: product.name } });
+  expect(search.ok()).toBe(true);
+  const catalog = (await search.json()) as {
+    items: { id: string; presentations: { id: string }[] }[];
+  };
+  const match = catalog.items.find(({ presentations }) =>
+    presentations.some(({ id }) => id === published.presentationId),
+  );
+  if (!match) throw new Error('No se encontró el producto de la presentación publicada.');
+  return match.id;
+}
+
+async function verifyPromotions(page: Page, productId: string) {
+  await page.getByRole('button', { name: 'Promociones' }).click();
+  const section = page.getByRole('region', { name: 'Promociones' });
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+  await section.getByLabel('Presentación').selectOption({ index: 1 });
+  await section.getByLabel('Descuento (%)').fill('10');
+  await section.getByLabel('Desde').fill(today);
+  await section.getByLabel('Hasta', { exact: true }).fill(today);
+  await section.getByRole('button', { name: 'Publicar promoción' }).click();
+  await expect(section.getByText('Promoción publicada.')).toBeVisible();
+  await expect(section.getByText('Activa', { exact: true })).toBeVisible();
+
+  await page.goto(`/productos/${productId}`);
+  const comparison = page.getByRole('region', { name: 'Todas las tiendas' });
+  const promotions = comparison.getByRole('region', { name: 'Promociones' });
+  await eventually(page, async () => {
+    await expect(promotions.getByText('10 % de descuento', { exact: true })).toBeVisible({
+      timeout: 1000,
+    });
+  });
+  await expect(
+    comparison.locator('ol.offer-list').getByText('Precio oficial', { exact: true }),
+  ).toBeVisible();
+  await expect(comparison.locator('ol.offer-list').getByText('10 % de descuento')).toHaveCount(0);
+
+  await page.goto('/comercios');
+  await page.getByRole('button', { name: 'Promociones' }).click();
+  await section.getByRole('button', { name: 'Retirar promoción' }).click();
+  await section.getByRole('button', { name: 'Confirmar retiro' }).click();
+  await expect(section.getByText('Promoción retirada.')).toBeVisible();
+  await expect(section.getByText('Aún no tienes promociones publicadas.')).toBeVisible();
+}

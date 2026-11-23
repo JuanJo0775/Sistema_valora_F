@@ -8,6 +8,7 @@ const FIXED: Record<string, string> = {
   '/mapa': 'Mapa',
   '/registrar': 'Registrar precio',
   '/comercios/registro': 'Registrar mi tienda',
+  '/comercios': 'Precios oficiales',
   '/canasta': 'Canasta',
   '/yo': 'Tu cuenta',
   '/yo/ajustes': 'Ajustes',
