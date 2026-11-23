@@ -111,7 +111,7 @@ describe('guardar el plan', () => {
     expect(readPlans()[0]?.lines.map((l) => l.productName)).toEqual(['Arroz blanco']);
   });
 
-  it('con 5 planes ya guardados avisa y no guarda', async () => {
+  it('con 20 planes ya guardados avisa y no guarda', async () => {
     const draft: PlanDraft = {
       area: { kind: 'municipio', municipality: 'armenia' },
       stores: [],
@@ -126,16 +126,16 @@ describe('guardar el plan', () => {
         missing: 0,
       },
     };
-    for (let i = 0; i < 5; i++) savePlan(toSavedPlan(draft, new Date()));
+    for (let i = 0; i < 20; i++) savePlan(toSavedPlan(draft, new Date()));
     stubApi(routes());
     renderPlan(rice, milk);
 
     fireEvent.click((await twoStores()).getByRole('button', { name: 'Guardar plan' }));
 
     expect(
-      await screen.findByText('Ya tienes 5 planes guardados. Borra uno para guardar otro.'),
+      await screen.findByText('Ya tienes 20 planes guardados. Borra uno para guardar otro.'),
     ).toBeInTheDocument();
-    expect(readPlans()).toHaveLength(5);
+    expect(readPlans()).toHaveLength(20);
   });
 
   it('si el navegador no deja guardar, lo dice y la pantalla sigue viva', async () => {

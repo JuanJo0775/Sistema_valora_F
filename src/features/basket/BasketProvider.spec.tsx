@@ -10,9 +10,11 @@ const rice500 = {
   presentationLabel: '500 g',
 };
 
+const listItem = { ...rice500, quantity: 3, bought: true };
+
 // Lo que una pantalla ve y hace con la canasta.
 function BasketProbe() {
-  const { items, add, setQuantity, toggleBought, removeBought } = useBasket();
+  const { items, add, setQuantity, toggleBought, removeBought, replaceAll, addMany } = useBasket();
   return (
     <>
       <button
@@ -22,6 +24,22 @@ function BasketProbe() {
         }}
       >
         Agregar arroz
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          replaceAll([listItem]);
+        }}
+      >
+        Reemplazar
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          addMany([listItem, { ...listItem, presentationId: 'otra', productName: 'Sal' }]);
+        }}
+      >
+        Agregar varios
       </button>
       <button type="button" onClick={removeBought}>
         Quitar lo comprado
@@ -102,5 +120,25 @@ describe('estado de la canasta', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quitar lo comprado' }));
 
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+  });
+
+  it('replaceAll cambia toda la canasta y la guarda con el mismo formato', () => {
+    renderBasket();
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar arroz' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reemplazar' }));
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByText('Arroz blanco · 500 g × 3 (comprado)')).toBeInTheDocument();
+    const saved = JSON.parse(localStorage.getItem('valora:canasta') ?? '[]') as unknown[];
+    expect(saved).toEqual([listItem]);
+  });
+
+  it('addMany suma cantidades si la presentación ya está y agrega las nuevas', () => {
+    renderBasket();
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar arroz' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar varios' }));
+
+    expect(screen.getByText('Arroz blanco · 500 g × 4')).toBeInTheDocument();
+    expect(screen.getByText(/Sal · 500 g × 3/)).toBeInTheDocument();
   });
 });

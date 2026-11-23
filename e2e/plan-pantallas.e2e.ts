@@ -259,13 +259,13 @@ for (const size of SIZES) {
       await check(page, 'plan-error', size.name, ['Plan de compra']);
     });
 
-    test('/canasta/plan: con 5 planes guardados avisa que está lleno', async ({ page }) => {
-      const plans = ['a', 'b', 'c', 'd', 'e'].map((id) => savedPlan(`plan-${id}`, 2));
+    test('/canasta/plan: con 20 planes guardados avisa que está lleno', async ({ page }) => {
+      const plans = Array.from({ length: 20 }, (_, i) => savedPlan(`plan-${String(i)}`, 2));
       await seed(page, 'valora:planes', { v: 1, plans });
       await fakeApi(page);
       await page.goto('/canasta/plan');
       await page.getByRole('button', { name: 'Guardar plan' }).first().click();
-      await expect(page.getByText(/Ya tienes 5 planes guardados/)).toBeVisible();
+      await expect(page.getByText(/Ya tienes 20 planes guardados/)).toBeVisible();
       await check(page, 'plan-lleno', size.name, ['Mis planes guardados']);
     });
 

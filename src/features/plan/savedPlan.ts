@@ -1,5 +1,6 @@
 import type { components } from '../../shared/api/schema';
 import { readStored } from '../../shared/storage';
+import { shortDay } from './planDates';
 import type { TravelAssumptions } from './travel';
 
 // Planes guardados en este teléfono (esquema v1, diseño §3.4). Nunca se guardan las coordenadas de
@@ -9,7 +10,8 @@ const KEY = 'valora:planes';
 const VERSION = 1;
 // Una sola ranura donde se copia lo que no se pudo leer antes de reescribir la clave.
 const BACKUP_KEY = 'valora:planes-respaldo';
-export const MAX_PLANS = 5;
+export const MAX_PLANS = 20;
+const MAX_NAME = 60;
 
 type Municipality = components['schemas']['Municipality'];
 type StoreType = components['schemas']['Establishment']['type'];
@@ -75,6 +77,9 @@ export interface SavedPlan {
   v: 1;
   id: string;
   savedAt: string;
+  // El nombre de la lista guardada. Los planes anteriores no lo traen: se ven como «Plan del <fecha>».
+  // No es el nombre de una tienda (SavedStore.name).
+  listName?: string;
   area: SavedArea;
   stores: SavedStore[];
   lines: SavedLine[];
@@ -96,7 +101,22 @@ export interface PlanDraft {
   summary: SavedSummary;
 }
 
-export function toSavedPlan(draft: PlanDraft, now: Date): SavedPlan {
+// «Lista del 21 nov»: el nombre que ya trae el campo al guardar (hora de Colombia).
+export const defaultListName = (iso: string): string => {
+  const day = shortDay(iso);
+  return day ? `Lista del ${day}` : 'Lista de compras';
+};
+
+// El nombre con que se ve un plan: el que le puso la persona o, si es anterior, «Plan del <fecha>».
+export function planName(plan: Pick<SavedPlan, 'listName' | 'savedAt'>): string {
+  if (plan.listName) return plan.listName;
+  const day = shortDay(plan.savedAt);
+  return day ? `Plan del ${day}` : 'Plan guardado';
+}
+
+const cleanName = (name: string) => name.trim().slice(0, MAX_NAME).trim();
+
+export function toSavedPlan(draft: PlanDraft, now: Date, listName?: string): SavedPlan {
   const area: SavedArea =
     draft.area.kind === 'municipio'
       ? { kind: 'municipio', municipality: draft.area.municipality }
@@ -128,10 +148,12 @@ export function toSavedPlan(draft: PlanDraft, now: Date): SavedPlan {
     bought: false,
   }));
   const { summary: s } = draft;
+  const name = cleanName(listName ?? '');
   return {
     v: VERSION,
     id: crypto.randomUUID(),
     savedAt: now.toISOString(),
+    ...(name ? { listName: name } : {}),
     area,
     stores,
     lines,
@@ -240,6 +262,8 @@ export function migrate(raw: unknown): SavedPlan[] {
   const plans: unknown[] = raw.plans;
   return plans.filter(validPlan).map((p) => {
     const plan = structuredClone(p);
+    // Un nombre que no es texto no vale el plan entero: se quita.
+    if (plan.listName !== undefined && typeof plan.listName !== 'string') delete plan.listName;
     // Planes v1 sin el campo: el número era el que se guardaba, sin saber si era extra.
     if (plan.summary.travel && typeof plan.summary.travel.extra !== 'boolean')
       plan.summary.travel.extra = false;
@@ -296,8 +320,27 @@ function write({ unreadable }: Stored, next: SavedPlan[]): boolean {
     }
     if (!hasBackup && !setItem(BACKUP_KEY, unreadable)) return false;
   }
-  return setItem(KEY, JSON.stringify({ v: VERSION, plans: next }));
+  const saved = setItem(KEY, JSON.stringify({ v: VERSION, plans: next }));
+  if (saved)
+    listeners.forEach((notify) => {
+      notify();
+    });
+  return saved;
 }
+
+// Quien muestra las listas (la canasta, el panel «Dónde comprar») se entera al instante de que
+// cambiaron, sin recargar.
+const listeners = new Set<() => void>();
+export function subscribePlans(notify: () => void): () => void {
+  listeners.add(notify);
+  window.addEventListener('storage', notify);
+  return () => {
+    listeners.delete(notify);
+    window.removeEventListener('storage', notify);
+  };
+}
+// El texto guardado tal cual: cambia solo si algo cambió, y sirve de instantánea estable.
+export const plansSnapshot = (): string | null => readStored(KEY);
 
 export function savePlan(plan: SavedPlan): 'saved' | 'full' | 'failed' {
   const state = readStoredPlans();
@@ -336,6 +379,7 @@ export function savePlanOnce(plan: SavedPlan): {
   const same = state.plans.find((p) => contentKey(p) === key);
   if (!same) return { outcome: savePlan(plan), id: plan.id };
   same.savedAt = plan.savedAt;
+  if (plan.listName) same.listName = plan.listName;
   return { outcome: write(state, state.plans) ? 'same' : 'failed', id: same.id };
 }
 
@@ -465,4 +509,33 @@ export function toggleBought(id: string, presentationId: string): void {
     l.presentationId === presentationId ? { ...l, bought: !l.bought } : l,
   );
   write(state, state.plans);
+}
+
+// Cambia el nombre de una lista guardada. Vacío vuelve al nombre por defecto. false si no existe o
+// no se pudo escribir.
+export function renamePlan(id: string, name: string): boolean {
+  const state = readStoredPlans();
+  const plan = state.plans.find((p) => p.id === id);
+  if (!plan) return false;
+  plan.listName = cleanName(name) || defaultListName(plan.savedAt);
+  return write(state, state.plans);
+}
+
+// Una copia con otro id y otra fecha, sin lo ya comprado. Respeta el límite de listas.
+export function duplicatePlan(
+  id: string,
+  now = new Date(),
+): { outcome: 'saved' | 'full' | 'failed' | 'missing'; id?: string } {
+  const original = readStoredPlans().plans.find((p) => p.id === id);
+  if (!original) return { outcome: 'missing' };
+  const suffix = ' (copia)';
+  const copy: SavedPlan = {
+    ...structuredClone(original),
+    id: crypto.randomUUID(),
+    savedAt: now.toISOString(),
+    listName: planName(original).slice(0, MAX_NAME - suffix.length) + suffix,
+  };
+  copy.lines = copy.lines.map((l) => ({ ...l, bought: false }));
+  const outcome = savePlan(copy);
+  return outcome === 'saved' ? { outcome, id: copy.id } : { outcome };
 }
