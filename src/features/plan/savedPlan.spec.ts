@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   applyPriceUpdate,
+  defaultListName,
   deletePlan,
   diffPrices,
+  duplicatePlan,
+  MAX_PLANS,
+  planName,
+  renamePlan,
   type PriceOffer,
   migrate,
   readPlans,
@@ -68,16 +73,17 @@ describe('guardar y leer', () => {
     expect((JSON.parse(localStorage.getItem(KEY) ?? '{}') as { v: number }).v).toBe(1);
   });
 
-  it('el sexto plan devuelve full y no se guarda', () => {
-    for (let i = 0; i < 5; i++) expect(savePlan(make(`id-${String(i)}`))).toBe('saved');
-    expect(savePlan(make('id-5'))).toBe('full');
-    expect(readPlans()).toHaveLength(5);
+  it('el plan 21 devuelve full y no se guarda', () => {
+    expect(MAX_PLANS).toBe(20);
+    for (let i = 0; i < 20; i++) expect(savePlan(make(`id-${String(i)}`))).toBe('saved');
+    expect(savePlan(make('id-20'))).toBe('full');
+    expect(readPlans()).toHaveLength(20);
   });
 
-  it('volver a guardar un plan existente lo reemplaza aun con 5 planes', () => {
-    for (let i = 0; i < 5; i++) savePlan(make(`id-${String(i)}`));
+  it('volver a guardar un plan existente lo reemplaza aun con 20 planes', () => {
+    for (let i = 0; i < 20; i++) savePlan(make(`id-${String(i)}`));
     expect(savePlan({ ...make('id-2'), savedAt: '2026-11-18T00:00:00.000Z' })).toBe('saved');
-    expect(readPlans()).toHaveLength(5);
+    expect(readPlans()).toHaveLength(20);
     expect(readPlans().find((p) => p.id === 'id-2')?.savedAt).toBe('2026-11-18T00:00:00.000Z');
   });
 
@@ -288,8 +294,8 @@ describe('guardar sin repetir', () => {
   });
 
   it('con el cupo lleno, un plan igual a uno guardado se refresca en vez de dar full', () => {
-    for (const id of ['a', 'b', 'c', 'd'])
-      savePlan({ ...make(id), area: { kind: 'ubicacion', radiusKm: id.charCodeAt(0) } });
+    for (let i = 0; i < 19; i++)
+      savePlan({ ...make(`id-${String(i)}`), area: { kind: 'ubicacion', radiusKm: i + 10 } });
     savePlan(make('e'));
     expect(savePlanOnce(make('z')).outcome).toBe('same');
     expect(savePlanOnce({ ...make('y'), area: { kind: 'ubicacion', radiusKm: 5.5 } }).outcome).toBe(
@@ -413,5 +419,136 @@ describe('comparar y aplicar precios nuevos', () => {
   it('sin cambios de precio devuelve el mismo plan', () => {
     const plan = make('a');
     expect(applyPriceUpdate(plan, diff(byProduct(['p1', [at('s1', 'pr1', 2190)]])))).toBe(plan);
+  });
+});
+
+describe('listas guardadas (un plan con nombre)', () => {
+  const bare = (): PlanDraft => ({
+    area: { kind: 'municipio', municipality: 'armenia' },
+    stores: [],
+    lines: draft().lines.map((l) => ({ ...l, storeId: null, priceCop: null, observedAt: null })),
+    summary: {
+      stores: 0,
+      productsCop: 0,
+      baselineCop: null,
+      travel: null,
+      deliveryCop: 0,
+      netCop: null,
+      missing: 3,
+    },
+  });
+
+  it('defaultListName usa el día de Colombia', () => {
+    expect(defaultListName('2026-11-22T03:30:00Z')).toBe('Lista del 21 nov');
+    expect(defaultListName('no es fecha')).toBe('Lista de compras');
+  });
+
+  it('planName: el nombre, o «Plan del <fecha>» si el plan es anterior', () => {
+    expect(planName(toSavedPlan(draft(), NOW))).toBe('Plan del 17 nov');
+    expect(planName(toSavedPlan(draft(), NOW, 'Mercado semanal'))).toBe('Mercado semanal');
+    expect(planName({ ...make('x'), savedAt: 'nada' })).toBe('Plan guardado');
+  });
+
+  it('toSavedPlan guarda listName; sin él, el campo no existe', () => {
+    expect(toSavedPlan(draft(), NOW, 'Mercado semanal').listName).toBe('Mercado semanal');
+    expect('listName' in toSavedPlan(draft(), NOW)).toBe(false);
+    expect(toSavedPlan(draft(), NOW, '   ').listName).toBeUndefined();
+  });
+
+  it('el nombre sobrevive a guardar y leer, y el JSON sigue sin distanceM ni coordenadas', () => {
+    savePlan(toSavedPlan(draft(), NOW, 'Mercado semanal'));
+    const raw = localStorage.getItem(KEY) ?? '';
+    expect(readPlans()[0]?.listName).toBe('Mercado semanal');
+    expect(raw).not.toContain('distanceM');
+    expect(raw).not.toContain(String(USER.lat));
+    expect(raw).not.toContain(String(USER.lng));
+  });
+
+  it('los planes viejos sin listName se leen igual', () => {
+    const old = make('viejo');
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, plans: [old] }));
+    expect(readPlans()).toEqual([old]);
+  });
+
+  it('un listName que no es texto se quita sin perder el plan', () => {
+    const odd = { ...make('raro'), listName: 7 };
+    const [plan] = migrate({ v: 1, plans: [odd] });
+    expect(plan?.id).toBe('raro');
+    expect(plan && 'listName' in plan).toBe(false);
+  });
+
+  it('una lista sin precios ni tiendas es válida y se guarda', () => {
+    const plan = toSavedPlan(bare(), NOW, 'Solo la lista');
+    expect(savePlan(plan)).toBe('saved');
+    const [read] = readPlans();
+    expect(read?.stores).toEqual([]);
+    expect(read?.lines.every((l) => l.storeId === null && l.priceCop === null)).toBe(true);
+  });
+
+  it('savePlanOnce con el mismo contenido no gasta cupo y adopta el nombre nuevo', () => {
+    savePlan(toSavedPlan(draft(), NOW, 'Uno'));
+    const { outcome } = savePlanOnce(toSavedPlan(draft(), NOW, 'Dos'));
+    expect(outcome).toBe('same');
+    expect(readPlans()).toHaveLength(1);
+    expect(readPlans()[0]?.listName).toBe('Dos');
+    savePlanOnce(toSavedPlan(draft(), NOW));
+    expect(readPlans()[0]?.listName).toBe('Dos');
+  });
+
+  it('renamePlan recorta, limita a 60 y, vacío, vuelve al nombre por defecto', () => {
+    savePlan(make('a'));
+    expect(renamePlan('a', '  Mercado  ')).toBe(true);
+    expect(readPlans()[0]?.listName).toBe('Mercado');
+    renamePlan('a', 'x'.repeat(80));
+    expect(readPlans()[0]?.listName).toHaveLength(60);
+    renamePlan('a', '   ');
+    expect(readPlans()[0]?.listName).toBe('Lista del 17 nov');
+    expect(renamePlan('nadie', 'Algo')).toBe(false);
+  });
+
+  it('renamePlan devuelve false si no se puede escribir', () => {
+    savePlan(make('a'));
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('cuota', 'QuotaExceededError');
+    });
+    expect(renamePlan('a', 'Otro')).toBe(false);
+  });
+
+  it('duplicatePlan crea otro id y otra fecha, con «(copia)» y sin lo comprado', () => {
+    const original = toSavedPlan(draft(), NOW, 'Mercado semanal');
+    original.lines[0] = { ...original.lines[0], bought: true } as SavedPlan['lines'][number];
+    savePlan(original);
+    const later = new Date('2026-11-20T10:00:00Z');
+    const result = duplicatePlan(original.id, later);
+    expect(result.outcome).toBe('saved');
+    const plans = readPlans();
+    expect(plans).toHaveLength(2);
+    const copy = plans.find((p) => p.id === result.id);
+    expect(copy?.id).not.toBe(original.id);
+    expect(copy?.savedAt).toBe(later.toISOString());
+    expect(copy?.listName).toBe('Mercado semanal (copia)');
+    expect(copy?.lines.every((l) => !l.bought)).toBe(true);
+  });
+
+  it('duplicar un plan viejo parte de «Plan del <fecha>» y el nombre cabe en 60', () => {
+    savePlan(make('a'));
+    duplicatePlan('a');
+    expect(readPlans()[1]?.listName).toBe('Plan del 17 nov (copia)');
+    savePlan({ ...make('b'), listName: 'y'.repeat(60) });
+    duplicatePlan('b');
+    const long = readPlans().at(-1)?.listName ?? '';
+    expect(long).toHaveLength(60);
+    expect(long.endsWith(' (copia)')).toBe(true);
+  });
+
+  it('duplicatePlan respeta el límite, el plan que falta y la escritura', () => {
+    for (let i = 0; i < 20; i++) savePlan(make(`id-${String(i)}`));
+    expect(duplicatePlan('id-1').outcome).toBe('full');
+    expect(duplicatePlan('nadie').outcome).toBe('missing');
+    deletePlan('id-0');
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('cuota', 'QuotaExceededError');
+    });
+    expect(duplicatePlan('id-1').outcome).toBe('failed');
   });
 });

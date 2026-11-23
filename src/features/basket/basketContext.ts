@@ -34,6 +34,9 @@ export interface BasketState {
   setQuantity: (presentationId: string, quantity: number) => void;
   toggleBought: (presentationId: string) => void;
   removeBought: () => void;
+  // Una lista guardada que se vuelve a usar: cambia toda la canasta o suma a lo que ya hay.
+  replaceAll: (items: BasketItem[]) => void;
+  addMany: (items: BasketItem[]) => void;
 }
 
 export const BasketContext = createContext<BasketState>({
@@ -44,6 +47,8 @@ export const BasketContext = createContext<BasketState>({
   setQuantity: () => undefined,
   toggleBought: () => undefined,
   removeBought: () => undefined,
+  replaceAll: () => undefined,
+  addMany: () => undefined,
 });
 
 export const useBasket = () => useContext(BasketContext);

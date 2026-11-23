@@ -2,12 +2,34 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { type BasketItem, useBasket } from '../basket/basketContext';
 import type { PlanChoice } from './PlanPage';
-import { savePlanOnce, toSavedPlan, type PlanDraft, type SavedLine } from './savedPlan';
+import type { Area } from '../basket/useStoreTotals';
+import { MAX_PLANS, savePlanOnce, toSavedPlan, type PlanDraft, type SavedLine } from './savedPlan';
 
 type Result = 'saved' | 'same' | 'full' | 'failed';
 
+// El área de búsqueda como la lleva el borrador. Las coordenadas de la persona viajan en memoria;
+// toSavedPlan las descarta.
+export const areaOf = (area: Area): PlanDraft['area'] =>
+  'municipality' in area
+    ? { kind: 'municipio', municipality: area.municipality }
+    : { kind: 'ubicacion', radiusKm: area.radiusKm, lat: area.lat, lng: area.lng };
+
+// Un producto de la canasta sin precio ni tienda: así se guarda solo la lista.
+export const unpricedLine = (item: BasketItem): Omit<SavedLine, 'bought'> => ({
+  productId: item.productId,
+  productName: item.productName,
+  presentationId: item.presentationId,
+  presentationLabel: item.presentationLabel,
+  quantity: item.quantity,
+  storeId: null,
+  priceCop: null,
+  source: 'comunidad',
+  freshness: 'vigente',
+  observedAt: null,
+});
+
 // Arma lo que se guarda: una línea por producto pendiente y solo las tiendas del reparto.
-function draftOf(choice: PlanChoice, pending: BasketItem[]): PlanDraft {
+export function draftOf(choice: PlanChoice, pending: BasketItem[]): PlanDraft {
   const { option, area, lines, summary, assumptions, deliveryByStore } = choice;
   const stores = option.shares.map(({ store }): PlanDraft['stores'][number] => {
     const fee = deliveryByStore[store.id];
@@ -24,13 +46,6 @@ function draftOf(choice: PlanChoice, pending: BasketItem[]): PlanDraft {
   });
   let missing = 0;
   const saved = pending.map((item): Omit<SavedLine, 'bought'> => {
-    const base = {
-      productId: item.productId,
-      productName: item.productName,
-      presentationId: item.presentationId,
-      presentationLabel: item.presentationLabel,
-      quantity: item.quantity,
-    };
     const share = option.shares.find((s) =>
       s.lines.some(({ presentationId }) => presentationId === item.presentationId),
     );
@@ -48,17 +63,10 @@ function draftOf(choice: PlanChoice, pending: BasketItem[]): PlanDraft {
       : undefined;
     if (!share || !assigned || !offer) {
       missing += 1;
-      return {
-        ...base,
-        storeId: null,
-        priceCop: null,
-        source: 'comunidad',
-        freshness: 'vigente',
-        observedAt: null,
-      };
+      return unpricedLine(item);
     }
     return {
-      ...base,
+      ...unpricedLine(item),
       storeId: share.store.id,
       priceCop: assigned.unitCop,
       source: offer.source,
@@ -67,11 +75,7 @@ function draftOf(choice: PlanChoice, pending: BasketItem[]): PlanDraft {
     };
   });
   return {
-    // Las coordenadas de la persona viajan en memoria; toSavedPlan las descarta.
-    area:
-      'municipality' in area
-        ? { kind: 'municipio', municipality: area.municipality }
-        : { kind: 'ubicacion', radiusKm: area.radiusKm, lat: area.lat, lng: area.lng },
+    area: areaOf(area),
     stores,
     lines: saved,
     summary: {
@@ -130,7 +134,7 @@ export function SavePlanButton({
         )}
         {result === 'full' && (
           <p>
-            Ya tienes 5 planes guardados. Borra uno para guardar otro.{' '}
+            Ya tienes {String(MAX_PLANS)} planes guardados. Borra uno para guardar otro.{' '}
             <Link to="/canasta/plan#mis-planes">Ver mis planes</Link>
           </p>
         )}

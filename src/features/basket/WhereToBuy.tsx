@@ -9,6 +9,7 @@ import { nearbyTotals, withDistance } from '../plan/nearby';
 import { OptionCard } from '../plan/OptionCard';
 import { planOf, usePlanSettings } from '../plan/planView';
 import { recommend } from '../plan/recommend';
+import { SaveList } from './SaveList';
 import type { BasketItem } from './basketContext';
 import { CheapestStore } from './CheapestStore';
 import { noticeText, RecommendationCards } from './RecommendationCards';
@@ -107,6 +108,7 @@ function Recommended({
   const { items: recs, notices } = found;
   const { names, unpricedItems, view } = planOf(items, lines, where.point, settings);
   const selected = recs.find(({ id }) => id === selectedId) ?? recs[0];
+  const shown = selected && view(selected.option);
   // La tarjeta naranja de siempre, para la mejor tienda única del área que se está viendo.
   const area = nearbyTotals(totals, where.point, where.radiusKm);
   const bestId = area.status === 'ready' ? area.best?.store.id : undefined;
@@ -125,8 +127,11 @@ function Recommended({
           {`Sin precio vigente cerca: ${unpricedItems.map(({ productName }) => productName).join(', ')}. No cuentan en los totales.`}
         </p>
       )}
-      {!selected ? (
-        <p className="muted">Ningún producto de tu canasta tiene precio vigente en esta zona.</p>
+      {!selected || !shown ? (
+        <>
+          <p className="muted">Ningún producto de tu canasta tiene precio vigente en esta zona.</p>
+          <SaveList area={where.query} items={items} resultKey="solo" />
+        </>
       ) : (
         <>
           <RecommendationCards
@@ -136,11 +141,30 @@ function Recommended({
             municipality={MUNICIPALITIES[municipality]}
             located={where.point !== null}
           />
+          <SaveList
+            choice={{
+              option: selected.option,
+              area: where.query,
+              lines,
+              assumptions: settings.assumptions,
+              deliveryByStore: shown.deliveryByStore,
+              summary: {
+                productsCop: selected.option.productsCop,
+                savingsCop: shown.savingsCop,
+                travel: where.point ? shown.shown : null,
+                deliveryCop: shown.deliveryCop,
+                netCop: shown.netCop,
+              },
+            }}
+            area={where.query}
+            items={items}
+            resultKey={selected.id}
+          />
           {showCheapest && (
             <CheapestStore municipality={municipality} totals={area} items={items} />
           )}
           <OptionCard
-            view={view(selected.option)}
+            view={shown}
             names={names}
             origin={where.point}
             assumptions={settings.assumptions}
