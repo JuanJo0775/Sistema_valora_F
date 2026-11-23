@@ -44,6 +44,23 @@ const basketNames = () =>
     (i) => i.productName,
   );
 
+// Una canasta que ya trae un producto: «Usar esta lista» tiene que preguntar.
+const withPanela = () => {
+  localStorage.setItem(
+    'valora:canasta',
+    JSON.stringify([
+      {
+        productId: 'x',
+        productName: 'Panela',
+        presentationId: 'px',
+        presentationLabel: '1 kg',
+        quantity: 1,
+        bought: false,
+      },
+    ]),
+  );
+};
+
 describe('plan guardado', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -117,19 +134,7 @@ describe('plan guardado', () => {
   });
 
   it('«Usar esta lista» con productos en la canasta pregunta: reemplazar o agregar', () => {
-    localStorage.setItem(
-      'valora:canasta',
-      JSON.stringify([
-        {
-          productId: 'x',
-          productName: 'Panela',
-          presentationId: 'px',
-          presentationLabel: '1 kg',
-          quantity: 1,
-          bought: false,
-        },
-      ]),
-    );
+    withPanela();
     const { unmount } = renderAt(stored(NOW).id);
     fireEvent.click(screen.getByRole('button', { name: /Usar esta lista/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Reemplazar mi lista' }));
@@ -137,19 +142,7 @@ describe('plan guardado', () => {
     expect(screen.getByText(/Listo: cargamos/)).toBeInTheDocument();
     unmount();
 
-    localStorage.setItem(
-      'valora:canasta',
-      JSON.stringify([
-        {
-          productId: 'x',
-          productName: 'Panela',
-          presentationId: 'px',
-          presentationLabel: '1 kg',
-          quantity: 1,
-          bought: false,
-        },
-      ]),
-    );
+    withPanela();
     renderAt(readPlans()[0]?.id ?? '');
     fireEvent.click(screen.getByRole('button', { name: /Usar esta lista/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Agregar a mi lista' }));
