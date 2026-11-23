@@ -19,6 +19,7 @@ import {
   SALT,
   shop,
 } from '../../test/planFixtures';
+import { readPlans, toggleBought } from '../plan/savedPlan';
 import { BasketPage } from './BasketPage';
 import { BasketProvider } from './BasketProvider';
 
@@ -123,11 +124,7 @@ describe('canasta: dónde comprar', () => {
     ).toBe(true);
     expect(side.getByText('Tiene 2 de 2 productos.')).toBeInTheDocument();
     expect(side.getByRole('link', { name: 'Cómo llegar a Tienda B' })).toBeInTheDocument();
-    expect(side.getByRole('link', { name: 'Ver el plan completo y guardarlo' })).toHaveAttribute(
-      'href',
-      '/canasta/plan',
-    );
-    expect(side.queryByRole('button', { name: /Guardar plan/ })).not.toBeInTheDocument();
+    expect(side.queryByRole('link', { name: /plan completo/ })).not.toBeInTheDocument();
   });
 
   it('el traslado va plegado y es «estimado»; rodeo y velocidad ya no se muestran', async () => {
@@ -465,6 +462,192 @@ describe('canasta: dónde comprar', () => {
 
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+  });
+
+  it('no escribe nada en localStorage salvo los supuestos', async () => {
+    stubApi(routesFor(far));
+    renderBasket(rice, milk);
+    const side = await panel();
+    await side.findByRole('radio', { name: 'La más barata' });
+    const before = Object.keys(localStorage).sort();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Pago pasaje' }));
+
+    expect(Object.keys(localStorage).sort()).toEqual([...before, 'valora:plan-supuestos'].sort());
+  });
+
+  it('una tienda con coordenadas no válidas no da NaN: se omite del traslado y se avisa', async () => {
+    locateAt(4.53, -75.6811);
+    const broken = { ...near, b: { ...near.b, lat: 'x' as unknown as number } };
+    stubApi(routesFor(broken));
+    renderBasket(rice, milk);
+
+    const side = await panel();
+    await side.findByRole('radio', { name: 'La más barata' });
+    expect(
+      await side.findByText('No pudimos ubicar 1 tienda; el traslado no la cuenta.'),
+    ).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent('NaN');
+  });
+
+  it('no ofrece ir a otra pantalla para ver el plan: guardar está en el panel', async () => {
+    stubApi(routesFor(far));
+    renderBasket(rice, milk);
+
+    const side = await panel();
+    await side.findByRole('radio', { name: 'La más barata' });
+    expect(side.getByRole('button', { name: 'Guardar lista' })).toBeInTheDocument();
+    expect(side.queryByRole('link', { name: /plan completo/ })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="/canasta/plan"]')).toBeNull();
+  });
+
+  describe('lo que se guarda', () => {
+    const KM1 = new Intl.NumberFormat('es-CO', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+    const saved = () => readPlans()[0];
+    const save = (side: Awaited<ReturnType<typeof panel>>) => {
+      fireEvent.click(side.getByRole('button', { name: 'Guardar lista' }));
+    };
+    // Lo que el panel dice del traslado de la tarjeta elegida.
+    const shownTravel = (side: Awaited<ReturnType<typeof panel>>) =>
+      side.getByText(/^Traslado .*estimado: /).textContent;
+
+    it('no lleva distanceM ni la ubicación de la persona; lo sin precio queda aparte', async () => {
+      locateAt(4.53017, -75.68023);
+      stubApi({ ...routesFor(near), ...comparisonOf(SALT) });
+      renderBasket(rice, milk, salt);
+
+      const side = await panel();
+      await side.findByRole('radio', { name: 'La más barata' });
+      save(side);
+
+      const raw = localStorage.getItem('valora:planes') ?? '';
+      expect(raw).not.toContain('distanceM');
+      expect(raw).not.toContain('4.53017');
+      expect(raw).not.toContain('-75.68023');
+      const plan = saved();
+      expect(plan?.stores).toHaveLength(2);
+      expect(plan?.area.kind).toBe('ubicacion');
+      expect(plan?.lines.find((l) => l.productName === 'Sal')).toMatchObject({
+        storeId: null,
+        priceCop: null,
+        observedAt: null,
+      });
+      expect(plan?.summary.missing).toBe(1);
+      expect(plan?.lines.find((l) => l.productName === 'Arroz blanco')).toMatchObject({
+        storeId: 'a',
+        priceCop: 2000,
+        source: 'comunidad',
+      });
+    });
+
+    it('guardar dos veces lo mismo no crea otra lista: refresca la fecha', async () => {
+      stubApi(routesFor(far));
+      renderBasket(rice, milk);
+
+      const side = await panel();
+      await side.findByRole('radio', { name: 'La más barata' });
+      save(side);
+      const first = saved();
+      toggleBought(first?.id ?? '', 'arroz-500g');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      save(side);
+
+      expect(readPlans()).toHaveLength(1);
+      expect(saved()?.id).toBe(first?.id);
+      expect((saved()?.savedAt ?? '') > (first?.savedAt ?? '')).toBe(true);
+      expect(saved()?.lines.some((l) => l.bought)).toBe(true);
+    });
+
+    it('con una sola tienda guarda el viaje real, igual al mostrado, y no lo rotula extra', async () => {
+      locateAt(4.53, -75.6811);
+      stubApi(routesFor(near));
+      renderBasket(rice, milk);
+      const side = await panel();
+      await side.findByRole('radio', { name: 'La más barata' });
+      pick('Todo en una tienda');
+      const shown = shownTravel(side);
+
+      save(side);
+
+      const travel = saved()?.summary.travel;
+      expect(travel?.extra).toBe(false);
+      expect(travel?.extraKm).toBeGreaterThan(0);
+      expect(shown).toContain(`${KM1.format(travel?.extraKm ?? 0)} km`);
+      expect(shown).not.toContain('extra');
+    });
+
+    it('con dos tiendas guarda el extra frente a la tienda única y lo marca extra', async () => {
+      locateAt(4.53, -75.6811);
+      stubApi(routesFor(near));
+      renderBasket(rice, milk);
+      const side = await panel();
+      await side.findByRole('radio', { name: 'La más barata' });
+      const shown = shownTravel(side);
+
+      save(side);
+
+      const travel = saved()?.summary.travel;
+      expect(travel?.extra).toBe(true);
+      expect(travel?.extraKm).toBeGreaterThan(0);
+      expect(shown).toContain('Traslado extra estimado');
+      expect(shown).toContain(`${KM1.format(travel?.extraKm ?? 0)} km`);
+    });
+
+    it('si ninguna tienda sola cubre todo guarda la ruta completa como total, no como extra', async () => {
+      locateAt(4.53, -75.6811);
+      stubApi({
+        ...comparisonOf(RICE, offer(near.a, 'arroz-500g', 2000)),
+        ...comparisonOf(MILK, offer(near.b, 'leche-1l', 3000)),
+      });
+      renderBasket(rice, milk);
+      const side = await panel();
+      await side.findByRole('radio', { name: 'La más barata' });
+      const shown = shownTravel(side);
+
+      save(side);
+
+      const travel = saved()?.summary.travel;
+      expect(travel?.extra).toBe(false);
+      expect(travel?.extraKm).toBeGreaterThan(0);
+      expect(shown).not.toContain('extra');
+      expect(shown).toContain(`${KM1.format(travel?.extraKm ?? 0)} km`);
+    });
+
+    it('si el domicilio deja menos traslado que ir a una sola tienda, guarda el valor absoluto como «menos»', async () => {
+      locateAt(4.53, -75.6811);
+      stubApi(routesFor(near));
+      renderBasket(rice, milk);
+      const side = await panel();
+      await side.findByRole('radio', { name: 'La más barata' });
+      // La tienda B (la lejana, la mejor tienda única) va a domicilio: solo se visita A.
+      const group = side.getAllByRole('group').find((g) => g.textContent.includes('Tienda B'));
+      fireEvent.click(within(group as HTMLElement).getByLabelText('Me lo llevan a casa'));
+      const shown = shownTravel(side);
+
+      save(side);
+
+      const travel = saved()?.summary.travel;
+      expect(travel?.extraKm).toBeGreaterThan(0);
+      expect(travel?.extra).toBe(true);
+      expect(travel?.less).toBe(true);
+      expect(shown).toContain('menos');
+      expect(shown).not.toContain('extra');
+      expect(shown).toContain(`${KM1.format(travel?.extraKm ?? 0)} km`);
+    });
+
+    it('sin ubicación el traslado guardado es null', async () => {
+      stubApi(routesFor(far));
+      renderBasket(rice, milk);
+      const side = await panel();
+      await side.findByRole('radio', { name: 'La más barata' });
+
+      save(side);
+
+      expect(saved()?.summary.travel).toBeNull();
+    });
   });
 
   it('el selector «Dónde buscar» está en el panel', async () => {

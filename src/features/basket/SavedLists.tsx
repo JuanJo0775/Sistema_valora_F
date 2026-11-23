@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
-import { Overlay } from '../../shared/ui/Overlay';
 import { shortDay } from '../plan/planDates';
 import { hasPrices, listSummary } from '../plan/savedListView';
 import {
@@ -14,8 +13,7 @@ import {
 } from '../plan/savedPlan';
 import { panelId } from './BasketTabs';
 import { usePlans } from '../plan/usePlans';
-
-export type UseMode = 'replace' | 'add';
+import { UseListButton, type UseMode } from './UseListButton';
 
 const FULL = `Ya tienes ${String(MAX_PLANS)} listas guardadas. Borra una para guardar otra.`;
 
@@ -107,10 +105,8 @@ function SavedListCard({
 }) {
   const [mode, setMode] = useState<Mode>('view');
   const [draft, setDraft] = useState('');
-  const [asking, setAsking] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const renameButton = useRef<HTMLButtonElement>(null);
-  const useButton = useRef<HTMLButtonElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
   const was = useRef<Mode>('view');
   const titleId = useId();
@@ -125,10 +121,6 @@ function SavedListCard({
     was.current = mode;
   }, [mode]);
 
-  const use = (how: UseMode) => {
-    setAsking(false);
-    onUse(plan, how);
-  };
   const back = () => {
     setMode('view');
   };
@@ -196,19 +188,7 @@ function SavedListCard({
       )}
       {mode === 'view' && (
         <div className="saved-actions">
-          <button
-            ref={useButton}
-            type="button"
-            className="btn"
-            aria-label={`Usar esta lista: ${name}`}
-            aria-haspopup={ask ? 'dialog' : undefined}
-            onClick={() => {
-              if (ask) setAsking(true);
-              else use('replace');
-            }}
-          >
-            Usar esta lista
-          </button>
+          <UseListButton plan={plan} ask={ask} onUse={onUse} />
           <Link to={`/canasta/plan/${plan.id}`} className="btn ghost" aria-label={`Abrir ${name}`}>
             Abrir
           </Link>
@@ -245,38 +225,6 @@ function SavedListCard({
             Borrar
           </button>
         </div>
-      )}
-      {asking && (
-        <Overlay
-          anchor={useButton}
-          title={`Usar «${name}»`}
-          onClose={() => {
-            setAsking(false);
-          }}
-        >
-          <div className="saved-ask">
-            <p>Ya tienes productos en tu lista. ¿Qué hacemos con ellos?</p>
-            <button
-              type="button"
-              className="btn"
-              data-autofocus
-              onClick={() => {
-                use('replace');
-              }}
-            >
-              Reemplazar mi lista
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => {
-                use('add');
-              }}
-            >
-              Agregar a mi lista
-            </button>
-          </div>
-        </Overlay>
       )}
     </li>
   );

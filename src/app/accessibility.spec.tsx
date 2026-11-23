@@ -167,7 +167,7 @@ describe('accesibilidad de los flujos críticos (axe, WCAG 2.2 AA)', () => {
     expect(await seriousViolations()).toEqual([]);
   });
 
-  it('el plan de compra, con su reparto en tiendas', async () => {
+  it('la canasta con «Dónde comprar» y sus recomendaciones', async () => {
     localStorage.setItem(
       'valora:canasta',
       JSON.stringify([
@@ -181,13 +181,20 @@ describe('accesibilidad de los flujos críticos (axe, WCAG 2.2 AA)', () => {
         },
       ]),
     );
-    visit('/canasta/plan');
-    await screen.findByRole('heading', { name: '1 tienda' });
+    visit('/canasta');
+    await screen.findByRole('radiogroup', { name: 'Recomendaciones' });
 
     expect(await seriousViolations()).toEqual([]);
   });
 
-  it('un plan de compra guardado', async () => {
+  it('la pestaña «Guardadas»', async () => {
+    visit('/canasta?tab=guardadas');
+    await screen.findByRole('heading', { name: 'Aún no tienes listas guardadas' });
+
+    expect(await seriousViolations()).toEqual([]);
+  });
+
+  it('una lista guardada', async () => {
     localStorage.setItem(
       'valora:planes',
       JSON.stringify({

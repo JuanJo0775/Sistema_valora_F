@@ -1,11 +1,7 @@
-import { useState } from 'react';
-import { Link } from 'react-router';
-import { type BasketItem, useBasket } from '../basket/basketContext';
-import type { PlanChoice } from './PlanPage';
+import type { BasketItem } from '../basket/basketContext';
 import type { Area } from '../basket/useStoreTotals';
-import { MAX_PLANS, savePlanOnce, toSavedPlan, type PlanDraft, type SavedLine } from './savedPlan';
-
-type Result = 'saved' | 'same' | 'full' | 'failed';
+import type { PlanChoice } from './planChoice';
+import type { PlanDraft, SavedLine } from './savedPlan';
 
 // El área de búsqueda como la lleva el borrador. Las coordenadas de la persona viajan en memoria;
 // toSavedPlan las descarta.
@@ -97,54 +93,4 @@ export function draftOf(choice: PlanChoice, pending: BasketItem[]): PlanDraft {
       missing,
     },
   };
-}
-
-export function SavePlanButton({
-  choice,
-  onSaved,
-}: {
-  choice: PlanChoice;
-  // Para que la lista «Mis planes» se refresque.
-  onSaved?: () => void;
-}) {
-  const { items } = useBasket();
-  const [result, setResult] = useState<Result | null>(null);
-  const [id, setId] = useState('');
-
-  const save = () => {
-    const pending = items.filter(({ bought }) => !bought);
-    const plan = toSavedPlan(draftOf(choice, pending), new Date());
-    const { outcome, id: savedId } = savePlanOnce(plan);
-    setId(savedId);
-    setResult(outcome);
-    if (outcome === 'saved' || outcome === 'same') onSaved?.();
-  };
-
-  return (
-    <div className="plan-save no-print">
-      <button type="button" className="btn" onClick={save}>
-        Guardar plan
-      </button>
-      <div role="status" className="plan-save-result">
-        {(result === 'saved' || result === 'same') && (
-          <p>
-            <span>{result === 'saved' ? 'Plan guardado' : 'Este plan ya estaba guardado'}</span>{' '}
-            <Link to={`/canasta/plan/${id}`}>Ver plan guardado</Link>
-          </p>
-        )}
-        {result === 'full' && (
-          <p>
-            Ya tienes {String(MAX_PLANS)} planes guardados. Borra uno para guardar otro.{' '}
-            <Link to="/canasta/plan#mis-planes">Ver mis planes</Link>
-          </p>
-        )}
-        {result === 'failed' && (
-          <p>
-            No se pudo guardar en este navegador (modo privado o sin espacio). Puedes compartirlo o
-            imprimirlo.
-          </p>
-        )}
-      </div>
-    </div>
-  );
 }

@@ -92,6 +92,24 @@ describe('mi canasta', () => {
     expect(screen.getByText('Te decimos dónde te sale más barata.')).toBeInTheDocument();
   });
 
+  it('quien llega de usar una lista ve el aviso que trae', () => {
+    stubApi({});
+    localStorage.setItem('valora:canasta', JSON.stringify([rice]));
+    render(
+      <BasketProvider>
+        <MemoryRouter
+          initialEntries={[
+            { pathname: '/canasta', state: { notice: 'Listo: cargamos «Mercado»' } },
+          ]}
+        >
+          <BasketPage />
+        </MemoryRouter>
+      </BasketProvider>,
+    );
+
+    expect(screen.getByText('Listo: cargamos «Mercado»')).toBeInTheDocument();
+  });
+
   it('vacía invita a buscar productos', () => {
     stubApi({});
     renderBasket();

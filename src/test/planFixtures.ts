@@ -1,10 +1,6 @@
-import { render } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
-import { BasketProvider } from '../features/basket/BasketProvider';
-import { PlanPage } from '../features/plan/PlanPage';
 import type { PlanDraft } from '../features/plan/savedPlan';
 
-// Fixtures y montaje compartidos por las pruebas del plan de compra.
+// Fixtures y montaje compartidos por las pruebas de las listas y del plan guardado.
 
 export const RICE = '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d';
 export const MILK = '4a2d3b75-6d2f-4c9b-8e72-1b8c2f3d4e5f';
@@ -80,18 +76,6 @@ export const near = {
   b: { ...shop('b', 'Tienda B', 4.5399, 1100), lng: -75.6761 },
 };
 export const far = { a: shop('a', 'Tienda A', 4.5339), b: shop('b', 'Tienda B', 4.5439) };
-
-// Monta la pantalla del plan con esa canasta guardada.
-export const renderPlan = (...items: ReturnType<typeof item>[]) => {
-  localStorage.setItem('valora:canasta', JSON.stringify(items));
-  return render(
-    <BasketProvider>
-      <MemoryRouter>
-        <PlanPage />
-      </MemoryRouter>
-    </BasketProvider>,
-  );
-};
 
 // La persona da su ubicación: el navegador responde con ese punto.
 export const locateAt = (latitude: number, longitude: number) => {

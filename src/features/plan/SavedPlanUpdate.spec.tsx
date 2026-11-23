@@ -157,11 +157,10 @@ describe('actualizar precios del plan guardado', () => {
     for (const secret of ['distanceM', '4.51234', '-75.61234']) expect(raw).not.toContain(secret);
 
     expect(await screen.findByText('Precios actualizados')).toBeInTheDocument();
-    expect(screen.getByText('Recalcula el plan para ver el ahorro')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Recalcular en el plan de compra' })).toHaveAttribute(
-      'href',
-      '/canasta/plan',
-    );
+    expect(
+      screen.getByText('Para ver el ahorro con precios de hoy, usa esta lista en «Dónde comprar».'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Recalcular/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Ahorro neto/)).not.toBeInTheDocument();
     expect(screen.getByText('$13.700')).toBeInTheDocument();
     expect(screen.queryByText('Puede estar desactualizado')).not.toBeInTheDocument();
@@ -230,17 +229,15 @@ describe('actualizar precios del plan guardado', () => {
     expect(screen.queryByText(/No pudimos consultar/)).not.toBeInTheDocument();
   });
 
-  it('sin conexión, los dos botones quedan deshabilitados y ligados a un solo texto', () => {
+  it('sin conexión, actualizar queda deshabilitado y ligado a su texto', () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     renderAt(stored(municipio).id);
 
     const text = screen.getByText('Necesitas conexión para actualizar');
-    for (const name of ['Actualizar precios', 'Armar de nuevo con precios de hoy']) {
-      const button = screen.getByRole('button', { name });
-      expect(button).toBeDisabled();
-      expect(button).toHaveAccessibleDescription('Necesitas conexión para actualizar');
-      expect(button).toHaveAttribute('aria-describedby', text.id);
-    }
+    const button = screen.getByRole('button', { name: 'Actualizar precios' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription('Necesitas conexión para actualizar');
+    expect(button).toHaveAttribute('aria-describedby', text.id);
   });
 
   it('un plan sin productos con precio no tiene nada que actualizar', async () => {
