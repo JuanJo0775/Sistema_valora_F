@@ -292,7 +292,7 @@ test.describe('«Dónde comprar»: solicitudes', () => {
   const QUERY = 'municipality=armenia&sort=unit_price&onlyCurrent=true';
   // La CI compila el frontend con NODE_ENV=development (el backend lo necesita en ese trabajo): React
   // corre con StrictMode y monta los efectos dos veces, así que cada producto se pide dos veces en el
-  // mismo instante. En producción es una vez. Lo que vigila el ADR-033 es que no se pida NADA más al
+  // mismo instante. En producción es una vez. Lo que vigila el ADR-035 es que no se pida NADA más al
   // activar la ubicación, cambiar de tarjeta o de radio, y que nunca viajen lat ni lng.
   const MOUNTS = process.env['NODE_ENV'] === 'development' ? 2 : 1;
 
