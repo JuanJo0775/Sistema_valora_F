@@ -142,3 +142,32 @@ it('permite aprobar una corrección en Tiendas y muestra los cambios propuestos'
     JSON.stringify({ decision: 'aprobar', note: 'Confirmado en la visita.' }),
   );
 });
+
+it('permite cancelar la denuncia y reintentar si el envío falla', async () => {
+  stubApi({
+    'GET /v1/auth/session': sessionAs('reportante'),
+    'GET /v1/establishments/s1/merchant-reports': { status: 200, body: { canReport: true } },
+    'POST /v1/establishments/s1/merchant-reports': [{ status: 503 }, { status: 202 }],
+  });
+  render(
+    <MemoryRouter>
+      <SessionProvider>
+        <MerchantReport establishmentId="s1" />
+      </SessionProvider>
+    </MemoryRouter>,
+  );
+  const action = '¿Este comercio no es de quien dice?';
+  fireEvent.click(await screen.findByRole('button', { name: action }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+  fireEvent.click(screen.getByRole('button', { name: action }));
+  const send = screen.getByRole('button', { name: 'Enviar denuncia' });
+  expect(send).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Motivo de la denuncia'), {
+    target: { value: '  La tienda tiene otro dueño.  ' },
+  });
+  fireEvent.click(send);
+  await screen.findByRole('alert');
+  expect(send).toBeEnabled();
+  fireEvent.click(send);
+  expect(await screen.findByText(/Denuncia recibida/)).toBeInTheDocument();
+});
