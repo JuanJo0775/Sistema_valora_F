@@ -137,7 +137,6 @@ export function DecisionForm<T extends string>({
               type="button"
               className="btn"
               // Pedir la confirmación mueve el foco a ella: quien usa teclado no la pierde.
-              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               onClick={() => {
                 submit(decision);

@@ -88,7 +88,7 @@ describe('formulario de decisión', () => {
       );
     });
 
-    it('pide confirmación antes de enviar, con el foco en Confirmar, y envía al confirmar', async () => {
+    it('pide confirmación antes de enviar, con el foco en Confirmar, y envía al confirmar', () => {
       const onDecide = vi.fn(() => Promise.resolve());
       render(<DecisionForm id="c" options={WITH_SANCTION} onDecide={onDecide} />);
       fireEvent.click(screen.getByRole('radio', { name: 'Observar cuentas' }));
