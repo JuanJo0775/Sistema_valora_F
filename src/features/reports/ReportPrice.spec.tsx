@@ -990,6 +990,22 @@ describe('registrar un precio: precio atípico', () => {
     expect(body).toMatchObject({ priceCop: 2400 });
   });
 
+  it('tras confirmar un precio atípico, «Recibido» dice que un moderador lo revisa antes de mostrarlo', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+    await sendKg(api, '2400');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sí, ese es el precio' }));
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Gracias: un moderador lo revisará antes de mostrarlo. El estado de tu aporte lo ves en «Mis aportes».',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Ya cuenta en la comparación/)).not.toBeInTheDocument();
+  });
+
   it('sugiere el precio con los ceros que faltan y «Sí, escribir» lo pone en el campo', async () => {
     const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
     renderReport();
