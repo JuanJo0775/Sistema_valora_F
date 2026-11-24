@@ -422,3 +422,22 @@
 .suggest-empty {
   padding: 12px;
 }
+
+.product-online-offers {
+  margin-block-start: 1.25rem;
+}
+
+.product-online-offers ul {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+
+.product-online-offers li > strong {
+  margin-inline-start: 0.75rem;
+}
+
+.product-online-offers li > p {
+  margin-block: 0.25rem;
+}

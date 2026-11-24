@@ -16,6 +16,7 @@ import { MUNICIPALITIES } from '../comparison/criteria';
 import { HistorySummary } from '../history/HistorySummary';
 import { ChangeProductPhoto } from '../moderation/ChangeProductPhoto';
 import { ProductImage } from './ProductImage';
+import { ProductOnlineOffers } from './ProductOnlineOffers';
 import './catalog.css';
 import { BackLink } from '../../shared/ui/BackLink';
 
@@ -118,6 +119,7 @@ export function ProductDetail() {
             <p className="muted">{summary(product, comparison)}</p>
           </div>
         </header>
+        <ProductOnlineOffers key={product.id} product={product} />
       </article>
       {/* #48: en escritorio, el panel fijo de la derecha; en el celular, entre el producto y la
           lista de tiendas, para que lo que decide la compra quede primero. Orden del panel: el más
