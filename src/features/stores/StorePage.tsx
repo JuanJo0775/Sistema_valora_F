@@ -13,6 +13,7 @@ import { SidePanel } from '../../shared/ui/SidePanel';
 import { Skeleton } from '../../shared/ui/Skeleton';
 import { ProductThumb } from '../catalog/ProductThumb';
 import { MUNICIPALITIES } from '../comparison/criteria';
+import { useSession } from '../auth/session';
 import { MerchantReport } from './MerchantReport';
 import { PinShape } from './pinShapes';
 import { StoreMap } from './StoreMap';
@@ -27,6 +28,9 @@ type StorePrices =
 // como en la comparación. El orden (por producto) lo da el backend.
 export function StorePage() {
   const { establishmentId = '' } = useParams();
+  const { session } = useSession();
+  // Un comercio o un moderador no puede registrar otra tienda: no se le ofrece reclamarla.
+  const canClaim = session.status !== 'active' || session.role === 'reportante';
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const key = `${establishmentId}|${String(onlyCurrent)}|${String(attempt)}`;
@@ -129,9 +133,11 @@ export function StorePage() {
               <Icon name="plus" />
               Registrar un precio aquí
             </Link>
-            <Link to={`/comercios/registro?tienda=${store.id}`} className="btn ghost">
-              ¿Eres el dueño? Registra tu tienda
-            </Link>
+            {canClaim && (
+              <Link to={`/comercios/registro?tienda=${store.id}`} className="btn ghost">
+                ¿Eres el dueño? Registra tu tienda
+              </Link>
+            )}
           </div>
           <MerchantReport key={store.id} establishmentId={store.id} />
         </header>
