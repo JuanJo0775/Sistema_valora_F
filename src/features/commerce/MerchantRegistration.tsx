@@ -110,8 +110,10 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
     <>
       {profile && (
         <p className="banner warn" role="status">
-          {profile.status === 'revocado' ? 'Registro revocado' : 'Registro rechazado'}.{' '}
-          {profile.reason}
+          {/* La nota de un moderador es interna (puede nombrar a quien denunció): al revocar no se muestra. */}
+          {profile.status === 'revocado'
+            ? 'Moderación revocó el registro de esta cuenta para esa tienda.'
+            : `Tu tienda propuesta fue rechazada: ${profile.reason}`}
         </p>
       )}
       <ClaimForm key={storeId} storeId={storeId} onRegistered={setReceipt} />

@@ -192,6 +192,36 @@ describe('registro de comercios (#165)', () => {
     expect(screen.getByText('Actualizar los datos de la tienda')).toBeInTheDocument();
   });
 
+  it('a una cuenta revocada le da un mensaje estándar y no la nota interna del moderador', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: {
+        status: 200,
+        body: { status: 'revocado', reason: 'Denunció Clara Pérez por precios falsos' },
+      },
+    });
+    open(registration);
+    expect(
+      await screen.findByText('Moderación revocó el registro de esta cuenta para esa tienda.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Clara/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Registro revocado/)).not.toBeInTheDocument();
+  });
+
+  it('a una cuenta rechazada le sigue mostrando el motivo del moderador', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: {
+        status: 200,
+        body: { status: 'rechazado', reason: 'La dirección no existe' },
+      },
+    });
+    open(registration);
+    expect(
+      await screen.findByText('Tu tienda propuesta fue rechazada: La dirección no existe'),
+    ).toBeInTheDocument();
+  });
+
   it('no envía el formulario si el navegador niega la ubicación', async () => {
     locate.mockRejectedValue(new Error('Ubicación denegada'));
     const { calls } = stubApi({

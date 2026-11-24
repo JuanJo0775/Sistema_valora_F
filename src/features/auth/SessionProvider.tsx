@@ -5,7 +5,7 @@ import { readLastRole, saveLastRole } from './lastRole';
 import { type Role, type Session, SessionContext } from './session';
 
 // MerchantVerified cambia el rol por el relé. El segundo reintento cubre el intervalo de 5 s.
-async function fetchSession(signal: AbortSignal, expectedRole?: Role) {
+async function loadSession(signal: AbortSignal, expectedRole?: Role) {
   let session = await call(api.GET('/auth/session', { signal }));
   for (
     let retries = 0;
@@ -17,6 +17,13 @@ async function fetchSession(signal: AbortSignal, expectedRole?: Role) {
     session = await call(api.GET('/auth/session', { signal }));
   }
   return session;
+}
+
+async function fetchSession(signal: AbortSignal, expectedRole?: Role) {
+  const session = await loadSession(signal, expectedRole);
+  // `suspension` es aditivo y el backend aún no lo declara en los tipos generados: se lee como opcional.
+  const { suspension } = session as { suspension?: { reason?: string } };
+  return { ...session, suspension };
 }
 
 // ADR-014: la sesión es una cookie del servidor; la app pregunta quién es al abrirse.
@@ -33,6 +40,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         ({
           role,
           suspendedUntil,
+          suspension,
           displayName,
           emailVerified,
           emailVerificationRequired,
@@ -44,6 +52,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             status: 'active',
             role,
             suspendedUntil,
+            suspensionReason: suspension?.reason,
             displayName,
             emailVerified,
             emailVerificationRequired,

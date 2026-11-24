@@ -14,6 +14,8 @@ export type Session =
       status: 'active';
       role: Role;
       suspendedUntil?: string | undefined;
+      // Por qué se suspendió (campo aditivo del backend: puede no venir). Ver SuspendedNotice.
+      suspensionReason?: string | undefined;
       // B#133: el nombre visible, solo para la propia cuenta (las anteriores no lo tienen).
       displayName?: string | undefined;
       // ADR-029: sin el correo verificado no se pueden registrar precios.

@@ -163,6 +163,26 @@ export function DeleteAccount() {
           </li>
         </ul>
       </section>
+      {session.role === 'comercio' && (
+        <section aria-labelledby="tu-tienda" className="delete-list">
+          <h2 id="tu-tienda">Si administras una tienda</h2>
+          <ul>
+            <li>
+              Durante los 10 días de plazo tu tienda, sus precios oficiales y sus promociones siguen
+              mostrándose. Si restauras la cuenta, vuelves como comercio y todo sigue como estaba.
+            </li>
+            <li>
+              Pasado el plazo se borran tu registro como responsable de la tienda y todo lo que
+              publicaste: sus precios oficiales y sus promociones dejan de mostrarse y no se pueden
+              recuperar. La comparación vuelve a los reportes de la comunidad.
+            </li>
+            <li>
+              La tienda queda sin responsable registrado. Qué pasa con ella después (por ejemplo,
+              quién puede volver a administrarla) todavía no está definido.
+            </li>
+          </ul>
+        </section>
+      )}
       <section aria-labelledby="plazo" className="delete-list">
         <h2 id="plazo">Tienes 10 días para cambiar de opinión</h2>
         <p>

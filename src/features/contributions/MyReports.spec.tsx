@@ -125,6 +125,9 @@ describe('mis aportes', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Tu cuenta está suspendida hasta el 20 de noviembre de 2026. Mientras tanto puedes ver el estado de tus aportes y apelar.',
     );
+    // Ya está en Mis aportes: no se enlaza a sí misma y dice cómo apelar.
+    expect(screen.queryByRole('link', { name: 'Ver mis aportes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('pulsa «Apelar»');
   });
 
   // RF-013 RN4: apelar un descarte una sola vez y dentro del plazo.
