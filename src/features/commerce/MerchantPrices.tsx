@@ -18,6 +18,8 @@ import { serverName } from './presentationName';
 import './merchant-prices.css';
 
 type Tab = 'prices' | 'upload' | 'promotions' | 'store';
+// Dónde se muestra el resultado de la última acción: junto al botón que la pidió.
+type Where = 'reconfirm' | 'editor' | 'upload';
 type Profile = components['schemas']['MerchantProfile'];
 type Promotion = components['schemas']['MerchantPromotion'];
 
@@ -51,6 +53,7 @@ function PricePanel() {
   const [selection, setSelection] = useState<PriceSelection | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState<unknown>(null);
+  const [where, setWhere] = useState<Where>('editor');
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const noticeRef = useRef<HTMLParagraphElement>(null);
@@ -185,9 +188,10 @@ function PricePanel() {
     setError(null);
   };
 
-  const update = async (action: () => Promise<string>) => {
+  const update = async (action: () => Promise<string>, at: Where) => {
     if (pending.current) return;
     pending.current = true;
+    setWhere(at);
     setBusy(true);
     setError(null);
     setNotice('');
@@ -206,7 +210,7 @@ function PricePanel() {
     update(async () => {
       const result = await call(api.POST('/commerce/prices/reconfirm'));
       return `Precios reconfirmados: ${String(result.reconfirmed)}.`;
-    });
+    }, 'reconfirm');
 
   // ADR-037: un precio absurdo se rechaza con el mensaje del servidor, que el editor muestra junto
   // al campo; uno sin referencia queda «en revisión» y no reemplaza al vigente.
@@ -230,12 +234,25 @@ function PricePanel() {
         }
         throw failure;
       }
-    });
+    }, 'editor');
     return rejection;
   };
 
+  // H21, H27: un único aviso de resultado, bajo el botón que lo provocó. Un error al guardar un precio
+  // que se edita en su fila sale en esa fila; el resto, bajo su acción. Cambiar de pestaña lo limpia.
   const editingListed =
     selection !== null && listed.some((item) => item.presentationId === selection.presentationId);
+  const notices = (at: Where) =>
+    where === at && (
+      <>
+        {notice && (
+          <p role="status" ref={noticeRef} tabIndex={-1} className="banner">
+            {notice}
+          </p>
+        )}
+        {error !== null && !(at === 'editor' && editingListed) && <ErrorState error={error} />}
+      </>
+    );
   const priceEditor = (current: PriceSelection | null) => (
     <MerchantPriceEditor
       key={current?.presentationId ?? 'new'}
@@ -267,11 +284,6 @@ function PricePanel() {
           <dd>{alerts && 'data' in alerts ? alerts.data.length : '—'}</dd>
         </div>
       </dl>
-      <p role="status" ref={noticeRef} tabIndex={-1} className={notice ? 'banner' : 'sr-only'}>
-        {notice}
-      </p>
-      {error !== null && <ErrorState error={error} />}
-
       <Tabs
         label="Secciones del portal de comercios"
         className="merchant-tabs"
@@ -281,6 +293,7 @@ function PricePanel() {
         onChange={(next) => {
           setTab(next as Tab);
           setNotice('');
+          setError(null);
         }}
         tabs={[
           {
@@ -390,6 +403,7 @@ function PricePanel() {
                             Todos mis precios siguen igual
                           </button>
                         )}
+                        {notices('reconfirm')}
                         <ul className="merchant-price-list">
                           {listed.map((item) => {
                             const label = productLabel(item.presentationId);
@@ -420,6 +434,9 @@ function PricePanel() {
                                 {selection?.presentationId === item.presentationId && (
                                   <div className="merchant-inline-editor">
                                     {priceEditor(selection)}
+                                    {where === 'editor' && error !== null && (
+                                      <ErrorState error={error} />
+                                    )}
                                   </div>
                                 )}
                               </li>
@@ -455,6 +472,7 @@ function PricePanel() {
                 <section aria-labelledby="merchant-editor" ref={editorSection}>
                   <h2 id="merchant-editor">Publicar o editar un precio</h2>
                   {priceEditor(editingListed ? null : selection)}
+                  {notices('editor')}
                 </section>
               </>
             ),
@@ -467,7 +485,11 @@ function PricePanel() {
               <>
                 <section aria-labelledby="merchant-upload">
                   <h2 id="merchant-upload">Cargar precios por CSV</h2>
-                  <MerchantPriceUpload disabled={busy} onUpload={update} />
+                  <MerchantPriceUpload
+                    disabled={busy}
+                    onUpload={(action) => update(action, 'upload')}
+                    result={notices('upload')}
+                  />
                 </section>
               </>
             ),
