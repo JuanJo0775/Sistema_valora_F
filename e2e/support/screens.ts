@@ -19,7 +19,19 @@ export async function chooseStoreByName(page: Page, store: Store) {
   await page.getByRole('button', { name: 'Buscar tienda' }).click();
   // La semilla del Quindío puede devolver otras tiendas con el mismo nombre.
   const byId = page.locator(`input[type="radio"][value="${store.id}"]`);
-  await choose(page.getByRole('radio', { name: store.name, exact: true }).and(byId));
+  await page
+    .getByRole('radio', { name: store.name, exact: true })
+    .and(byId)
+    .locator('xpath=ancestor::label[1]')
+    .click();
+  // Al elegirla, el bloque «Tienda» se resume en una fila «Tienda X · Cambiar» (ya no hay lista).
+  await expectStoreChosen(page, store);
+}
+
+export async function expectStoreChosen(page: Page, store: Store) {
+  await expect(
+    page.getByRole('button', { name: `Cambiar la tienda (ahora ${store.name})` }),
+  ).toBeVisible();
 }
 
 export async function sendPrice(page: Page, priceCop: number) {

@@ -3,6 +3,7 @@ import { choose } from '../../test/choose';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
+import { stubMatchMedia } from '../../test/matchMedia';
 import { PriceHistory } from './PriceHistory';
 
 const RICE = '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d';
@@ -116,10 +117,105 @@ describe('historial de precios', () => {
 
     renderHistory();
 
+    // Título corto; el producto va debajo, como subtítulo.
     expect(
-      await screen.findByRole('heading', { name: 'Historial de precios · Arroz blanco' }),
+      await screen.findByRole('heading', { level: 1, name: 'Historial de precios' }),
     ).toBeInTheDocument();
+    expect(screen.getByText('Arroz blanco')).toHaveClass('history-product');
     expect(screen.getByText('Últimos 30 días: del 18 oct al 16 nov.')).toBeInTheDocument();
+  });
+
+  it('arriba, tarjetas con el más bajo, el más alto, el precio de hoy y la variación', async () => {
+    stubHistory(
+      history({
+        presentationId: 'p500',
+        label: '500 g',
+        points: [
+          point('2026-11-10', 2000, 2100, 1),
+          point('2026-11-12', 2400, 2400, 2),
+          point('2026-11-16', 2200, 2300, 1),
+        ],
+      }),
+    );
+
+    renderHistory();
+
+    const cards = await screen.findByRole('list', { name: 'Resumen del periodo' });
+    expect(
+      within(cards)
+        .getAllByRole('listitem')
+        .map((card) => card.textContent),
+    ).toEqual(['Más bajo$2.000', 'Más alto$2.400', 'Hoy$2.200', 'VariaciónSube 10 %']);
+  });
+
+  it('si el último precio no es de hoy, lo dice con su fecha', async () => {
+    stubHistory(
+      history({
+        presentationId: 'p500',
+        label: '500 g',
+        points: [point('2026-11-10', 2000, 2100, 1), point('2026-11-14', 1900, 1900, 1)],
+      }),
+    );
+
+    renderHistory();
+
+    const cards = await screen.findByRole('list', { name: 'Resumen del periodo' });
+    expect(within(cards).getByText('Último (14 nov)')).toBeInTheDocument();
+    expect(within(cards).getByText('Baja 5 %')).toBeInTheDocument();
+  });
+
+  it('con un solo precio no hay variación que mostrar', async () => {
+    stubHistory(
+      history({
+        presentationId: 'p500',
+        label: '500 g',
+        points: [point('2026-11-16', 2300, 2300, 1)],
+      }),
+    );
+
+    renderHistory();
+
+    const cards = await screen.findByRole('list', { name: 'Resumen del periodo' });
+    expect(within(cards).getByText('Sin variación')).toBeInTheDocument();
+  });
+
+  it('la tabla queda plegada, con su número de filas, y sigue siendo la alternativa de la gráfica', async () => {
+    stubHistory(
+      history({
+        presentationId: 'p500',
+        label: '500 g',
+        points: [point('2026-11-14', 2400, 2550, 3), point('2026-11-16', 2300, 2300, 1)],
+      }),
+    );
+
+    renderHistory();
+
+    const summary = await screen.findByText('Ver la tabla de precios (2)');
+    const details = summary.closest('details');
+    expect(summary.tagName).toBe('SUMMARY');
+    expect(details).not.toHaveAttribute('open');
+    expect(details).toContainElement(screen.getByRole('table', { name: 'Precio por día · 500 g' }));
+    // La gráfica conserva su descripción accesible y no está dentro de lo plegado.
+    const chart = screen.getByRole('img', { name: /^Precio más bajo por día · 500 g/ });
+    expect(details).not.toContainElement(chart);
+  });
+
+  it('la gráfica usa el ancho disponible en pantallas anchas y la compacta en celular', async () => {
+    stubHistory(
+      history({
+        presentationId: 'p500',
+        label: '500 g',
+        points: [point('2026-11-14', 2400, 2550, 3), point('2026-11-16', 2300, 2300, 1)],
+      }),
+    );
+    stubMatchMedia(true);
+    const { unmount } = renderHistory();
+    expect((await screen.findByRole('img')).getAttribute('viewBox')).toBe('0 0 640 170');
+    unmount();
+
+    stubMatchMedia(false);
+    renderHistory();
+    expect((await screen.findByRole('img')).getAttribute('viewBox')).toBe('0 0 320 140');
   });
 
   it('con varias presentaciones se elige cuál ver', async () => {

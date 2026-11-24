@@ -89,8 +89,14 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
           rows={3}
           required
           disabled={busy}
+          aria-describedby="merchant-report-hint"
         />
       </label>
+      <p id="merchant-report-hint" className="muted">
+        {reason.trim().length < 10
+          ? 'Cuenta qué pasa, con al menos 10 letras, para poder enviar la denuncia.'
+          : 'Un moderador revisará lo que escribas.'}
+      </p>
       {error !== null && <ErrorState error={error} />}
       <div className="actions">
         <button type="submit" className="btn" disabled={busy || reason.trim().length < 10}>

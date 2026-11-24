@@ -49,6 +49,14 @@ const renderAt = (path: string) =>
               </RequireRole>
             }
           />
+          <Route
+            path="/portal"
+            element={
+              <RequireRole role="comercio">
+                <h1>Portal</h1>
+              </RequireRole>
+            }
+          />
           <Route path="/entrar" element={<WhereAmI />} />
         </Routes>
       </MemoryRouter>
@@ -88,6 +96,22 @@ describe('secciones con sesión', () => {
       await screen.findByRole('heading', { name: 'Esta sección es para cuentas de reportante' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
+    // Nadie se queda sin salida: la pantalla ofrece a dónde ir.
+    expect(screen.getByRole('link', { name: 'Volver a Yo' })).toHaveAttribute('href', '/yo');
+  });
+
+  it('a un reportante que abre el portal de comercios le ofrece registrar su tienda', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+
+    renderAt('/portal');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Esta sección es para cuentas de comercio' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Registrar mi tienda' })).toHaveAttribute(
+      'href',
+      '/comercios/registro',
+    );
   });
 
   it('mientras pregunta por la sesión dice «Cargando…» y no muestra la sección', () => {

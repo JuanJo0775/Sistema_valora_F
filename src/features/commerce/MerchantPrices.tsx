@@ -141,7 +141,7 @@ function PricePanel() {
     (alerts && 'data' in alerts
       ? alerts.data.find((alert) => alert.presentationId === id)?.productName
       : undefined) ??
-    `Presentación ${id}`;
+    'Producto nuevo (el nombre aparece en unos segundos)';
 
   const choose = (presentationId: string, label = productLabel(presentationId)) => {
     const price = listed.find((item) => item.presentationId === presentationId);
@@ -221,6 +221,7 @@ function PricePanel() {
             className="btn ghost"
             onClick={() => {
               setTab(key);
+              setNotice('');
             }}
           >
             {label}

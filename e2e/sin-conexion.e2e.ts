@@ -14,6 +14,7 @@ import {
 import {
   chooseFirstPresentation,
   chooseStoreByName,
+  expectStoreChosen,
   expectHeading,
   sendPrice,
 } from './support/screens';
@@ -69,7 +70,7 @@ async function oneReporter(
     await page.goto(`/registrar?producto=${product.id}`);
     await expectHeading(page, product.name);
     // La tienda de la vez anterior ya viene elegida.
-    await expect(page.getByRole('radio', { name: store.name, exact: true })).toBeChecked();
+    await expectStoreChosen(page, store);
     await chooseFirstPresentation(page);
     await sendPrice(page, prices[index + 1] ?? 0);
     await expectHeading(page, 'Guardado en tu teléfono');

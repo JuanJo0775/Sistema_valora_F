@@ -201,6 +201,22 @@ describe('detalle del producto', () => {
     expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
   });
 
+  it('el botón de registrar dice «Registrar un precio» y el producto va en su nombre accesible', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([offer('Ara', 2000, true)]),
+    });
+    renderDetail(rice.id);
+
+    const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
+    const link = await within(side).findByRole('link', {
+      name: 'Registrar un precio de Arroz blanco',
+    });
+    // WCAG 2.5.3: el nombre accesible contiene el texto visible.
+    expect(link).toHaveTextContent(/^Registrar un precio$/);
+    expect(link).toHaveAttribute('aria-label', 'Registrar un precio de Arroz blanco');
+  });
+
   it('reserva el lugar de la tarjeta «Más barato» mientras llega la comparación', async () => {
     // La comparación no llega (respuesta pendiente): así la reserva sigue puesta sin depender de la
     // velocidad de la prueba.

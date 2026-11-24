@@ -134,8 +134,12 @@ export function ProductDetail() {
           suggestedPresentationId={cheapestPresentationId}
           lowestPrice={cheapest ? formatCop(cheapest.priceCop) : undefined}
         />
-        <Link to={`/registrar?producto=${product.id}`} className="btn ghost">
-          {`Registrar un precio de ${product.name}`}
+        <Link
+          to={`/registrar?producto=${product.id}`}
+          className="btn ghost"
+          aria-label={`Registrar un precio de ${product.name}`}
+        >
+          Registrar un precio
         </Link>
         <HistorySummary productId={product.id} />
       </SidePanel>

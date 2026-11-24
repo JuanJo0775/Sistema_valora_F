@@ -37,6 +37,31 @@ describe('popover y hoja del «¿Dónde?»: estilos', () => {
     expect(rule('.overlay-body')).toMatch(/overflow-y:\s*auto/);
   });
 
+  it('un solo scroll: la lista no tiene alto máximo ni desplazamiento propio, solo la hoja', () => {
+    const items = rule('.option-items');
+    expect(items).not.toMatch(/max-height/);
+    expect(items).not.toMatch(/overflow/);
+    expect(rule('.overlay-body')).toMatch(/overflow-y:\s*auto/);
+  });
+
+  it('desde 960 px la lista larga va en dos columnas, de arriba abajo', () => {
+    const start = css.indexOf('@media (width >= 960px)');
+    expect(start).toBeGreaterThan(-1);
+    const wide = css.slice(start);
+    expect(wide).toMatch(/\.option-items-cols\s*\{[^}]*grid-auto-flow:\s*column/);
+    expect(wide).toMatch(
+      /\.option-items-cols\s*\{[^}]*grid-template-rows:\s*repeat\(var\(--option-rows\)/,
+    );
+    expect(wide).toMatch(/\.option-items-cols\s*\{[^}]*grid-template-columns:\s*repeat\(2,/);
+  });
+
+  it('con ratón, las filas de dos columnas miden 36 px (no menos de 24); con el dedo, 44 px', () => {
+    const start = css.indexOf('@media (width >= 960px) and (pointer: fine)');
+    expect(start).toBeGreaterThan(-1);
+    expect(css.slice(start)).toMatch(/\.option-items-cols \.option\s*\{\s*min-height:\s*36px/);
+    expect(rule('.option')).toMatch(/var\(--touch\)/);
+  });
+
   it('opciones y botones se tocan en 44 px o más', () => {
     for (const selector of ['.option', '.option-search', '.select-trigger', '.overlay-close']) {
       expect(rule(selector)).toMatch(/var\(--touch\)/);
