@@ -188,7 +188,9 @@ describe('reclamos de tienda (H11)', () => {
       target: { value: 'Datos que no coinciden.' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Registrar decisión' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/no corresponde a este tipo de caso/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /no corresponde a este tipo de caso/,
+    );
   });
 });
 

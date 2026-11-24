@@ -163,12 +163,12 @@ function ClaimStatus({
   return (
     <section className="form merchant-registration" aria-live="polite">
       <h1>{pending ? 'Tu tienda quedó preaprobada' : 'Tu tienda quedó verificada'}</h1>
-      <p>
-        {pending ? PENDING_TEXT[kind ?? 'neutro'] : 'Tu cuenta ya está vinculada a la tienda.'}
-      </p>
+      <p>{pending ? PENDING_TEXT[kind ?? 'neutro'] : 'Tu cuenta ya está vinculada a la tienda.'}</p>
       {pending && unlocks && unlocks.length > 0 && (
         <>
-          <h2>{kind === 'reclamo' ? 'Al aprobar tu reclamo podrás' : 'Al aprobar tu tienda podrás'}</h2>
+          <h2>
+            {kind === 'reclamo' ? 'Al aprobar tu reclamo podrás' : 'Al aprobar tu tienda podrás'}
+          </h2>
           <ul>
             {unlocks.map((item) => (
               <li key={item}>{UNLOCK_LABEL[item]}</li>

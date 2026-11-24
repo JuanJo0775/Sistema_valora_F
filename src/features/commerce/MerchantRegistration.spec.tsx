@@ -211,7 +211,9 @@ describe('registro de comercios (#165)', () => {
     });
     open(registration);
     fireEvent.click(await screen.findByRole('button', { name: 'Mi tienda no está en el mapa' }));
-    fireEvent.change(screen.getByLabelText('Nombre de la tienda'), { target: { value: 'Mi tienda' } });
+    fireEvent.change(screen.getByLabelText('Nombre de la tienda'), {
+      target: { value: 'Mi tienda' },
+    });
     responsible();
     submit();
     expect(await screen.findByText(/antes de que aparezca en el mapa/)).toBeInTheDocument();
