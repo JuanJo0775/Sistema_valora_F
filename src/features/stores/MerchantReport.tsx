@@ -1,4 +1,5 @@
-import { type SyntheticEvent, useEffect, useState } from 'react';
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { restoreFocus } from '../../shared/focus';
 import { api, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { useSession } from '../auth/session';
@@ -15,6 +16,19 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const sentRef = useRef<HTMLParagraphElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+
+  // El botón que abre el formulario desaparece: al cancelar el foco vuelve a él, y al enviar pasa
+  // al mensaje de resultado (WCAG 2.4.3).
+  useEffect(() => {
+    if (sent) restoreFocus(sentRef.current);
+  }, [sent]);
+  useEffect(() => {
+    if (!open && wasOpen.current) triggerRef.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -57,12 +71,18 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
   }
 
   if (!enabled || !available) return null;
-  if (sent) return <p role="status">Denuncia recibida. Un moderador revisará el caso.</p>;
+  if (sent)
+    return (
+      <p role="status" ref={sentRef} tabIndex={-1}>
+        Denuncia recibida. Un moderador revisará el caso.
+      </p>
+    );
   if (!open)
     return (
       <button
         type="button"
         className="link-button"
+        ref={triggerRef}
         onClick={() => {
           setOpen(true);
         }}
@@ -88,6 +108,7 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
           maxLength={500}
           rows={3}
           required
+          autoFocus
           disabled={busy}
           aria-describedby="merchant-report-hint"
         />

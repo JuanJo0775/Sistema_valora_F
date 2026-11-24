@@ -111,7 +111,7 @@ export function MerchantPriceEditor({
           onValue={setQuery}
           minLength={2}
           maxLength={120}
-          disabled={disabled || searching}
+          disabled={disabled}
         />
         <button type="submit" className="btn ghost" disabled={disabled || searching}>
           {searching ? 'Buscando…' : 'Buscar en el catálogo'}

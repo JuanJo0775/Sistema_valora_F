@@ -100,6 +100,7 @@ export function ProposeProduct() {
     return (
       <EmptyState
         title="Recibido"
+        focus
         text="Aparecerá en la búsqueda cuando un moderador lo apruebe."
         action={
           <div className="actions">
