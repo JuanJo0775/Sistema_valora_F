@@ -25,6 +25,10 @@ type Profile = components['schemas']['MerchantProfile'];
 type NewStore = NonNullable<Claim['newEstablishment']>;
 type Unlocks = components['schemas']['MerchantUnlocks'];
 
+// Qué se envió: una tienda nueva o el reclamo de una del mapa. Al volver a consultar el estado
+// (GET /commerce/me) el servidor no lo dice, y entonces el texto es neutro.
+type ClaimKind = 'nueva' | 'reclamo' | undefined;
+
 const TERMS_VERSION = '2026-11';
 const STORE_TYPE_OPTIONS = (Object.keys(STORE_TYPES) as NewStore['type'][]).map((value) => ({
   value,
@@ -54,7 +58,7 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
   const storeId = query.get('tienda');
   const [attempt, setAttempt] = useState(0);
   const [found, setFound] = useState<{ profile: Profile | null } | { error: unknown } | null>(null);
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [receipt, setReceipt] = useState<(Receipt & { kind: ClaimKind }) | null>(null);
   const refreshedRole = useRef(false);
   const status =
     receipt?.status ?? (found && 'profile' in found ? found.profile?.status : undefined);
@@ -87,7 +91,14 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
   };
 
   if (receipt)
-    return <ClaimStatus status={receipt.status} unlocks={receipt.unlocks} onRefresh={refresh} />;
+    return (
+      <ClaimStatus
+        status={receipt.status}
+        unlocks={receipt.unlocks}
+        kind={receipt.kind}
+        onRefresh={refresh}
+      />
+    );
   if (!found) return <Loading text="Consultando tu registro…" />;
   if ('error' in found) return <ErrorState error={found.error} onRetry={refresh} />;
   const { profile } = found;
@@ -116,18 +127,34 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
             : `Tu tienda propuesta fue rechazada: ${profile.reason}`}
         </p>
       )}
-      <ClaimForm key={storeId} storeId={storeId} onRegistered={setReceipt} />
+      <ClaimForm
+        key={storeId}
+        storeId={storeId}
+        onRegistered={(result, kind) => {
+          setReceipt({ ...result, kind });
+        }}
+      />
     </>
   );
 }
 
+const PENDING_TEXT = {
+  nueva:
+    'Un moderador revisará la tienda antes de que aparezca en el mapa. Una vez aprobada, se verificará tu registro.',
+  reclamo:
+    'Un moderador revisará tu reclamo de esta tienda. Cuando lo apruebe, tu cuenta quedará verificada como dueña.',
+  neutro: 'Un moderador revisará tu solicitud. Cuando la apruebe, se verificará tu registro.',
+};
+
 function ClaimStatus({
   status,
   unlocks,
+  kind,
   onRefresh,
 }: {
   status: Receipt['status'];
   unlocks: Unlocks | undefined;
+  kind?: ClaimKind;
   onRefresh: () => void;
 }) {
   const { session } = useSession();
@@ -136,14 +163,12 @@ function ClaimStatus({
   return (
     <section className="form merchant-registration" aria-live="polite">
       <h1>{pending ? 'Tu tienda quedó preaprobada' : 'Tu tienda quedó verificada'}</h1>
-      <p>
-        {pending
-          ? 'Un moderador revisará la tienda antes de que aparezca en el mapa. Una vez aprobada, se verificará tu registro.'
-          : 'Tu cuenta ya está vinculada a la tienda.'}
-      </p>
+      <p>{pending ? PENDING_TEXT[kind ?? 'neutro'] : 'Tu cuenta ya está vinculada a la tienda.'}</p>
       {pending && unlocks && unlocks.length > 0 && (
         <>
-          <h2>Al aprobar tu tienda podrás</h2>
+          <h2>
+            {kind === 'reclamo' ? 'Al aprobar tu reclamo podrás' : 'Al aprobar tu tienda podrás'}
+          </h2>
           <ul>
             {unlocks.map((item) => (
               <li key={item}>{UNLOCK_LABEL[item]}</li>
@@ -191,6 +216,8 @@ const CLAIM_ERROR: Record<string, string> = {
   EMAIL_NOT_VERIFIED: 'Verifica tu correo antes de registrar una tienda.',
   REVOKED_FROM_ESTABLISHMENT:
     'El equipo de moderación revocó el registro de esta cuenta para esa tienda.',
+  CHAIN_STORE_NOT_CLAIMABLE:
+    'Las tiendas de cadena (como D1, Ara o Éxito) no se pueden reclamar: no tienen un dueño individual. Si tienes un negocio propio, regístralo como tienda nueva.',
   NOT_FOUND: 'La tienda ya no está disponible. Busca otra tienda en el mapa.',
 };
 
@@ -209,7 +236,7 @@ function ClaimForm({
   onRegistered,
 }: {
   storeId: string | null;
-  onRegistered: (receipt: Receipt) => void;
+  onRegistered: (receipt: Receipt, kind: ClaimKind) => void;
 }) {
   const [picked, setPicked] = useState<Store | null>(null);
   const [prefill, setPrefill] = useState<Store | null>(null);
@@ -340,7 +367,7 @@ function ClaimForm({
         }),
       );
       controller.signal.throwIfAborted();
-      onRegistered(result);
+      onRegistered(result, isNew ? 'nueva' : 'reclamo');
     } catch (failure: unknown) {
       if (!controller.signal.aborted) setError(failure);
     } finally {
@@ -492,6 +519,18 @@ function ClaimForm({
           <div className="banner warn">
             <p role="alert">{errorMessage}</p>
             {code === 'EMAIL_NOT_VERIFIED' && <ResendVerification />}
+            {code === 'CHAIN_STORE_NOT_CLAIMABLE' && !isNew && (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  setIsNew(true);
+                  setError(null);
+                }}
+              >
+                Registrar una tienda nueva
+              </button>
+            )}
           </div>
         )}
         {error !== null && !errorMessage && <ErrorState error={error} />}

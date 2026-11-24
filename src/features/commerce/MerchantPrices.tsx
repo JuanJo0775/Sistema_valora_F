@@ -13,6 +13,7 @@ import { MerchantPriceEditor, type PriceSelection } from './MerchantPriceEditor'
 import { MerchantStoreEditor } from './MerchantStoreEditor';
 import { MerchantPromotions } from './MerchantPromotions';
 import { MerchantPriceUpload } from './MerchantPriceUpload';
+import { serverName } from './presentationName';
 import './merchant-prices.css';
 
 const TABS = [
@@ -94,8 +95,14 @@ function PricePanel() {
         setPrices({ data: items });
         // El portal puede salir antes que el backend que trae `inReview`: sin ese campo, no hay nada en revisión.
         setInReview(Array.isArray(waiting) ? waiting : []);
+        // H3: el servidor ya manda el nombre. Solo si falta en algún precio (backend sin desplegar)
+        // se completa con la lista pública, como antes.
         const storeId = items[0]?.establishmentId;
-        if (!storeId) return;
+        const named = (item: { productName?: string; presentationLabel?: string }) =>
+          serverName(item) !== undefined;
+        if (!storeId || (items.every(named) && (!Array.isArray(waiting) || waiting.every(named)))) {
+          return;
+        }
         return call(
           api.GET('/establishments/{establishmentId}/prices', {
             params: { path: { establishmentId: storeId } },
@@ -162,7 +169,15 @@ function PricePanel() {
   const merchant =
     profile && 'data' in profile && 'establishment' in profile.data ? profile.data : null;
   const listed = prices && 'data' in prices ? prices.data : [];
+  // H3: el nombre que calcula el servidor es la fuente de verdad; lo demás es respaldo.
+  const serverNames = new Map<string, string>();
+  const promoted = promotions && 'data' in promotions ? promotions.data : [];
+  for (const entry of [...listed, ...inReview, ...promoted]) {
+    const name = serverName(entry);
+    if (name) serverNames.set(entry.presentationId, name);
+  }
   const productLabel = (id: string) =>
+    serverNames.get(id) ??
     labels.get(id) ??
     (alerts && 'data' in alerts
       ? alerts.data.find((alert) => alert.presentationId === id)?.productName

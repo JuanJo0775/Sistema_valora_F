@@ -11,6 +11,7 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
     !session.suspendedUntil &&
     (session.role === 'reportante' || session.role === 'comercio');
   const [available, setAvailable] = useState(false);
+  const [already, setAlready] = useState(false);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [sent, setSent] = useState(false);
@@ -39,8 +40,11 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
         signal: controller.signal,
       }),
     )
-      .then(({ canReport }) => {
-        if (!controller.signal.aborted) setAvailable(canReport);
+      .then(({ canReport, alreadyReported }) => {
+        if (controller.signal.aborted) return;
+        setAvailable(canReport);
+        // H31: el campo falta en los demás casos (y en un backend sin desplegar).
+        setAlready(alreadyReported === true);
       })
       .catch(() => {
         // Una ficha pública sigue disponible aunque falle esta consulta privada.
@@ -70,6 +74,9 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
     }
   }
 
+  if (enabled && already && !available) {
+    return <p role="status">Ya denunciaste este comercio; moderación lo está revisando.</p>;
+  }
   if (!enabled || !available) return null;
   if (sent)
     return (
