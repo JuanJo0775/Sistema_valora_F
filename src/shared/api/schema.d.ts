@@ -713,7 +713,7 @@ export interface paths {
         put?: never;
         /**
          * Registrar la decisión del moderador; queda auditada (RF-013)
-         * @description Solo el rol moderador. itemId es el id del reporte (o, en sin_referencia, el del precio oficial en revisión: aprobar lo publica como oficial vigente y descartar lo retira, sin tocar la reputación de nadie; observar_cuentas no aplica, ADR-037). Toda decisión exige motivo (RN3) y queda en una bitácora que no se puede modificar. aprobar vuelve a mostrar el precio como normal; descartar deja de mostrarlo (pasa al precio confiable más reciente de la tienda) y baja la reputación de su autor; si es el tercer descarte seguido de ese autor, su cuenta se suspende 7 días (RN6). observar_cuentas suspende 7 días al autor del reporte, que sigue en la cola. El moderador nunca ve quién es el autor; la suspensión revoca sus sesiones (#33).
+         * @description Solo el rol moderador. itemId es el id del reporte (o, en sin_referencia, el del precio oficial en revisión: aprobar lo publica como oficial vigente y descartar lo retira, sin tocar la reputación de nadie; observar_cuentas no aplica, ADR-037). Toda decisión exige motivo (RN3) y queda en una bitácora que no se puede modificar. aprobar vuelve a mostrar el precio como normal; descartar deja de mostrarlo (pasa al precio confiable más reciente de la tienda) y baja la reputación de su autor; si es el tercer descarte seguido de ese autor, su cuenta se suspende 7 días (RN6). observar_cuentas retira el reporte como un descarte (sale de la cola y de la tienda, GET /me/reports lo muestra descartado, sin plazo de apelación, y no baja la reputación) y suspende 7 días al autor; la causa la explica GET /auth/session en suspension.reason (ADR-039). El moderador nunca ve quién es el autor; la suspensión revoca sus sesiones (#33). Todo reporte que sale de la cola queda en un estado final: aprobar, normal; descartar y observar_cuentas, descartado.
          */
         post: operations["decideModerationItem"];
         delete?: never;
@@ -853,7 +853,8 @@ export interface paths {
         put?: never;
         /**
          * Registrar como suya una tienda, del mapa o nueva (RF-015)
-         * @description D2 y D3 del grill comercial (#201). Solo un reportante con el correo verificado. La persona debe estar a 50 m o menos de la tienda: location es la ubicación del celular en ese momento, solo sirve para comprobarlo y no se guarda (EC-08). Si todo está bien, la cuenta queda verificada como dueña de la tienda y su rol pasa a comercio. Una tienda por cuenta y un dueño por tienda. El NIT es opcional; sin NIT, el comercio es informal. Su dígito de verificación solo detecta errores al escribir: no se consulta a la DIAN.
+         * @description D2 y D3 del grill comercial (#201). Solo un reportante con el correo verificado. La persona debe estar a 50 m o menos de la tienda: location es la ubicación del celular en ese momento, solo sirve para comprobarlo y no se guarda (EC-08). Si todo está bien, la cuenta queda verificada como dueña de la tienda y su rol pasa a comercio. Una tienda por cuenta y un dueño por tienda.
+         *     Tiendas de cadena (ADR-038, H11): una tienda de tipo descuento o cuyo nombre es el de una cadena conocida (D1, Ara, Éxito, Olímpica, Carulla, Jumbo, Metro, Alkosto, Makro, Justo & Bueno, PriceSmart, Surtimax, Super Inter, Oxxo) no se puede reclamar: responde 422 CHAIN_STORE_NOT_CLAIMABLE, antes de comprobar la cercanía. Un supermercado que no es de cadena no se verifica al instante: la solicitud queda pre_aprobado y abre un caso de tipo reclamo en GET /moderation/merchant-cases; el rol pasa a comercio solo cuando un moderador lo aprueba. Barrio y minimercado se verifican al instante por cercanía, como antes. Orden de las comprobaciones: sesión, correo verificado, datos y NIT, tienda existente (404), cadena (422), cercanía (422), cuenta revocada de esa tienda (422), una tienda por cuenta (409) y dueño existente (409, con disputa). El NIT es opcional; sin NIT, el comercio es informal. Su dígito de verificación solo detecta errores al escribir: no se consulta a la DIAN.
          *     Si la tienda no está en el mapa (#202), se envía newEstablishment en lugar de establishmentId: se crea una propuesta de tienda en el punto de location (RF-005 RN7, la revisa el moderador) y la solicitud queda pre_aprobado. Al aprobarse la tienda, el comercio queda verificado solo; si el moderador la fusiona con una tienda sin dueño, queda verificado en esa tienda; si la rechaza o la tienda ya tenía dueño, la solicitud se cierra y GET /commerce/me muestra el motivo. El rol pasa a comercio cuando se verifica, por un evento interno: el frontend vuelve a pedir GET /auth/session.
          */
         post: operations["claimEstablishment"];
@@ -872,7 +873,7 @@ export interface paths {
         };
         /**
          * Perfil del comercio de la sesión (RF-015)
-         * @description D3 del grill comercial (#201): la tienda de la cuenta y su estado. Nunca una ubicación (EC-08). Si la última solicitud se cerró y no hay otra, responde rechazado con el motivo (#202).
+         * @description D3 del grill comercial (#201): la tienda de la cuenta y su estado. Nunca una ubicación (EC-08). Si la última solicitud se cerró y no hay otra, responde rechazado con el motivo (#202). Si un moderador la revocó (#208), reason es siempre un mensaje estándar: la nota del moderador queda en la bitácora interna y no se devuelve (H15).
          */
         get: operations["getMerchantProfile"];
         put?: never;
@@ -892,7 +893,7 @@ export interface paths {
         };
         /**
          * Consultar si la cuenta puede denunciar el comercio de una tienda
-         * @description Solo reportantes y comercios con sesión. No devuelve información del propietario.
+         * @description Solo reportantes y comercios con sesión. No devuelve información del propietario. H31, aditivo: si la cuenta ya tiene una denuncia abierta sobre esa tienda, canReport es false y alreadyReported es true (el POST la rechazaría con 409 MERCHANT_REPORT_OPEN); el campo se omite en los demás casos.
          */
         get: operations["getMerchantReportEligibility"];
         put?: never;
@@ -915,8 +916,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Denuncias y disputas de comercios pendientes (RF-015, D2)
-         * @description Solo el rol moderador (#208). La más antigua primero. Una disputa se abre sola cuando otra cuenta, estando en la tienda (presencia, D2), intenta registrar una tienda que ya tiene dueño. Trae los datos del comercio para verificarlo; nunca quién abrió el caso ni la cuenta del dueño (EC-08). Sin caché.
+         * Denuncias, disputas y reclamos de comercios pendientes (RF-015, D2)
+         * @description Solo el rol moderador (#208). La más antigua primero. Una disputa se abre sola cuando otra cuenta, estando en la tienda (presencia, D2), intenta registrar una tienda que ya tiene dueño. Un reclamo se abre solo cuando una cuenta, estando en la tienda, reclama un supermercado que no es de cadena (ADR-038): su owner es el comercio pre_aprobado que espera la decisión. Trae los datos del comercio para verificarlo; nunca quién abrió el caso ni la cuenta del dueño (EC-08). Sin caché.
          */
         get: operations["listMerchantCases"];
         put?: never;
@@ -937,8 +938,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Revocar el comercio o descartar el caso (RF-015, D3)
-         * @description Solo el rol moderador (#208). revocar retira al instante los precios oficiales y las promociones de la tienda, devuelve la cuenta a reportante, cierra los casos abiertos de esa tienda y deja anotado quién, cuándo y por qué; esa cuenta no puede volver a registrar esa tienda. descartar cierra el caso sin tocar el comercio. Siempre con motivo.
+         * Decidir un caso de comercio (RF-015, D3)
+         * @description Solo el rol moderador (#208). Siempre con motivo. En una denuncia o una disputa: revocar retira al instante los precios oficiales y las promociones de la tienda, devuelve la cuenta a reportante, cierra los casos abiertos de esa tienda y deja anotado quién, cuándo y por qué; esa cuenta no puede volver a registrar esa tienda. descartar cierra el caso sin tocar el comercio. En un reclamo (ADR-038): aprobar deja el comercio verificado y concede el rol comercio por el evento MerchantVerified; rechazar cierra la solicitud con el motivo (la cuenta sigue reportante y GET /commerce/me responde rechazado). Una decisión que no corresponde al tipo de caso responde 422 DECISION_NOT_APPLICABLE y no cambia nada.
          */
         post: operations["decideMerchantCase"];
         delete?: never;
@@ -996,7 +997,9 @@ export interface paths {
         };
         /**
          * Los precios oficiales del comercio con su vigencia (RF-016)
-         * @description D4 del grill comercial (#203). La vigencia cuenta desde la última confirmación, con el TTL de la categoría (ADR-005). ADR-037: inReview trae los precios enviados que esperan a moderación; todavía no son oficiales y no están en items.
+         * @description H3: items e inReview traen productName y presentationLabel, calculados en el servidor desde el catálogo canónico (no de la lista pública, que se actualiza con retraso); así «Mis precios» no muestra identificadores justo después de publicar.
+         *
+         *     D4 del grill comercial (#203). La vigencia cuenta desde la última confirmación, con el TTL de la categoría (ADR-005). ADR-037: inReview trae los precios enviados que esperan a moderación; todavía no son oficiales y no están en items.
          */
         get: operations["listOfficialPrices"];
         /**
@@ -1062,12 +1065,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Las promociones del comercio con su estado de hoy (RF-017) */
+        /**
+         * Las promociones del comercio con su estado de hoy (RF-017)
+         * @description H3: cada promoción trae productName y presentationLabel, calculados en el servidor desde el catálogo canónico, para que el portal no tenga que completarlos con la lista pública.
+         */
         get: operations["listMerchantPromotions"];
         put?: never;
         /**
          * Publicar una promoción con reglas y vigencia (RF-017, EC-06)
-         * @description D6 del grill comercial (#206). Solo un comercio verificado, sobre el precio oficial VIGENTE de una presentación de su tienda (si no, 422 OFFICIAL_PRICE_REQUIRED). Condiciones fijas, sin texto libre. Dura como mucho 30 días; puede empezar en el futuro (queda programada). Si el oficial deja de estar vigente se pausa sola y reconfirmarlo la reactiva. Va siempre aparte de los resultados de la comparación y nunca cambia el orden (ADR-009). ADR-037: el precio que deja la promoción («Precio especial», «Descuento porcentual» o «Pague X lleve Y») no puede quedar por debajo del 40 % de la mediana de otras tiendas del municipio (50 % del mayorista SIPSA si no hay mediana); si queda por debajo, 422 IMPLAUSIBLE_OFFICIAL_PRICE. Sin referencia no se frena.
+         * @description H20: no se aceptan dos promociones de la misma presentación en la misma tienda con al menos un día en común (422 PROMOTION_OVERLAP); retirar la primera libera sus fechas. H3: la respuesta trae productName y presentationLabel.
+         *
+         *     D6 del grill comercial (#206). Solo un comercio verificado, sobre el precio oficial VIGENTE de una presentación de su tienda (si no, 422 OFFICIAL_PRICE_REQUIRED). Condiciones fijas, sin texto libre. Dura como mucho 30 días; puede empezar en el futuro (queda programada). Si el oficial deja de estar vigente se pausa sola y reconfirmarlo la reactiva. Va siempre aparte de los resultados de la comparación y nunca cambia el orden (ADR-009). ADR-037: el precio que deja la promoción («Precio especial», «Descuento porcentual» o «Pague X lleve Y») no puede quedar por debajo del 40 % de la mediana de otras tiendas del municipio (50 % del mayorista SIPSA si no hay mediana); si queda por debajo, 422 IMPLAUSIBLE_OFFICIAL_PRICE. Sin referencia no se frena.
          */
         post: operations["createPromotion"];
         delete?: never;
@@ -1140,6 +1148,16 @@ export interface components {
         OfficialPriceInReview: {
             /** Format: uuid */
             presentationId: string;
+            /**
+             * @description H3. El nombre del producto con su marca, del catálogo canónico (no de la lista pública, que se actualiza con retraso). «Producto sin nombre» si la presentación ya no está en el catálogo.
+             * @example Arroz blanco Diana
+             */
+            productName: string;
+            /**
+             * @description H3. La cantidad y la unidad de la presentación, con el mismo formato que el frontend: «1 kg», «500 g», «6 × 400 ml». Cadena vacía si la presentación ya no está en el catálogo.
+             * @example 1 kg
+             */
+            presentationLabel: string;
             priceCop: number;
             /** Format: date-time */
             submittedAt: string;
@@ -1151,6 +1169,16 @@ export interface components {
             establishmentId: string;
             /** Format: uuid */
             presentationId: string;
+            /**
+             * @description H3. El nombre del producto con su marca, del catálogo canónico (no de la lista pública, que se actualiza con retraso). «Producto sin nombre» si la presentación ya no está en el catálogo.
+             * @example Arroz blanco Diana
+             */
+            productName: string;
+            /**
+             * @description H3. La cantidad y la unidad de la presentación, con el mismo formato que el frontend: «1 kg», «500 g», «6 × 400 ml». Cadena vacía si la presentación ya no está en el catálogo.
+             * @example 1 kg
+             */
+            presentationLabel: string;
             priceCop: number;
             /** Format: date-time */
             confirmedAt: string;
@@ -1219,12 +1247,12 @@ export interface components {
             name: string;
             distanceM: number;
         }[];
-        /** @description Una denuncia o una disputa sobre un comercio (D2, D3); sin quién la abrió (EC-08). */
+        /** @description Una denuncia, una disputa o un reclamo sobre un comercio (D2, D3, ADR-038); sin quién la abrió (EC-08). */
         MerchantCase: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "denuncia" | "disputa";
+            kind: "denuncia" | "disputa" | "reclamo";
             establishment: {
                 /** Format: uuid */
                 id: string;
@@ -1274,7 +1302,7 @@ export interface components {
              * @enum {string}
              */
             status: "rechazado" | "revocado";
-            /** @description Motivo del moderador o de la fusión. */
+            /** @description rechazado: el motivo del moderador o de la fusión. revocado: siempre el mensaje estándar «Moderación revocó el registro de esta cuenta para esa tienda.»; la nota del moderador no se devuelve (H15). */
             reason: string;
             /** Format: date-time */
             rejectedAt: string;
@@ -1297,7 +1325,6 @@ export interface components {
             verifiedAt: string | null;
             unlocks?: components["schemas"]["MerchantUnlocks"];
         };
-        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84) y scheduledFor en el 403 ACCOUNT_PENDING_DELETION (PendingDeletionError, ADR-032). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), MERCHANT_NOT_VERIFIED (403), INVALID_PASSWORD (403), LAST_MODERATOR_CANNOT_DELETE (403), ACCOUNT_PENDING_DELETION (403), NOT_FOUND (404), CONFLICT (409), ESTABLISHMENT_HAS_OWNER (409), ACCOUNT_HAS_ESTABLISHMENT (409), MERCHANT_REPORT_OPEN (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, IMPLAUSIBLE_PRICE, IMPLAUSIBLE_OFFICIAL_PRICE, INVALID_TTL, INVALID_VERIFICATION_TOKEN, NOT_AT_ESTABLISHMENT, UNKNOWN_PRESENTATION, OFFICIAL_PRICE_REQUIRED, INVALID_PROMOTION, INVALID_OPENING_HOURS, OWN_ESTABLISHMENT, REVOKED_FROM_ESTABLISHMENT y los que agreguen las reglas futuras. */
         OnlineOffer: {
             /** Format: uuid */
             presentationId: string;
@@ -1316,6 +1343,7 @@ export interface components {
              */
             productUrl?: string;
         };
+        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84) y scheduledFor en el 403 ACCOUNT_PENDING_DELETION (PendingDeletionError, ADR-032). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), MERCHANT_NOT_VERIFIED (403), INVALID_PASSWORD (403), LAST_MODERATOR_CANNOT_DELETE (403), ACCOUNT_PENDING_DELETION (403), NOT_FOUND (404), CONFLICT (409), ESTABLISHMENT_HAS_OWNER (409), ACCOUNT_HAS_ESTABLISHMENT (409), MERCHANT_REPORT_OPEN (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, IMPLAUSIBLE_PRICE, IMPLAUSIBLE_OFFICIAL_PRICE, INVALID_TTL, INVALID_VERIFICATION_TOKEN, NOT_AT_ESTABLISHMENT, UNKNOWN_PRESENTATION, OFFICIAL_PRICE_REQUIRED, INVALID_PROMOTION, PROMOTION_OVERLAP, INVALID_OPENING_HOURS, OWN_ESTABLISHMENT, REVOKED_FROM_ESTABLISHMENT, CHAIN_STORE_NOT_CLAIMABLE, DECISION_NOT_APPLICABLE y los que agreguen las reglas futuras. */
         Error: {
             /** @example INVALID_QUANTITY */
             code: string;
@@ -1501,6 +1529,16 @@ export interface components {
             establishmentId: string;
             /** Format: uuid */
             presentationId: string;
+            /**
+             * @description H3. El nombre del producto con su marca, del catálogo canónico (no de la lista pública, que se actualiza con retraso). «Producto sin nombre» si la presentación ya no está en el catálogo.
+             * @example Arroz blanco Diana
+             */
+            productName: string;
+            /**
+             * @description H3. La cantidad y la unidad de la presentación, con el mismo formato que el frontend: «1 kg», «500 g», «6 × 400 ml». Cadena vacía si la presentación ya no está en el catálogo.
+             * @example 1 kg
+             */
+            presentationLabel: string;
             /** @enum {string} */
             type: "descuento_porcentual" | "precio_especial" | "pague_x_lleve_y";
             percent?: number;
@@ -2994,9 +3032,22 @@ export interface operations {
                         csrfToken: string;
                         /**
                          * Format: date-time
-                         * @description Solo si la cuenta está suspendida: la sesión está limitada a ver el estado de sus reportes y apelar (#71).
+                         * @description Solo si la cuenta está suspendida: la sesión está limitada a ver el estado de sus reportes y apelar (#71). Se conserva por compatibilidad; suspension trae lo mismo con la causa.
                          */
                         suspendedUntil?: string;
+                        /** @description H33 (ADR-039), aditivo. Solo si la cuenta está suspendida: hasta cuándo y por qué, para que la app lo explique. Nunca trae la nota del moderador ni quién denunció. */
+                        suspension?: {
+                            /**
+                             * Format: date-time
+                             * @description Igual que suspendedUntil.
+                             */
+                            until: string;
+                            /**
+                             * @description observada_por_moderacion, un moderador eligió «Observar cuentas» sobre un reporte de la cuenta; descartes_seguidos, el tercer descarte seguido (RN6); no_registrada, suspensión anterior al registro de la causa. Conjunto estable: el frontend puede mapear cada valor a un texto propio.
+                             * @enum {string}
+                             */
+                            reason: "observada_por_moderacion" | "descartes_seguidos" | "no_registrada";
+                        };
                     };
                 };
             };
@@ -3690,7 +3741,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description verificado: la cuenta quedó como dueña de la tienda del mapa y su rol pasa a comercio. pre_aprobado: la tienda nueva espera la aprobación de su propuesta; unlocks dice lo que se desbloquea al aprobarse. */
+            /** @description verificado: la cuenta quedó como dueña de la tienda del mapa (barrio o minimercado) y su rol pasa a comercio. pre_aprobado: la tienda nueva espera la aprobación de su propuesta, o el supermercado del mapa que no es de cadena espera el caso reclamo del moderador (ADR-038); unlocks dice lo que se desbloquea al aprobarse. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -3737,7 +3788,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description code NOT_AT_ESTABLISHMENT: la ubicación está a más de 50 m de la tienda. code REVOKED_FROM_ESTABLISHMENT: un moderador revocó a esta cuenta de esta tienda (#208). */
+            /** @description code CHAIN_STORE_NOT_CLAIMABLE: es una tienda de cadena (D1, Ara, Éxito…) y no se puede reclamar; se comprueba antes de la cercanía (ADR-038). code NOT_AT_ESTABLISHMENT: la ubicación está a más de 50 m de la tienda. code REVOKED_FROM_ESTABLISHMENT: un moderador revocó a esta cuenta de esta tienda (#208). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3808,6 +3859,11 @@ export interface operations {
                 content: {
                     "application/json": {
                         canReport: boolean;
+                        /**
+                         * @description Solo aparece, y vale true, cuando la cuenta ya denunció esa tienda y la denuncia sigue abierta.
+                         * @enum {boolean}
+                         */
+                        alreadyReported?: true;
                     };
                 };
             };
@@ -3915,8 +3971,11 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    decision: "revocar" | "descartar";
+                    /**
+                     * @description revocar y descartar, de la denuncia y la disputa; aprobar y rechazar, del reclamo.
+                     * @enum {string}
+                     */
+                    decision: "revocar" | "descartar" | "aprobar" | "rechazar";
                     note: string;
                 };
             };
@@ -3934,6 +3993,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             /** @description El caso no existe o ya se decidió. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code DECISION_NOT_APPLICABLE, la decisión no corresponde al tipo de caso. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4284,7 +4352,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description code OFFICIAL_PRICE_REQUIRED: no hay precio oficial vigente de esa presentación. code INVALID_PROMOTION: la oferta no baja el oficial, está fuera de sus límites o las fechas no sirven (final antes del inicio o ya pasado, o más de 30 días). code IMPLAUSIBLE_OFFICIAL_PRICE (ADR-037): el precio resultante queda muy por debajo de lo normal para esa presentación; el mensaje dice el rango y cómo corregirla. */
+            /** @description code OFFICIAL_PRICE_REQUIRED: no hay precio oficial vigente de esa presentación. code INVALID_PROMOTION: la oferta no baja el oficial, está fuera de sus límites o las fechas no sirven (final antes del inicio o ya pasado, o más de 30 días). code IMPLAUSIBLE_OFFICIAL_PRICE (ADR-037): el precio resultante queda muy por debajo de lo normal para esa presentación; el mensaje dice el rango y cómo corregirla. code PROMOTION_OVERLAP (H20): ya hay otra promoción de esa presentación en la tienda, vigente, pausada o programada, que comparte al menos un día con las fechas pedidas; el mensaje dice las fechas de la otra y que debe retirarla o cambiar las fechas. Las retiradas y las vencidas no cuentan. */
             422: {
                 headers: {
                     [name: string]: unknown;
