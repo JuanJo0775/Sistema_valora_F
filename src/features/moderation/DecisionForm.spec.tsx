@@ -57,4 +57,102 @@ describe('formulario de decisión', () => {
     expect(note).not.toHaveAttribute('aria-invalid');
     expect(note).not.toHaveAttribute('aria-describedby');
   });
+
+  describe('decisión con sanción', () => {
+    const WITH_SANCTION = [
+      { value: 'aprobar' as const, label: 'Aprobar' },
+      {
+        value: 'observar' as const,
+        label: 'Observar cuentas',
+        hint: 'Suspende por 7 días la cuenta de quien reportó.',
+        confirm: 'Esto suspende la cuenta por 7 días. ¿Confirmas?',
+      },
+    ];
+    const note = () =>
+      fireEvent.change(screen.getByLabelText('Motivo de la decisión'), {
+        target: { value: 'Motivo suficiente' },
+      });
+    const register = () =>
+      fireEvent.click(screen.getByRole('button', { name: 'Registrar decisión' }));
+
+    it('dice qué hace la opción con una descripción visible ligada al radio', () => {
+      render(
+        <DecisionForm id="c" options={WITH_SANCTION} onDecide={vi.fn(() => Promise.resolve())} />,
+      );
+      const hint = screen.getByText('Suspende por 7 días la cuenta de quien reportó.');
+      expect(screen.getByRole('radio', { name: 'Observar cuentas' })).toHaveAccessibleDescription(
+        hint.textContent,
+      );
+      expect(screen.getByRole('radio', { name: 'Aprobar' })).not.toHaveAttribute(
+        'aria-describedby',
+      );
+    });
+
+    it('pide confirmación antes de enviar, con el foco en Confirmar, y envía al confirmar', async () => {
+      const onDecide = vi.fn(() => Promise.resolve());
+      render(<DecisionForm id="c" options={WITH_SANCTION} onDecide={onDecide} />);
+      fireEvent.click(screen.getByRole('radio', { name: 'Observar cuentas' }));
+      note();
+
+      register();
+
+      expect(screen.getByText('Esto suspende la cuenta por 7 días. ¿Confirmas?')).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Confirmar' })).toHaveFocus();
+      expect(onDecide).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+      expect(onDecide).toHaveBeenCalledWith('observar', 'Motivo suficiente');
+    });
+
+    it('Cancelar no envía, cierra la confirmación y devuelve el foco al botón', () => {
+      const onDecide = vi.fn(() => Promise.resolve());
+      render(<DecisionForm id="c" options={WITH_SANCTION} onDecide={onDecide} />);
+      fireEvent.click(screen.getByRole('radio', { name: 'Observar cuentas' }));
+      note();
+      register();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(onDecide).not.toHaveBeenCalled();
+      expect(screen.queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Registrar decisión' })).toHaveFocus();
+    });
+
+    it('cambiar de decisión retira la confirmación', () => {
+      render(
+        <DecisionForm id="c" options={WITH_SANCTION} onDecide={vi.fn(() => Promise.resolve())} />,
+      );
+      fireEvent.click(screen.getByRole('radio', { name: 'Observar cuentas' }));
+      note();
+      register();
+
+      fireEvent.click(screen.getByRole('radio', { name: 'Aprobar' }));
+
+      expect(screen.queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument();
+    });
+
+    it('las demás decisiones se envían sin pedir confirmación', () => {
+      const onDecide = vi.fn(() => Promise.resolve());
+      render(<DecisionForm id="c" options={WITH_SANCTION} onDecide={onDecide} />);
+      fireEvent.click(screen.getByRole('radio', { name: 'Aprobar' }));
+      note();
+
+      register();
+
+      expect(onDecide).toHaveBeenCalledWith('aprobar', 'Motivo suficiente');
+      expect(screen.queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument();
+    });
+
+    it('sin motivo no pide confirmación: primero el aviso del motivo', () => {
+      render(
+        <DecisionForm id="c" options={WITH_SANCTION} onDecide={vi.fn(() => Promise.resolve())} />,
+      );
+      fireEvent.click(screen.getByRole('radio', { name: 'Observar cuentas' }));
+
+      register();
+
+      expect(screen.queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('al menos 10 letras');
+    });
+  });
 });
