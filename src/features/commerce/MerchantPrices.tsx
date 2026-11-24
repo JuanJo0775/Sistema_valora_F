@@ -79,6 +79,7 @@ function PricePanel() {
   }, [notice]);
 
   const reconfirmButton = useRef<HTMLButtonElement>(null);
+  const [askingReconfirm, setAskingReconfirm] = useState(false);
 
   const refresh = () => {
     setRevision((now) => now + 1);
@@ -330,17 +331,48 @@ function PricePanel() {
               <p className="muted">Aún no has publicado precios oficiales.</p>
             ) : (
               <>
-                <button
-                  ref={reconfirmButton}
-                  type="button"
-                  className="btn"
-                  disabled={busy}
-                  onClick={() => {
-                    void reconfirm();
-                  }}
-                >
-                  Todos mis precios siguen igual
-                </button>
+                {askingReconfirm ? (
+                  <div className="actions">
+                    <p>
+                      {`Esto renueva la vigencia de ${String(listed.length)} ${listed.length === 1 ? 'precio' : 'precios'}. ¿Confirmas?`}
+                    </p>
+                    <button
+                      ref={reconfirmButton}
+                      type="button"
+                      className="btn"
+                      disabled={busy}
+                      autoFocus
+                      onClick={() => {
+                        setAskingReconfirm(false);
+                        void reconfirm();
+                      }}
+                    >
+                      Confirmar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        setAskingReconfirm(false);
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    ref={reconfirmButton}
+                    type="button"
+                    className="btn"
+                    disabled={busy}
+                    onClick={() => {
+                      setAskingReconfirm(true);
+                    }}
+                  >
+                    Todos mis precios siguen igual
+                  </button>
+                )}
                 <ul className="merchant-price-list">
                   {listed.map((item) => {
                     const label = productLabel(item.presentationId);
