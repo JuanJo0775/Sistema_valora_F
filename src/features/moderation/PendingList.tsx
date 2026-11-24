@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { restoreFocus } from '../../shared/focus';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { SkeletonList } from '../../shared/ui/Skeleton';
@@ -22,6 +23,11 @@ export function PendingList<T extends { id: string }>({
   const [attempt, setAttempt] = useState(0);
   const [outcome, setOutcome] = useState<Outcome<T> | null>(null);
   const [decided, setDecided] = useState('');
+  // La tarjeta decidida desaparece de la lista: el foco pasa al aviso del resultado.
+  const decidedRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (decided) restoreFocus(decidedRef.current);
+  }, [decided]);
   // La última función de carga, sin volver a cargar cada vez que cambia.
   const latest = useRef(load);
   const key = `${String(attempt)}|${source}`;
@@ -67,7 +73,7 @@ export function PendingList<T extends { id: string }>({
   return (
     <>
       {decided && (
-        <p role="status" className="muted">
+        <p role="status" ref={decidedRef} tabIndex={-1} className="muted">
           {decided}
         </p>
       )}

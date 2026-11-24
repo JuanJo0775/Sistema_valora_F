@@ -26,4 +26,12 @@ describe('estado vacío', () => {
     rerender(<EmptyState title="Sin nada" level={1} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Sin nada' })).toBeInTheDocument();
   });
+
+  it('con focus lleva el foco al título; sin él no lo mueve', () => {
+    const { rerender } = render(<EmptyState title="Sin nada" />);
+    expect(screen.getByRole('heading', { name: 'Sin nada' })).not.toHaveFocus();
+
+    rerender(<EmptyState title="Recibido" focus />);
+    expect(screen.getByRole('heading', { name: 'Recibido' })).toHaveFocus();
+  });
 });

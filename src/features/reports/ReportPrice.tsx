@@ -273,6 +273,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         )}
         <EmptyState
           title={done === 'recibido' ? 'Recibido' : 'Guardado en tu teléfono'}
+          focus
           text={
             done === 'recibido'
               ? inReview
