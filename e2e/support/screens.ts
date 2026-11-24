@@ -17,13 +17,10 @@ export async function chooseFirstPresentation(page: Page) {
 export async function chooseStoreByName(page: Page, store: Store) {
   await page.getByRole('searchbox', { name: 'Buscar tienda por nombre' }).fill(store.name);
   await page.getByRole('button', { name: 'Buscar tienda' }).click();
-  // La semilla del Quindío puede devolver otras tiendas con el mismo nombre.
+  // La semilla del Quindío puede devolver otras tiendas con el mismo nombre: el nombre accesible de cada
+  // opción suma municipio, dirección y distancia, así que se elige por id.
   const byId = page.locator(`input[type="radio"][value="${store.id}"]`);
-  await page
-    .getByRole('radio', { name: store.name, exact: true })
-    .and(byId)
-    .locator('xpath=ancestor::label[1]')
-    .click();
+  await page.getByRole('radio').and(byId).locator('xpath=ancestor::label[1]').click();
   // Al elegirla, el bloque «Tienda» se resume en una fila «Tienda X · Cambiar» (ya no hay lista).
   await expectStoreChosen(page, store);
 }
