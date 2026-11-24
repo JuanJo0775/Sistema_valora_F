@@ -27,10 +27,16 @@ const REASON_OPTIONS: { value: Reason | ''; label: string }[] = [
   ...(Object.keys(REASONS) as Reason[]).map((value) => ({ value, label: REASONS[value] })),
 ];
 
-const DECISIONS: { value: Decision; label: string }[] = [
+const DECISIONS: { value: Decision; label: string; hint?: string; confirm?: string }[] = [
   { value: 'aprobar', label: 'Aprobar' },
   { value: 'descartar', label: 'Descartar' },
-  { value: 'observar_cuentas', label: 'Observar cuentas' },
+  {
+    value: 'observar_cuentas',
+    label: 'Observar cuentas',
+    // Backend (#33): suspende 7 días al autor del reporte y solo anota la decisión; no aprueba ni descarta.
+    hint: 'Observar cuentas suspende por 7 días la cuenta de quien reportó. No aprueba ni descarta este reporte.',
+    confirm: 'Esto suspende la cuenta por 7 días. ¿Confirmas?',
+  },
 ];
 
 // #73 y #71 del backend: nadie decide su propio reporte ni la apelación de lo que descartó.

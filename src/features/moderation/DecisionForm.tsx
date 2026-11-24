@@ -12,7 +12,9 @@ export function DecisionForm<T extends string>({
   explain,
 }: {
   id: string;
-  options: { value: T; label: string }[];
+  // hint: lo que hace la opción, visible y ligado al radio. confirm: la opción tiene una sanción y
+  // se pide confirmar en línea antes de enviar.
+  options: { value: T; label: string; hint?: string; confirm?: string }[];
   onDecide: (decision: T, note: string) => Promise<unknown>;
   // Mensajes propios para algunos rechazos del servidor; lo demás muestra el del servidor.
   explain?: (error: unknown) => string | null;
@@ -22,9 +24,24 @@ export function DecisionForm<T extends string>({
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const problemId = useId();
+  const hintId = useId();
+  const sendButton = useRef<HTMLButtonElement>(null);
   const firstChoice = useRef<HTMLInputElement>(null);
   const noteBox = useRef<HTMLTextAreaElement>(null);
+
+  const chosen = options.find((option) => option.value === decision);
+
+  const submit = (value: T) => {
+    setConfirming(false);
+    setError(null);
+    setSending(true);
+    onDecide(value, note.trim()).catch((failure: unknown) => {
+      setError(failure);
+      setSending(false);
+    });
+  };
 
   const send = () => {
     const found = !decision
@@ -38,12 +55,11 @@ export function DecisionForm<T extends string>({
       (decision ? noteBox : firstChoice).current?.focus();
       return;
     }
-    setError(null);
-    setSending(true);
-    onDecide(decision, note.trim()).catch((failure: unknown) => {
-      setError(failure);
-      setSending(false);
-    });
+    if (chosen?.confirm) {
+      setConfirming(true);
+      return;
+    }
+    submit(decision);
   };
 
   const decisionInvalid = problem !== '' && !decision;
@@ -69,12 +85,22 @@ export function DecisionForm<T extends string>({
               onChange={() => {
                 setDecision(option.value);
                 setProblem('');
+                setConfirming(false);
               }}
+              aria-describedby={option.hint ? `${hintId}-${option.value}` : undefined}
             />
             {option.label}
           </label>
         ))}
       </fieldset>
+      {options.map(
+        (option) =>
+          option.hint && (
+            <p key={option.value} id={`${hintId}-${option.value}`} className="muted">
+              {option.hint}
+            </p>
+          ),
+      )}
       <label className="field">
         Motivo de la decisión
         <textarea
@@ -87,6 +113,7 @@ export function DecisionForm<T extends string>({
           onChange={(event) => {
             setNote(event.target.value);
             setProblem('');
+            setConfirming(false);
           }}
         />
       </label>
@@ -102,7 +129,36 @@ export function DecisionForm<T extends string>({
       ) : (
         error !== null && <ErrorState error={error} />
       )}
-      <button type="button" className="btn" disabled={sending} onClick={send}>
+      {confirming && chosen?.confirm && decision && (
+        <div className="banner warn" role="group" aria-label="Confirmar la decisión">
+          <p>{chosen.confirm}</p>
+          <div className="actions">
+            <button
+              type="button"
+              className="btn"
+              // Pedir la confirmación mueve el foco a ella: quien usa teclado no la pierde.
+              // eslint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
+              onClick={() => {
+                submit(decision);
+              }}
+            >
+              Confirmar
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                setConfirming(false);
+                sendButton.current?.focus();
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+      <button ref={sendButton} type="button" className="btn" disabled={sending} onClick={send}>
         Registrar decisión
       </button>
     </div>
