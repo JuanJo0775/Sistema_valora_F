@@ -4,6 +4,7 @@ import { formatCop } from '../../shared/money';
 import { BackLink } from '../../shared/ui/BackLink';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { Loading } from '../../shared/ui/Loading';
+import { SidePanel } from '../../shared/ui/SidePanel';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import { WherePicker } from '../comparison/WherePicker';
 import { AssumptionsForm } from '../plan/AssumptionsForm';
@@ -196,7 +197,7 @@ function SaveSide({
   children: ReactNode;
 }) {
   return (
-    <aside className="side fit where-save" aria-label="Guardar lista">
+    <SidePanel className="where-save" aria-label="Guardar lista">
       {label && total && (
         <div className="where-sum">
           <p className="rec-label">{label}</p>
@@ -208,6 +209,6 @@ function SaveSide({
         </div>
       )}
       {children}
-    </aside>
+    </SidePanel>
   );
 }

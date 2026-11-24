@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { formatCop } from '../../shared/money';
 import { Loading } from '../../shared/ui/Loading';
+import { SidePanel } from '../../shared/ui/SidePanel';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import { placeLabel } from '../comparison/WherePicker';
 import { useCanasta } from './canastaContext';
@@ -18,7 +19,7 @@ export function WhereSummary() {
   const gain = first ? gainSentence(first, where.point !== null) : '';
   const waiting = !where.ready || totals.status === 'loading';
   return (
-    <aside className="side fit where-buy where-summary" aria-label="Dónde comprar">
+    <SidePanel className="where-buy where-summary" aria-label="Dónde comprar">
       <h2>Dónde comprar</h2>
       {waiting ? (
         <Loading text={where.ready ? 'Buscando precios…' : 'Buscando tu ubicación…'} />
@@ -42,6 +43,6 @@ export function WhereSummary() {
           Ver dónde comprar
         </Link>
       )}
-    </aside>
+    </SidePanel>
   );
 }

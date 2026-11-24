@@ -5,6 +5,7 @@ import type { components } from '../../shared/api/schema';
 import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { SidePanel } from '../../shared/ui/SidePanel';
 import { SkeletonDetail } from '../../shared/ui/Skeleton';
 import { formatPresentation } from './presentation';
 import { useSession } from '../auth/session';
@@ -121,7 +122,7 @@ export function ProductDetail() {
       {/* #48: en escritorio, el panel fijo de la derecha; en el celular, entre el producto y la
           lista de tiendas, para que lo que decide la compra quede primero. Orden del panel: el más
           barato, la presentación, agregar a la canasta (primaria) y registrar un precio. */}
-      <aside className="side" aria-label="Precios y acciones">
+      <SidePanel aria-label="Precios y acciones">
         {comparison ? (
           <CheapestCard comparison={comparison} sizeOf={sizeOf(product)} />
         ) : (
@@ -137,7 +138,7 @@ export function ProductDetail() {
           {`Registrar un precio de ${product.name}`}
         </Link>
         <HistorySummary productId={product.id} />
-      </aside>
+      </SidePanel>
       <AllStores
         product={product}
         onComparison={(latest) => {

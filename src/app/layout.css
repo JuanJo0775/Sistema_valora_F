@@ -113,6 +113,7 @@ html {
 
 /* Enlaces sueltos dentro de listas: se tocan en 44 px o más (WCAG 2.2). */
 .offer h2 a,
+.store-offer h3 a,
 .legal-index a {
   display: inline-flex;
   align-items: center;

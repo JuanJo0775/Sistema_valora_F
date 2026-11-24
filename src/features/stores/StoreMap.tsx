@@ -48,6 +48,7 @@ export function StoreMap({
   picked = null,
   around = null,
   municipality,
+  pinsFocusable = true,
 }: {
   stores: MapStore[];
   label: string;
@@ -55,6 +56,10 @@ export function StoreMap({
   picked?: { lat: number; lng: number } | null;
   around?: Around | null;
   municipality?: Municipality;
+  // Los pines se alcanzan con Tab y abren su globo con Enter (H-32). Si al lado hay una lista de las
+  // mismas tiendas con los mismos botones (el mapa de tiendas), la lista es el camino del teclado: los
+  // pines pasan a ser imágenes con nombre, sin parada de Tab, para no sumar 50 paradas ni saltar el orden.
+  pinsFocusable?: boolean;
 }) {
   // Solo importa si hay círculo, no cuánto mide: arrastrar la barra no vuelve a dibujar las tiendas.
   const hasAround = around !== null;
@@ -143,6 +148,7 @@ export function StoreMap({
     // (preventDefault evita que Leaflet lo vuelva a tomar como clic y la cierre) y llevan el foco a su
     // primer enlace; Escape la cierra y devuelve el foco al pin. La lista sigue siendo la alternativa.
     const onKeys = (marker: L.Marker, run: () => void) => {
+      if (!pinsFocusable) return;
       marker.on('add', () => {
         marker.getElement()?.addEventListener('keydown', (event: Event) => {
           const { key } = event as KeyboardEvent;
@@ -150,6 +156,14 @@ export function StoreMap({
           event.preventDefault();
           run();
         });
+      });
+    };
+    // El nombre accesible del marcador. Sin foco no es un botón: es una imagen con nombre.
+    const named = (marker: L.Marker, name: string) => {
+      marker.on('add', () => {
+        const element = marker.getElement();
+        element?.setAttribute('aria-label', name);
+        if (!pinsFocusable) element?.setAttribute('role', 'img');
       });
     };
     const draw = () => {
@@ -176,12 +190,11 @@ export function StoreMap({
             }),
             title: store.name,
             alt: store.name,
+            keyboard: pinsFocusable,
           });
           const { popup, route } = popupFor(store, () => marker);
           marker.bindPopup(popup);
-          marker.on('add', () => {
-            marker.getElement()?.setAttribute('aria-label', store.name);
-          });
+          named(marker, store.name);
           onKeys(marker, () => {
             marker.openPopup();
             route.focus();
@@ -206,11 +219,10 @@ export function StoreMap({
           }),
           title: label,
           alt: label,
+          keyboard: pinsFocusable,
         });
         marker.on('click', zoomIn);
-        marker.on('add', () => {
-          marker.getElement()?.setAttribute('aria-label', label);
-        });
+        named(marker, label);
         onKeys(marker, zoomIn);
         marker.addTo(layer);
       }
@@ -228,7 +240,7 @@ export function StoreMap({
     return () => {
       current.off('zoomend', draw);
     };
-  }, [stores, navigate, hasAround, shaped, municipality]);
+  }, [stores, navigate, hasAround, shaped, municipality, pinsFocusable]);
 
   // La persona y su círculo: se vuelven a dibujar solo si cambia dónde está.
   useEffect(() => {
