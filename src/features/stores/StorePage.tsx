@@ -30,7 +30,8 @@ type StorePrices =
 export function StorePage() {
   const { establishmentId = '' } = useParams();
   const { session } = useSession();
-  // Un comercio o un moderador no puede registrar otra tienda: no se le ofrece reclamarla.
+  // Un comercio o un moderador no puede registrar otra tienda: no se le ofrece reclamarla. Las tiendas
+  // de cadena (tipo descuento) no tienen dueño individual y tampoco se reclaman (H11).
   const canClaim = session.status !== 'active' || session.role === 'reportante';
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -134,7 +135,7 @@ export function StorePage() {
               <Icon name="plus" />
               Registrar un precio aquí
             </Link>
-            {canClaim && (
+            {canClaim && store.type !== 'descuento' && (
               <Link to={`/comercios/registro?tienda=${store.id}`} className="btn ghost">
                 ¿Eres el dueño? Registra tu tienda
               </Link>

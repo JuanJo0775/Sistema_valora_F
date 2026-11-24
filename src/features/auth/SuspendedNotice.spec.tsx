@@ -25,14 +25,32 @@ describe('aviso de cuenta suspendida', () => {
   });
 
   it.each([
-    ['observada_por_moderacion', 'Moderación observó tu cuenta por un reporte de precio.'],
+    [
+      'observada_por_moderacion',
+      'Moderación observó tu cuenta por un reporte de precio; esa decisión no se apela.',
+    ],
     ['descartes_seguidos', 'Varios de tus reportes seguidos fueron descartados.'],
-    ['rafaga', 'Enviaste demasiados reportes en poco tiempo.'],
   ])('con el motivo %s lo explica con una frase simple', (reason, sentence) => {
     renderNotice({ reason });
 
     expect(screen.getByRole('alert')).toHaveTextContent(sentence);
     expect(screen.getByRole('link', { name: 'Ver mis aportes' })).toBeInTheDocument();
+  });
+
+  it('con observada_por_moderacion no ofrece apelar esa decisión (H34)', () => {
+    renderNotice({ reason: 'observada_por_moderacion' });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('puedes ver el estado de tus aportes.');
+    expect(alert).not.toHaveTextContent('y apelar');
+  });
+
+  it('no_registrada no muestra ninguna frase inventada (H33)', () => {
+    renderNotice({ reason: 'no_registrada' });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Tu cuenta está suspendida hasta el 1 de diciembre de 2026. Mientras tanto puedes ver el estado de tus aportes y apelar.',
+    );
   });
 
   it('un motivo que la app no conoce no inventa ninguna frase', () => {

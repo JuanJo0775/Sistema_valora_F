@@ -162,6 +162,44 @@ describe('promociones del comercio (#167)', () => {
     expect(publish).toHaveAccessibleDescription(message);
   });
 
+  it('usa el nombre del servidor en la lista y en el selector «Presentación» (H3)', async () => {
+    const named = { productName: 'Arroz blanco Diana', presentationLabel: '1 kg' };
+    const { calls } = await open({
+      'GET /v1/commerce/prices': {
+        status: 200,
+        body: { items: [{ ...price, ...named }], inReview: [] },
+      },
+      [`GET ${path}`]: { status: 200, body: { items: [{ ...promotion, ...named }] } },
+    });
+    expect(
+      await screen.findByRole('heading', { name: 'Arroz blanco Diana · 1 kg' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'Arroz blanco Diana · 1 kg · $2.200' }),
+    ).toBeInTheDocument();
+    expect(calls.some(({ path: url }) => url === '/v1/establishments/s1/prices')).toBe(false);
+  });
+
+  it('muestra el solapamiento de promociones junto al botón «Publicar promoción» (H20)', async () => {
+    const message =
+      'Ya tienes otra promoción de esta presentación del 22 al 25 de nov. Retírala o cambia las fechas.';
+    await open({
+      [`POST ${path}`]: { status: 422, body: { code: 'PROMOTION_OVERLAP', message } },
+    });
+    await screen.findByRole('option', { name: /Arroz/ });
+    fill('Presentación', 'p1');
+    fill('Descuento (%)', '10');
+    fill('Desde', '2026-11-22');
+    fill('Hasta', '2026-11-25');
+    const publish = screen.getByRole('button', { name: 'Publicar promoción' });
+    fireEvent.click(publish);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    expect(publish.closest('form')).toContainElement(alert);
+    expect(publish).toHaveAccessibleDescription(message);
+  });
+
   it('muestra los estados de la API y retira una promoción con confirmación', async () => {
     const { calls } = await open({
       [`GET ${path}`]: [

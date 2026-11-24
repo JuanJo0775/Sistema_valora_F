@@ -6,11 +6,22 @@ import { PendingList } from './PendingList';
 import { explainWith } from './explain';
 
 const load = () => call(api.GET('/moderation/merchant-cases')).then(({ items }) => items);
-const OPTIONS = [
-  { value: 'revocar' as const, label: 'Revocar comercio' },
-  { value: 'descartar' as const, label: 'Descartar caso' },
+type Decision = 'revocar' | 'descartar' | 'aprobar' | 'rechazar';
+const OPTIONS: { value: Decision; label: string }[] = [
+  { value: 'revocar', label: 'Revocar comercio' },
+  { value: 'descartar', label: 'Descartar caso' },
 ];
-const explain = explainWith({ 404: 'El caso ya no está pendiente.' });
+// Un reclamo (ADR-038) se aprueba o se rechaza; revocar y descartar son de denuncias y disputas.
+const CLAIM_OPTIONS: { value: Decision; label: string }[] = [
+  { value: 'aprobar', label: 'Aprobar reclamo' },
+  { value: 'rechazar', label: 'Rechazar reclamo' },
+];
+const explain = explainWith({
+  404: 'El caso ya no está pendiente.',
+  DECISION_NOT_APPLICABLE:
+    'Esa decisión no corresponde a este tipo de caso. Actualiza la lista e inténtalo de nuevo.',
+});
+const KIND_TITLE = { disputa: 'Disputa de propiedad', denuncia: 'Denuncia' };
 
 export function MerchantCases() {
   return (
@@ -23,7 +34,7 @@ export function MerchantCases() {
             <Link to={`/tiendas/${item.establishment.id}`}>{item.establishment.name}</Link>
           </h2>
           <p className="muted">
-            {item.kind === 'disputa' ? 'Disputa de propiedad' : 'Denuncia'} ·{' '}
+            {item.kind === 'reclamo' ? 'Reclamo de tienda' : KIND_TITLE[item.kind]} ·{' '}
             {dayInColombia(item.createdAt)}
           </p>
           <p>{item.reason}</p>
@@ -42,11 +53,13 @@ export function MerchantCases() {
             <p className="muted">El comercio ya no está registrado.</p>
           )}
           <p className="muted">
-            Revocar retira los precios oficiales y las promociones del comercio.
+            {item.kind === 'reclamo'
+              ? 'Aprobar deja la tienda verificada a nombre de quien reclama; rechazar cierra la solicitud.'
+              : 'Revocar retira los precios oficiales y las promociones del comercio.'}
           </p>
           <DecisionForm
             id={item.id}
-            options={OPTIONS}
+            options={item.kind === 'reclamo' ? CLAIM_OPTIONS : OPTIONS}
             explain={explain}
             onDecide={(decision, note) =>
               call(

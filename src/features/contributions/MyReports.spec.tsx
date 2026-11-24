@@ -130,6 +130,42 @@ describe('mis aportes', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('pulsa «Apelar»');
   });
 
+  it('un aporte descartado por «observar cuentas» no tiene plazo ni botón «Apelar» (H34)', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': page([report('Banano', 'descartado')]),
+    });
+    renderMine();
+
+    expect(await screen.findByText('Descartado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Apelar' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Puedes apelar hasta/)).not.toBeInTheDocument();
+  });
+
+  it('suspendida por moderación, el aviso dice que esa decisión no se apela (H34)', async () => {
+    stubApi({
+      'GET /v1/auth/session': {
+        status: 200,
+        body: {
+          ...(sessionAs('reportante', '2026-11-20T17:00:00Z').body as object),
+          suspension: { until: '2026-11-20T17:00:00Z', reason: 'observada_por_moderacion' },
+        },
+      },
+      'GET /v1/me/reports': page([report('Banano', 'descartado')]),
+    });
+
+    render(
+      <SessionProvider>
+        <MemoryRouter>
+          <MyReports />
+        </MemoryRouter>
+      </SessionProvider>,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('esa decisión no se apela');
+    expect(screen.queryByRole('button', { name: 'Apelar' })).not.toBeInTheDocument();
+  });
+
   // RF-013 RN4: apelar un descarte una sola vez y dentro del plazo.
   const discarded = report('Arroz blanco', 'descartado', {
     appealableUntil: '2026-11-23T17:00:00Z',
