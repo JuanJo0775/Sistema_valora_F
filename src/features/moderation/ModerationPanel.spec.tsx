@@ -63,4 +63,44 @@ describe('panel del moderador', () => {
       }),
     ).toBeInTheDocument();
   });
+
+  it('maneja las pestañas con el teclado y conserva ?vista= (H32)', async () => {
+    renderPanel();
+    const precios = screen.getByRole('tab', { name: 'Precios' });
+    precios.focus();
+
+    // Solo la pestaña activa está en el orden de Tab.
+    expect(screen.getAllByRole('tab').filter((tab) => tab.tabIndex === 0)).toEqual([precios]);
+
+    fireEvent.keyDown(precios, { key: 'ArrowRight' });
+    const tiendas = screen.getByRole('tab', { name: 'Tiendas' });
+    expect(tiendas).toHaveFocus();
+    expect(tiendas).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('tabpanel', { name: 'Tiendas' })).toBeInTheDocument();
+
+    fireEvent.keyDown(tiendas, { key: 'End' });
+    expect(screen.getByRole('tab', { name: 'Roles' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Roles' }), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Precios' })).toHaveFocus();
+  });
+
+  it('abre la vista de la dirección y la tabpanel queda ligada a su pestaña', () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('moderador'),
+      'GET /v1/categories': { status: 200, body: { items: [] } },
+    });
+    render(
+      <MemoryRouter initialEntries={['/moderacion?vista=roles']}>
+        <ModerationPanel />
+      </MemoryRouter>,
+    );
+
+    const roles = screen.getByRole('tab', { name: 'Roles' });
+    expect(roles).toHaveAttribute('aria-selected', 'true');
+    expect(roles).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tabpanel', { name: 'Roles' })).toHaveAttribute(
+      'id',
+      roles.getAttribute('aria-controls'),
+    );
+  });
 });
