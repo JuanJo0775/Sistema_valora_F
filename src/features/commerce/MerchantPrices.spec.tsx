@@ -65,6 +65,10 @@ describe('panel de precios oficiales (#166)', () => {
     const request = calls.find(({ method, path }) => method === 'PUT' && path === prices);
     expect(request?.body).toBe(JSON.stringify({ presentationId: 'p1', priceCop: 2200 }));
     expect(request?.headers.get('X-CSRF-Token')).toBe('token-1');
+
+    // El aviso de éxito es de esta acción: no sigue visible al pasar a otra sección.
+    fireEvent.click(screen.getByRole('button', { name: 'Carga masiva' }));
+    expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
   });
 
   it('muestra la vigencia y permite corregir el precio desde un aviso', async () => {
