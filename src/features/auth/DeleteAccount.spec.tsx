@@ -64,7 +64,7 @@ describe('eliminar mi cuenta', () => {
     expect(section).toHaveTextContent(/durante los 10 días.*siguen mostrándose/i);
     expect(section).toHaveTextContent(/si restauras la cuenta.*vuelves como comercio/i);
     expect(section).toHaveTextContent(
-      /pasado el plazo.*precios oficiales.*promociones.*se borran/i,
+      /pasado el plazo se borran tu registro.*precios oficiales y sus promociones dejan de mostrarse/i,
     );
     expect(section).toHaveTextContent(/sin responsable registrado/i);
     expect(section).toHaveTextContent(/todavía no está definido/i);
