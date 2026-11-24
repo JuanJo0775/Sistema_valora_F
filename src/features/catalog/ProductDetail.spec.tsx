@@ -69,6 +69,25 @@ const renderWithSession = (productId: string) =>
   );
 
 describe('detalle del producto', () => {
+  it.each([{ status: 200, body: { items: [] } }, { status: 503 }])(
+    'mantiene la ficha visible cuando Olímpica no ofrece un precio (%j)',
+    async (reply) => {
+      const { requested } = stubApi({
+        [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+        [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([]),
+        [`GET /v1/products/${rice.id}/online-offers`]: reply,
+      });
+      renderDetail(rice.id);
+      expect(await screen.findByRole('heading', { name: rice.name })).toBeInTheDocument();
+      await vi.waitFor(() => {
+        expect(requested.some((url) => url.pathname.endsWith('/online-offers'))).toBe(true);
+      });
+      expect(
+        screen.queryByRole('region', { name: 'Olímpica en línea · Armenia centro' }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   it('muestra el precio en línea de Olímpica en una sección con su presentación y fecha', async () => {
     const presentation = rice.presentations[0];
     stubApi({
