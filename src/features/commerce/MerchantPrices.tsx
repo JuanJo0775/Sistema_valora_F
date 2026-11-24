@@ -8,6 +8,7 @@ import { formatCop } from '../../shared/money';
 import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { Tabs } from '../../shared/ui/Tabs';
 import { RequireRole } from '../auth/RequireRole';
 import { MerchantPriceEditor, type PriceSelection } from './MerchantPriceEditor';
 import { MerchantStoreEditor } from './MerchantStoreEditor';
@@ -16,13 +17,7 @@ import { MerchantPriceUpload } from './MerchantPriceUpload';
 import { serverName } from './presentationName';
 import './merchant-prices.css';
 
-const TABS = [
-  ['prices', 'Precios'],
-  ['upload', 'Carga masiva'],
-  ['promotions', 'Promociones'],
-  ['store', 'Mi tienda'],
-] as const;
-type Tab = (typeof TABS)[number][0];
+type Tab = 'prices' | 'upload' | 'promotions' | 'store';
 type Profile = components['schemas']['MerchantProfile'];
 type Promotion = components['schemas']['MerchantPromotion'];
 
@@ -272,236 +267,272 @@ function PricePanel() {
           <dd>{alerts && 'data' in alerts ? alerts.data.length : '—'}</dd>
         </div>
       </dl>
-      <nav className="merchant-tabs" aria-label="Portal de comercios">
-        {TABS.map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            aria-pressed={tab === key}
-            className="btn ghost"
-            onClick={() => {
-              setTab(key);
-              setNotice('');
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
       <p role="status" ref={noticeRef} tabIndex={-1} className={notice ? 'banner' : 'sr-only'}>
         {notice}
       </p>
       {error !== null && <ErrorState error={error} />}
 
-      <div className="merchant-tab-content" hidden={tab !== 'prices'}>
-        <section aria-labelledby="merchant-alerts">
-          <h2 id="merchant-alerts">Avisos</h2>
-          {!alerts && <Loading text="Consultando avisos…" />}
-          {alerts && 'error' in alerts && <ErrorState error={alerts.error} onRetry={refresh} />}
-          {alerts &&
-            'data' in alerts &&
-            (alerts.data.length === 0 ? (
-              <p className="muted">No tienes avisos pendientes.</p>
-            ) : (
-              <ul className="merchant-price-list">
-                {alerts.data.map((alert) => (
-                  <li key={`${alert.presentationId}:${alert.kind}`}>
-                    <p>{alert.message}</p>
-                    <div className="actions">
-                      <button
-                        type="button"
-                        className="btn ghost"
-                        disabled={busy}
-                        aria-label={`${alert.kind === 'discrepancia' ? 'Corregir' : 'Editar'} precio de ${alert.productName}`}
-                        onClick={() => {
-                          choose(alert.presentationId, alert.productName);
-                        }}
-                      >
-                        {alert.kind === 'discrepancia' ? 'Corregir precio' : 'Editar precio'}
-                      </button>
-                      {alert.kind !== 'discrepancia' && listed.length > 0 && (
-                        <button
-                          type="button"
-                          className="link-button"
-                          onClick={() => {
-                            reconfirmButton.current?.focus();
-                          }}
-                        >
-                          Ir a reconfirmar precios
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ))}
-        </section>
-
-        <section aria-labelledby="merchant-price-list">
-          <h2 id="merchant-price-list">Mis precios</h2>
-          {!prices && <Loading text="Consultando precios…" />}
-          {prices && 'error' in prices && <ErrorState error={prices.error} onRetry={refresh} />}
-          {prices &&
-            'data' in prices &&
-            (listed.length === 0 ? (
-              <p className="muted">Aún no has publicado precios oficiales.</p>
-            ) : (
+      <Tabs
+        label="Secciones del portal de comercios"
+        className="merchant-tabs"
+        tabClassName="btn ghost"
+        panelClassName="merchant-tab-content"
+        value={tab}
+        onChange={(next) => {
+          setTab(next as Tab);
+          setNotice('');
+        }}
+        tabs={[
+          {
+            id: 'prices',
+            label: 'Precios',
+            keepMounted: true,
+            content: (
               <>
-                {askingReconfirm ? (
-                  <div className="actions">
-                    <p>
-                      {`Esto renueva la vigencia de ${String(listed.length)} ${listed.length === 1 ? 'precio' : 'precios'}. ¿Confirmas?`}
-                    </p>
-                    <button
-                      ref={reconfirmButton}
-                      type="button"
-                      className="btn"
-                      disabled={busy}
-                      autoFocus
-                      onClick={() => {
-                        setAskingReconfirm(false);
-                        void reconfirm();
-                      }}
-                    >
-                      Confirmar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn ghost"
-                      disabled={busy}
-                      onClick={() => {
-                        setAskingReconfirm(false);
-                      }}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    ref={reconfirmButton}
-                    type="button"
-                    className="btn"
-                    disabled={busy}
-                    onClick={() => {
-                      setAskingReconfirm(true);
-                    }}
-                  >
-                    Todos mis precios siguen igual
-                  </button>
-                )}
-                <ul className="merchant-price-list">
-                  {listed.map((item) => {
-                    const label = productLabel(item.presentationId);
-                    const freshness = FRESHNESS[item.freshness];
-                    return (
-                      <li key={item.presentationId} className="merchant-price-row">
-                        <h3>{label}</h3>
-                        <p>
-                          <strong>{formatCop(item.priceCop)}</strong>{' '}
-                          <span className={`pill ${freshness.tone}`}>{freshness.label}</span>
-                        </p>
-                        <p className="muted">Confirmado el {dayInColombia(item.confirmedAt)}</p>
-                        <button
-                          type="button"
-                          className="btn ghost"
-                          disabled={busy}
-                          aria-label={`Editar precio de ${label}`}
-                          onClick={() => {
-                            choose(item.presentationId);
-                          }}
-                        >
-                          Editar precio
-                        </button>
-                        {selection?.presentationId === item.presentationId && (
-                          <div className="merchant-inline-editor">{priceEditor(selection)}</div>
+                <section aria-labelledby="merchant-alerts">
+                  <h2 id="merchant-alerts">Avisos</h2>
+                  {!alerts && <Loading text="Consultando avisos…" />}
+                  {alerts && 'error' in alerts && (
+                    <ErrorState error={alerts.error} onRetry={refresh} />
+                  )}
+                  {alerts &&
+                    'data' in alerts &&
+                    (alerts.data.length === 0 ? (
+                      <p className="muted">No tienes avisos pendientes.</p>
+                    ) : (
+                      <ul className="merchant-price-list">
+                        {alerts.data.map((alert) => (
+                          <li key={`${alert.presentationId}:${alert.kind}`}>
+                            <p>{alert.message}</p>
+                            <div className="actions">
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                disabled={busy}
+                                aria-label={`${alert.kind === 'discrepancia' ? 'Corregir' : 'Editar'} precio de ${alert.productName}`}
+                                onClick={() => {
+                                  choose(alert.presentationId, alert.productName);
+                                }}
+                              >
+                                {alert.kind === 'discrepancia'
+                                  ? 'Corregir precio'
+                                  : 'Editar precio'}
+                              </button>
+                              {alert.kind !== 'discrepancia' && listed.length > 0 && (
+                                <button
+                                  type="button"
+                                  className="link-button"
+                                  onClick={() => {
+                                    reconfirmButton.current?.focus();
+                                  }}
+                                >
+                                  Ir a reconfirmar precios
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
+                </section>
+
+                <section aria-labelledby="merchant-price-list">
+                  <h2 id="merchant-price-list">Mis precios</h2>
+                  {!prices && <Loading text="Consultando precios…" />}
+                  {prices && 'error' in prices && (
+                    <ErrorState error={prices.error} onRetry={refresh} />
+                  )}
+                  {prices &&
+                    'data' in prices &&
+                    (listed.length === 0 ? (
+                      <p className="muted">Aún no has publicado precios oficiales.</p>
+                    ) : (
+                      <>
+                        {askingReconfirm ? (
+                          <div className="actions">
+                            <p>
+                              {`Esto renueva la vigencia de ${String(listed.length)} ${listed.length === 1 ? 'precio' : 'precios'}. ¿Confirmas?`}
+                            </p>
+                            <button
+                              ref={reconfirmButton}
+                              type="button"
+                              className="btn"
+                              disabled={busy}
+                              autoFocus
+                              onClick={() => {
+                                setAskingReconfirm(false);
+                                void reconfirm();
+                              }}
+                            >
+                              Confirmar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn ghost"
+                              disabled={busy}
+                              onClick={() => {
+                                setAskingReconfirm(false);
+                              }}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            ref={reconfirmButton}
+                            type="button"
+                            className="btn"
+                            disabled={busy}
+                            onClick={() => {
+                              setAskingReconfirm(true);
+                            }}
+                          >
+                            Todos mis precios siguen igual
+                          </button>
                         )}
-                      </li>
-                    );
-                  })}
-                </ul>
+                        <ul className="merchant-price-list">
+                          {listed.map((item) => {
+                            const label = productLabel(item.presentationId);
+                            const freshness = FRESHNESS[item.freshness];
+                            return (
+                              <li key={item.presentationId} className="merchant-price-row">
+                                <h3>{label}</h3>
+                                <p>
+                                  <strong>{formatCop(item.priceCop)}</strong>{' '}
+                                  <span className={`pill ${freshness.tone}`}>
+                                    {freshness.label}
+                                  </span>
+                                </p>
+                                <p className="muted">
+                                  Confirmado el {dayInColombia(item.confirmedAt)}
+                                </p>
+                                <button
+                                  type="button"
+                                  className="btn ghost"
+                                  disabled={busy}
+                                  aria-label={`Editar precio de ${label}`}
+                                  onClick={() => {
+                                    choose(item.presentationId);
+                                  }}
+                                >
+                                  Editar precio
+                                </button>
+                                {selection?.presentationId === item.presentationId && (
+                                  <div className="merchant-inline-editor">
+                                    {priceEditor(selection)}
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </>
+                    ))}
+                </section>
+
+                {inReview.length > 0 && (
+                  <section aria-labelledby="merchant-in-review">
+                    <h2 id="merchant-in-review">En revisión</h2>
+                    <p className="muted">
+                      Estos precios todavía no son públicos: un moderador los revisa antes de
+                      publicarlos.
+                    </p>
+                    <ul className="merchant-price-list">
+                      {inReview.map((item) => (
+                        <li key={item.presentationId} className="merchant-price-row">
+                          <h3>{productLabel(item.presentationId)}</h3>
+                          <p>
+                            <strong>{formatCop(item.priceCop)}</strong>{' '}
+                            <span className="pill warn">En revisión</span>
+                          </p>
+                          <p className="muted">Enviado el {dayInColombia(item.submittedAt)}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                <section aria-labelledby="merchant-editor" ref={editorSection}>
+                  <h2 id="merchant-editor">Publicar o editar un precio</h2>
+                  {priceEditor(editingListed ? null : selection)}
+                </section>
               </>
-            ))}
-        </section>
-
-        {inReview.length > 0 && (
-          <section aria-labelledby="merchant-in-review">
-            <h2 id="merchant-in-review">En revisión</h2>
-            <p className="muted">
-              Estos precios todavía no son públicos: un moderador los revisa antes de publicarlos.
-            </p>
-            <ul className="merchant-price-list">
-              {inReview.map((item) => (
-                <li key={item.presentationId} className="merchant-price-row">
-                  <h3>{productLabel(item.presentationId)}</h3>
-                  <p>
-                    <strong>{formatCop(item.priceCop)}</strong>{' '}
-                    <span className="pill warn">En revisión</span>
-                  </p>
-                  <p className="muted">Enviado el {dayInColombia(item.submittedAt)}</p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        <section aria-labelledby="merchant-editor" ref={editorSection}>
-          <h2 id="merchant-editor">Publicar o editar un precio</h2>
-          {priceEditor(editingListed ? null : selection)}
-        </section>
-      </div>
-      <div className="merchant-tab-content" hidden={tab !== 'upload'}>
-        <section aria-labelledby="merchant-upload">
-          <h2 id="merchant-upload">Cargar precios por CSV</h2>
-          <MerchantPriceUpload disabled={busy} onUpload={update} />
-        </section>
-      </div>
-      {tab === 'promotions' && (
-        <section aria-labelledby="merchant-promotions">
-          <h2 id="merchant-promotions">Promociones</h2>
-          {!promotions && <Loading text="Consultando promociones…" />}
-          {promotions && 'error' in promotions && (
-            <ErrorState error={promotions.error} onRetry={refresh} />
-          )}
-          <MerchantPromotions
-            items={promotions && 'data' in promotions ? promotions.data : undefined}
-            prices={prices && 'data' in prices ? prices.data : undefined}
-            label={productLabel}
-            onChanged={refresh}
-            onPrices={() => {
-              setTab('prices');
-            }}
-          />
-        </section>
-      )}
-      {tab === 'store' && (
-        <section aria-labelledby="merchant-store">
-          <h2 id="merchant-store">Mi tienda</h2>
-          {!profile && <Loading text="Consultando tu tienda…" />}
-          {profile && 'error' in profile && <ErrorState error={profile.error} />}
-          {merchant && (
-            <>
-              <h3>{merchant.establishment.name}</h3>
-              <p>Responsable: {merchant.responsibleName}</p>
-              {merchant.verifiedAt && (
-                <p className="muted">Verificada el {dayInColombia(merchant.verifiedAt)}</p>
-              )}
-              <Link className="btn ghost" to={`/tiendas/${merchant.establishment.id}`}>
-                Ver ficha pública
-              </Link>
-              {merchant.status === 'verificado' && (
-                <MerchantStoreEditor
-                  key={merchant.establishment.id}
-                  storeId={merchant.establishment.id}
-                  onChanged={refresh}
-                />
-              )}
-            </>
-          )}
-          {profile && 'data' in profile && !merchant && (
-            <Link to="/comercios/registro">Consultar mi registro</Link>
-          )}
-        </section>
-      )}
+            ),
+          },
+          {
+            id: 'upload',
+            label: 'Carga masiva',
+            keepMounted: true,
+            content: (
+              <>
+                <section aria-labelledby="merchant-upload">
+                  <h2 id="merchant-upload">Cargar precios por CSV</h2>
+                  <MerchantPriceUpload disabled={busy} onUpload={update} />
+                </section>
+              </>
+            ),
+          },
+          {
+            id: 'promotions',
+            label: 'Promociones',
+            content: (
+              <>
+                <section aria-labelledby="merchant-promotions">
+                  <h2 id="merchant-promotions">Promociones</h2>
+                  {!promotions && <Loading text="Consultando promociones…" />}
+                  {promotions && 'error' in promotions && (
+                    <ErrorState error={promotions.error} onRetry={refresh} />
+                  )}
+                  <MerchantPromotions
+                    items={promotions && 'data' in promotions ? promotions.data : undefined}
+                    prices={prices && 'data' in prices ? prices.data : undefined}
+                    label={productLabel}
+                    onChanged={refresh}
+                    onPrices={() => {
+                      setTab('prices');
+                    }}
+                  />
+                </section>
+              </>
+            ),
+          },
+          {
+            id: 'store',
+            label: 'Mi tienda',
+            content: (
+              <>
+                <section aria-labelledby="merchant-store">
+                  <h2 id="merchant-store">Mi tienda</h2>
+                  {!profile && <Loading text="Consultando tu tienda…" />}
+                  {profile && 'error' in profile && <ErrorState error={profile.error} />}
+                  {merchant && (
+                    <>
+                      <h3>{merchant.establishment.name}</h3>
+                      <p>Responsable: {merchant.responsibleName}</p>
+                      {merchant.verifiedAt && (
+                        <p className="muted">Verificada el {dayInColombia(merchant.verifiedAt)}</p>
+                      )}
+                      <Link className="btn ghost" to={`/tiendas/${merchant.establishment.id}`}>
+                        Ver ficha pública
+                      </Link>
+                      {merchant.status === 'verificado' && (
+                        <MerchantStoreEditor
+                          key={merchant.establishment.id}
+                          storeId={merchant.establishment.id}
+                          onChanged={refresh}
+                        />
+                      )}
+                    </>
+                  )}
+                  {profile && 'data' in profile && !merchant && (
+                    <Link to="/comercios/registro">Consultar mi registro</Link>
+                  )}
+                </section>
+              </>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

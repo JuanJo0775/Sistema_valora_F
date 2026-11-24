@@ -75,7 +75,7 @@ describe('panel de precios oficiales (#166)', () => {
     expect(request?.headers.get('X-CSRF-Token')).toBe('token-1');
 
     // El aviso de éxito es de esta acción: no sigue visible al pasar a otra sección.
-    fireEvent.click(screen.getByRole('button', { name: 'Carga masiva' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Carga masiva' }));
     expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
   });
 
@@ -221,7 +221,7 @@ describe('panel de precios oficiales (#166)', () => {
         },
       },
     });
-    fireEvent.click(await screen.findByRole('button', { name: 'Carga masiva' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Carga masiva' }));
     fireEvent.change(await screen.findByLabelText('Archivo CSV'), {
       target: { files: [new File([csv], 'precios.csv', { type: 'text/csv' })] },
     });
@@ -354,7 +354,7 @@ describe('panel de precios oficiales (#166)', () => {
         },
       },
     });
-    fireEvent.click(await screen.findByRole('button', { name: 'Carga masiva' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Carga masiva' }));
     fireEvent.change(await screen.findByLabelText('Archivo CSV'), {
       target: { files: [new File([csv], 'precios.csv', { type: 'text/csv' })] },
     });
@@ -394,17 +394,45 @@ describe('panel de precios oficiales (#166)', () => {
     openPanel({ 'GET /v1/commerce/promotions': { status: 200, body: { items: [] } } });
     expect(await screen.findByRole('heading', { name: 'La Rosa' })).toBeInTheDocument();
     expect(screen.getByText('Verificado')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Precios' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('tab', { name: 'Precios' })).toHaveAttribute('aria-selected', 'true');
     expect(
       screen.queryByRole('heading', { name: 'Cargar precios por CSV' }),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Promociones' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Promociones' }));
     expect(await screen.findByText('Aún no tienes promociones publicadas.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Mi tienda' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Mi tienda' }));
     expect(screen.getByRole('link', { name: 'Ver ficha pública' })).toHaveAttribute(
       'href',
       '/tiendas/s1',
     );
+  });
+
+  it('las secciones son pestañas WAI-ARIA con teclado y foco estable (H28)', async () => {
+    openPanel({ 'GET /v1/commerce/promotions': { status: 200, body: { items: [] } } });
+    const list = await screen.findByRole('tablist', { name: 'Secciones del portal de comercios' });
+    expect(
+      within(list)
+        .getAllByRole('tab')
+        .map(({ textContent }) => textContent),
+    ).toEqual(['Precios', 'Carga masiva', 'Promociones', 'Mi tienda']);
+    const precios = screen.getByRole('tab', { name: 'Precios' });
+    expect(screen.getAllByRole('tab').filter((tab) => tab.tabIndex === 0)).toEqual([precios]);
+    expect(screen.getByRole('tabpanel', { name: 'Precios' })).toHaveAttribute(
+      'id',
+      precios.getAttribute('aria-controls'),
+    );
+
+    precios.focus();
+    fireEvent.keyDown(precios, { key: 'ArrowRight' });
+    const carga = screen.getByRole('tab', { name: 'Carga masiva' });
+    expect(carga).toHaveFocus();
+    expect(screen.getByRole('tabpanel', { name: 'Carga masiva' })).toBeVisible();
+
+    fireEvent.keyDown(carga, { key: 'End' });
+    expect(screen.getByRole('tab', { name: 'Mi tienda' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Mi tienda' }), { key: 'ArrowRight' });
+    expect(precios).toHaveFocus();
+    expect(precios).toHaveAttribute('aria-selected', 'true');
   });
 
   it('no consulta datos comerciales desde una cuenta reportante', async () => {

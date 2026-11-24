@@ -85,7 +85,7 @@
   font-weight: 700;
 }
 
-.merchant-tabs [aria-pressed='true'] {
+.merchant-tabs [aria-selected='true'] {
   border-color: var(--accent-line);
   background: var(--accent-soft);
   color: var(--accent-ink);

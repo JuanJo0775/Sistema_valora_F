@@ -38,7 +38,7 @@ async function open(overrides: Parameters<typeof stubApi>[0] = {}) {
   });
   window.history.pushState({}, '', '/comercios');
   render(<App />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Promociones' }));
+  fireEvent.click(await screen.findByRole('tab', { name: 'Promociones' }));
   return api;
 }
 
