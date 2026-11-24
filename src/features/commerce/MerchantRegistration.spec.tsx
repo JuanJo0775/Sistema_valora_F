@@ -177,6 +177,69 @@ describe('registro de comercios (#165)', () => {
     );
   });
 
+  it('un reclamo de supermercado queda preaprobado y el texto habla del reclamo (H11)', async () => {
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+      [`POST ${claims}`]: {
+        status: 201,
+        body: { status: 'pre_aprobado', establishmentId: store.id },
+      },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    submit();
+    expect(
+      await screen.findByRole('heading', { name: 'Tu tienda quedó preaprobada' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Un moderador revisará tu reclamo/)).toBeInTheDocument();
+    expect(screen.queryByText(/antes de que aparezca en el mapa/)).not.toBeInTheDocument();
+  });
+
+  it('una tienda nueva preaprobada conserva el texto de la tienda nueva', async () => {
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      [`POST ${claims}`]: {
+        status: 201,
+        body: { status: 'pre_aprobado', establishmentId: store.id },
+      },
+    });
+    open(registration);
+    fireEvent.click(await screen.findByRole('button', { name: 'Mi tienda no está en el mapa' }));
+    fireEvent.change(screen.getByLabelText('Nombre de la tienda'), { target: { value: 'Mi tienda' } });
+    responsible();
+    submit();
+    expect(await screen.findByText(/antes de que aparezca en el mapa/)).toBeInTheDocument();
+  });
+
+  it('una tienda de cadena no se reclama: explica por qué y deja registrar una tienda nueva (H11)', async () => {
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+      [`POST ${claims}`]: {
+        status: 422,
+        body: { code: 'CHAIN_STORE_NOT_CLAIMABLE', message: 'Cadena.' },
+      },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    submit();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Las tiendas de cadena (como D1, Ara o Éxito) no se pueden reclamar: no tienen un dueño individual. Si tienes un negocio propio, regístralo como tienda nueva.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar una tienda nueva' }));
+    expect(screen.getByLabelText('Nombre de la tienda')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('recupera una solicitud pendiente al volver a entrar', async () => {
     stubApi({
       [`GET ${session}`]: sessionAs('reportante'),

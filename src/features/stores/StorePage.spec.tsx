@@ -58,9 +58,12 @@ describe('página de una tienda', () => {
     vi.unstubAllGlobals();
   });
 
-  const renderAs = (role: 'comercio' | 'reportante') => {
+  const renderAs = (role: 'comercio' | 'reportante', type = 'barrio') => {
     stubApi({
-      [`GET /v1/establishments/${ARA}/prices`]: storeReply([banana]),
+      [`GET /v1/establishments/${ARA}/prices`]: {
+        status: 200,
+        body: { establishment: { ...ara, type }, prices: [banana] },
+      },
       'GET /v1/auth/session': sessionAs(role),
     });
     return render(
@@ -80,6 +83,17 @@ describe('página de una tienda', () => {
     expect(
       await screen.findByRole('link', { name: '¿Eres el dueño? Registra tu tienda' }),
     ).toBeInTheDocument();
+  });
+
+  it('en una tienda de cadena (tipo descuento) no ofrece reclamarla (H11)', async () => {
+    renderAs('reportante', 'descuento');
+
+    await screen.findByRole('heading', { level: 1, name: 'Ara' });
+    await vi.waitFor(() => {
+      expect(
+        screen.queryByRole('link', { name: '¿Eres el dueño? Registra tu tienda' }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('a un comercio no le ofrece reclamar una tienda: ya no puede registrar otra', async () => {
