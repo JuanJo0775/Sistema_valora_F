@@ -77,7 +77,10 @@ export function MerchantPriceEditor({
           autoFocus
           inputMode="numeric"
           value={price}
-          onValue={setPrice}
+          onValue={(value) => {
+            setPrice(value);
+            setProblem('');
+          }}
           disabled={disabled}
           error={problem || undefined}
         />

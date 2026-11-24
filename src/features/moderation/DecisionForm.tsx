@@ -53,6 +53,7 @@ export function DecisionForm<T extends string>({
               checked={decision === option.value}
               onChange={() => {
                 setDecision(option.value);
+                setProblem('');
               }}
             />
             {option.label}
@@ -67,6 +68,7 @@ export function DecisionForm<T extends string>({
           value={note}
           onChange={(event) => {
             setNote(event.target.value);
+            setProblem('');
           }}
         />
       </label>

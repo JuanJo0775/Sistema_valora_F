@@ -225,6 +225,37 @@ describe('registro de comercios (#165)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/50 m/);
   });
 
+  it('retira el aviso de error apenas la persona corrige el campo', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: '12345' } });
+    submit();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/celular de 10 dígitos/);
+
+    fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: '3001234567' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('dice que espera la ubicación mientras el navegador la obtiene', async () => {
+    locate.mockReturnValue(new Promise(() => undefined));
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    submit();
+    expect(await screen.findByRole('button', { name: 'Obteniendo tu ubicación…' })).toBeDisabled();
+  });
+
   it('pide aceptar las condiciones antes de compartir la ubicación', async () => {
     const { calls } = stubApi({
       [`GET ${session}`]: sessionAs('reportante'),
