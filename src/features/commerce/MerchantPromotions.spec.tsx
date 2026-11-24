@@ -27,7 +27,7 @@ const promotion = {
 async function open(overrides: Parameters<typeof stubApi>[0] = {}) {
   const api = stubApi({
     'GET /v1/auth/session': sessionAs('comercio'),
-    'GET /v1/commerce/prices': { status: 200, body: { items: [price] } },
+    'GET /v1/commerce/prices': { status: 200, body: { items: [price], inReview: [] } },
     'GET /v1/commerce/alerts': { status: 200, body: { items: [] } },
     'GET /v1/establishments/s1/prices': {
       status: 200,
@@ -141,6 +141,27 @@ describe('promociones del comercio (#167)', () => {
     expect(screen.getByRole('heading', { name: 'Mis precios' })).toBeInTheDocument();
   });
 
+  it('muestra el precio absurdo de la promoción junto al botón «Publicar promoción»', async () => {
+    const message =
+      'El precio de la promoción está fuera de lo normal. Lo más barato que vemos es $2.000. Revisa si faltan o sobran ceros.';
+    await open({
+      [`POST ${path}`]: { status: 422, body: { code: 'IMPLAUSIBLE_OFFICIAL_PRICE', message } },
+    });
+    await screen.findByRole('option', { name: /Arroz/ });
+    fill('Presentación', 'p1');
+    fill('Descuento (%)', '90');
+    fill('Desde', '2026-11-22');
+    fill('Hasta', '2026-11-25');
+    const publish = screen.getByRole('button', { name: 'Publicar promoción' });
+    fireEvent.click(publish);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    // Está dentro del formulario, pegado al botón, y el botón lo referencia.
+    expect(publish.closest('form')).toContainElement(alert);
+    expect(publish).toHaveAccessibleDescription(message);
+  });
+
   it('muestra los estados de la API y retira una promoción con confirmación', async () => {
     const { calls } = await open({
       [`GET ${path}`]: [
@@ -195,7 +216,7 @@ describe('promociones del comercio (#167)', () => {
     await open({
       'GET /v1/commerce/prices': {
         status: 200,
-        body: { items: [{ ...price, freshness: 'desactualizado' }] },
+        body: { items: [{ ...price, freshness: 'desactualizado' }], inReview: [] },
       },
     });
     fireEvent.click(await screen.findByRole('button', { name: 'Ir a Precios' }));

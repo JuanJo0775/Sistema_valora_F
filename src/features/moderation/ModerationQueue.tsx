@@ -14,6 +14,7 @@ type Decision = 'aprobar' | 'descartar' | 'observar_cuentas';
 
 export const REASONS: Record<Reason, string> = {
   desviacion: 'Muy distinto a la mediana',
+  sin_referencia: 'Sin referencia para comparar',
   rafaga: 'Muchos reportes seguidos',
   marcado: 'Marcado como dudoso',
   apelacion: 'Apelación',
@@ -88,6 +89,9 @@ export function ModerationQueue() {
             <h2>{item.productName}</h2>
             <p className="muted">{item.establishmentName}</p>
             <p>{comparison(item)}</p>
+            {item.reason === 'sin_referencia' && (
+              <p>Precio oficial de un comercio sin otras tiendas para compararlo</p>
+            )}
             <p className="muted">{`Reportado el ${dayInColombia(item.createdAt)} (${relativeDay(item.createdAt).toLowerCase()})`}</p>
             {item.reportersCount > 0 && (
               <p className="muted">
@@ -99,7 +103,11 @@ export function ModerationQueue() {
             )}
             <DecisionForm
               id={item.id}
-              options={DECISIONS}
+              options={
+                item.reason === 'sin_referencia'
+                  ? DECISIONS.filter(({ value }) => value !== 'observar_cuentas')
+                  : DECISIONS
+              }
               onDecide={(decision: Decision, note) =>
                 call(
                   api.POST('/moderation/{itemId}/decision', {

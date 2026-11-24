@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useRef, useState } from 'react';
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
@@ -26,12 +26,16 @@ export function MerchantPriceEditor({
   disabled: boolean;
   onChoose: (id: string, label: string) => void;
   onCancel: () => void;
-  onSave: (id: string, priceCop: number) => Promise<void>;
+  /** Devuelve el mensaje del servidor si el precio se rechazó por absurdo (ADR-037). */
+  onSave: (id: string, priceCop: number) => Promise<string | undefined>;
 }) {
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<Product[] | null>(null);
   const [price, setPrice] = useState(selection?.priceCop?.toString() ?? '');
   const [problem, setProblem] = useState('');
+  const [rejection, setRejection] = useState('');
+  const form = useRef<HTMLFormElement>(null);
+  const focusPrice = useRef(false);
   const [error, setError] = useState<unknown>(null);
   const [searching, setSearching] = useState(false);
   const lookup = useRef(false);
@@ -57,6 +61,13 @@ export function MerchantPriceEditor({
     }
   };
 
+  // El precio rechazado deja el editor abierto: el foco vuelve al campo, ya habilitado, para corregirlo.
+  useEffect(() => {
+    if (!focusPrice.current || disabled) return;
+    focusPrice.current = false;
+    form.current?.querySelector('input')?.focus();
+  }, [rejection, disabled]);
+
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     if (!selection || disabled) return;
@@ -66,12 +77,17 @@ export function MerchantPriceEditor({
       return;
     }
     setProblem('');
-    void onSave(selection.presentationId, priceCop);
+    setRejection('');
+    void onSave(selection.presentationId, priceCop).then((message) => {
+      if (!message) return;
+      focusPrice.current = true;
+      setRejection(message);
+    });
   };
 
   if (selection) {
     return (
-      <form className="merchant-price-form" onSubmit={submit}>
+      <form className="merchant-price-form" onSubmit={submit} ref={form}>
         <p>{selection.label}</p>
         <Field
           label="Precio oficial en pesos"
@@ -81,9 +97,10 @@ export function MerchantPriceEditor({
           onValue={(value) => {
             setPrice(value);
             setProblem('');
+            setRejection('');
           }}
           disabled={disabled}
-          error={problem || undefined}
+          error={problem || rejection || undefined}
         />
         <div className="actions">
           <button type="submit" className="btn" disabled={disabled}>
