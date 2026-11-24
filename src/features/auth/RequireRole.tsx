@@ -58,7 +58,7 @@ export function RequireRole({
     );
   }
   if (session.suspendedUntil && !allowSuspended) {
-    return <SuspendedNotice until={session.suspendedUntil} />;
+    return <SuspendedNotice until={session.suspendedUntil} reason={session.suspensionReason} />;
   }
   return children;
 }

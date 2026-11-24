@@ -54,6 +54,36 @@ describe('eliminar mi cuenta', () => {
     expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/yo/ajustes');
   });
 
+  // H35: una cuenta de comercio tiene tienda, precios oficiales y promociones.
+  it('a una cuenta de comercio le dice qué pasa con su tienda, sus precios y sus promociones', async () => {
+    stub({ status: 202 }, sessionAs('comercio'));
+    renderAt();
+
+    const section = (await screen.findByRole('heading', { name: 'Si administras una tienda' }))
+      .parentElement as HTMLElement;
+    expect(section).toHaveTextContent(/durante los 10 días.*siguen mostrándose/i);
+    expect(section).toHaveTextContent(/si restauras la cuenta.*vuelves como comercio/i);
+    expect(section).toHaveTextContent(
+      /pasado el plazo se borran tu registro.*precios oficiales y sus promociones dejan de mostrarse/i,
+    );
+    expect(section).toHaveTextContent(/sin responsable registrado/i);
+    expect(section).toHaveTextContent(/todavía no está definido/i);
+    expect(section).not.toHaveTextContent(/dejar de administrar/i);
+  });
+
+  it.each(['reportante', 'moderador'])(
+    'a una cuenta de %s no le muestra la sección de la tienda',
+    async (role) => {
+      stub({ status: 202 }, sessionAs(role));
+      renderAt();
+
+      await screen.findByRole('heading', { level: 1, name: 'Eliminar mi cuenta' });
+      expect(
+        screen.queryByRole('heading', { name: 'Si administras una tienda' }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   it('el botón sigue deshabilitado hasta tener contraseña y confirmación', async () => {
     stub({ status: 202 });
     renderAt();

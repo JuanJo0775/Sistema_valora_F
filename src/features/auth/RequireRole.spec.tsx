@@ -147,6 +147,33 @@ describe('secciones con sesión', () => {
     expect(screen.queryByRole('heading', { name: 'Registrar precio' })).not.toBeInTheDocument();
   });
 
+  it('una cuenta suspendida ve por qué y tiene un enlace a sus aportes', async () => {
+    stubApi({
+      'GET /v1/auth/session': {
+        status: 200,
+        body: {
+          role: 'reportante',
+          csrfToken: 'token-1',
+          suspendedUntil: '2026-12-01T17:00:00Z',
+          suspension: { reason: 'observada_por_moderacion' },
+          emailVerified: true,
+          emailVerificationRequired: true,
+          hasPassword: true,
+        },
+      },
+    });
+
+    renderAt('/registrar');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Moderación observó tu cuenta por un reporte de precio.',
+    );
+    expect(screen.getByRole('link', { name: 'Ver mis aportes' })).toHaveAttribute(
+      'href',
+      '/mis-aportes',
+    );
+  });
+
   it('una cuenta suspendida sí ve sus aportes, para poder apelar', async () => {
     stubApi({ 'GET /v1/auth/session': sessionAs('reportante', '2026-11-20T17:00:00Z') });
 
