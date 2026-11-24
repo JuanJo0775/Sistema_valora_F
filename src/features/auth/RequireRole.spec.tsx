@@ -155,7 +155,7 @@ describe('secciones con sesión', () => {
           role: 'reportante',
           csrfToken: 'token-1',
           suspendedUntil: '2026-12-01T17:00:00Z',
-          suspension: { reason: 'observada_por_moderacion' },
+          suspension: { until: '2026-12-01T17:00:00Z', reason: 'observada_por_moderacion' },
           emailVerified: true,
           emailVerificationRequired: true,
           hasPassword: true,
@@ -166,7 +166,7 @@ describe('secciones con sesión', () => {
     renderAt('/registrar');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Moderación observó tu cuenta por un reporte de precio.',
+      'Moderación observó tu cuenta por un reporte de precio; esa decisión no se apela.',
     );
     expect(screen.getByRole('link', { name: 'Ver mis aportes' })).toHaveAttribute(
       'href',

@@ -21,9 +21,7 @@ async function loadSession(signal: AbortSignal, expectedRole?: Role) {
 
 async function fetchSession(signal: AbortSignal, expectedRole?: Role) {
   const session = await loadSession(signal, expectedRole);
-  // `suspension` es aditivo y el backend aún no lo declara en los tipos generados: se lee como opcional.
-  const { suspension } = session as { suspension?: { reason?: string } };
-  return { ...session, suspension };
+  return session;
 }
 
 // ADR-014: la sesión es una cookie del servidor; la app pregunta quién es al abrirse.

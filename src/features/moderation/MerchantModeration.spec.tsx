@@ -43,6 +43,29 @@ it('ofrece denunciar solo si la API autoriza y envía el motivo', async () => {
   );
 });
 
+it('si la cuenta ya denunció el comercio lo dice en lugar del formulario (H31)', async () => {
+  stubApi({
+    'GET /v1/auth/session': sessionAs('reportante'),
+    'GET /v1/establishments/s1/merchant-reports': {
+      status: 200,
+      body: { canReport: false, alreadyReported: true },
+    },
+  });
+  render(
+    <MemoryRouter>
+      <SessionProvider>
+        <MerchantReport establishmentId="s1" />
+      </SessionProvider>
+    </MemoryRouter>,
+  );
+  expect(
+    await screen.findByText('Ya denunciaste este comercio; moderación lo está revisando.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '¿Este comercio no es de quien dice?' }),
+  ).not.toBeInTheDocument();
+});
+
 it('no habilita la denuncia al consultar una tienda propia', async () => {
   const requested = vi.fn(() => ({ status: 200, body: { canReport: false } }));
   stubApi({
