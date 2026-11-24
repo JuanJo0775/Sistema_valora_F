@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { useEffect, useRef, useState } from 'react';
+import { restoreFocus } from '../../shared/focus';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { dayInColombia } from '../../shared/days';
@@ -54,6 +55,26 @@ function PricePanel() {
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+  const editorSection = useRef<HTMLElement>(null);
+  const hadSelection = useRef(false);
+
+  // Al guardar o cancelar, el formulario de precio desaparece: el foco vuelve al buscador y no se
+  // pierde en <body> (WCAG 2.4.3). El aviso del resultado solo toma el foco si este se perdió.
+  useEffect(() => {
+    if (selection) {
+      hadSelection.current = true;
+      return;
+    }
+    if (!hadSelection.current) return;
+    hadSelection.current = false;
+    editorSection.current?.querySelector('input')?.focus();
+  }, [selection]);
+
+  // El resultado de una acción recibe el foco: el botón que la pidió ya no existe o cambió.
+  useEffect(() => {
+    if (notice) restoreFocus(noticeRef.current);
+  }, [notice]);
 
   const reconfirmButton = useRef<HTMLButtonElement>(null);
 
@@ -228,7 +249,7 @@ function PricePanel() {
           </button>
         ))}
       </nav>
-      <p role="status" className={notice ? 'banner' : 'sr-only'}>
+      <p role="status" ref={noticeRef} tabIndex={-1} className={notice ? 'banner' : 'sr-only'}>
         {notice}
       </p>
       {error !== null && <ErrorState error={error} />}
@@ -332,7 +353,7 @@ function PricePanel() {
             ))}
         </section>
 
-        <section aria-labelledby="merchant-editor">
+        <section aria-labelledby="merchant-editor" ref={editorSection}>
           <h2 id="merchant-editor">Publicar o editar un precio</h2>
           {priceEditor(editingListed ? null : selection)}
         </section>

@@ -1,4 +1,5 @@
-import { type SyntheticEvent, useRef, useState } from 'react';
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { restoreFocus } from '../../shared/focus';
 import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { shortDay } from '../../shared/days';
@@ -58,6 +59,20 @@ export function MerchantPromotions({
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  const retireButtons = useRef(new Map<string, HTMLButtonElement>());
+  const cancelled = useRef<string | null>(null);
+
+  // El resultado de la acción recibe el foco: el botón que la pidió ya no existe o cambió.
+  useEffect(() => {
+    if (notice) restoreFocus(statusRef.current);
+  }, [notice]);
+  // Al cancelar el retiro, el foco vuelve al botón «Retirar promoción» de esa promoción.
+  useEffect(() => {
+    if (confirm !== null || cancelled.current === null) return;
+    retireButtons.current.get(cancelled.current)?.focus();
+    cancelled.current = null;
+  }, [confirm]);
   const eligible = prices?.filter(({ freshness }) => freshness === 'vigente') ?? [];
   const selected = eligible.find(({ presentationId }) => presentationId === presentation);
 
@@ -141,7 +156,7 @@ export function MerchantPromotions({
 
   return (
     <>
-      <p role="status" className={notice ? 'banner' : 'sr-only'}>
+      <p role="status" ref={statusRef} tabIndex={-1} className={notice ? 'banner' : 'sr-only'}>
         {notice}
       </p>
       {problem && (
@@ -193,6 +208,7 @@ export function MerchantPromotions({
                       className="btn"
                       type="button"
                       disabled={busy}
+                      autoFocus
                       onClick={() => {
                         void mutate(
                           () =>
@@ -215,6 +231,7 @@ export function MerchantPromotions({
                       type="button"
                       disabled={busy}
                       onClick={() => {
+                        cancelled.current = promotion.id;
                         setConfirm(null);
                       }}
                     >
@@ -226,6 +243,10 @@ export function MerchantPromotions({
                     className="btn ghost"
                     type="button"
                     disabled={busy}
+                    ref={(node) => {
+                      if (node) retireButtons.current.set(promotion.id, node);
+                      else retireButtons.current.delete(promotion.id);
+                    }}
                     onClick={() => {
                       setConfirm(promotion.id);
                     }}

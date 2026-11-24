@@ -107,6 +107,8 @@ describe('tiendas propuestas', () => {
     decide(await pendingCase('Ara Centro'), 'Fusionar con Ara');
 
     expect(await screen.findByRole('status')).toHaveTextContent('Decisión registrada: Ara Centro.');
+    // La tarjeta decidida desaparece: el foco pasa al aviso y no se pierde en <body>.
+    expect(screen.getByRole('status')).toHaveFocus();
     expect(screen.queryByRole('heading', { name: 'Ara Centro' })).not.toBeInTheDocument();
     const sent = api.calls.find(({ method }) => method === 'POST');
     expect(JSON.parse(sent?.body ?? '{}')).toEqual({

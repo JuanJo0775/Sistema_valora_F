@@ -29,13 +29,15 @@ it('ofrece denunciar solo si la API autoriza y envía el motivo', async () => {
   fireEvent.click(
     await screen.findByRole('button', { name: '¿Este comercio no es de quien dice?' }),
   );
+  // El botón que abrió el formulario desaparece: el foco pasa al campo del motivo.
+  expect(screen.getByLabelText('Motivo de la denuncia')).toHaveFocus();
   fireEvent.change(screen.getByLabelText('Motivo de la denuncia'), {
     target: { value: 'La tienda tiene otro dueño.' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Enviar denuncia' }));
   expect(
     await screen.findByText('Denuncia recibida. Un moderador revisará el caso.'),
-  ).toBeInTheDocument();
+  ).toHaveFocus();
   expect(calls.find((request) => request.method === 'POST')?.body).toBe(
     JSON.stringify({ reason: 'La tienda tiene otro dueño.' }),
   );
