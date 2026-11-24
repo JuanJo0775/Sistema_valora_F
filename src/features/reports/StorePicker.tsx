@@ -1,13 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import { askLocation, formatDistance } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { ResultsStatus } from '../../shared/ui/ResultsStatus';
 import './reports.css';
 
 export type Store = components['schemas']['Establishment'];
+
+// Id del buscador por nombre: el formulario que contiene el selector lo usa para llevarle el foco
+// cuando falta elegir la tienda.
+export const STORE_SEARCH_ID = 'store-search-box';
 
 // RF-005: la ubicación del momento solo sirve para buscar las tiendas cercanas. No se guarda ni va
 // en el reporte, que solo lleva la tienda (EC-08).
@@ -15,12 +20,17 @@ export function StorePicker({
   value,
   onChange,
   mode = 'report',
+  error: fieldError,
 }: {
   mode?: 'report' | 'claim';
+  /** Error de validación del selector (falta elegir): marca el grupo y se enlaza con `aria-describedby`. */
+  error?: string;
   value: Store | null;
   onChange: (store: Store) => void;
 }) {
   const [stores, setStores] = useState<Store[]>([]);
+  const [searched, setSearched] = useState(false);
+  const errorId = useId();
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [searching, setSearching] = useState(false);
@@ -47,6 +57,7 @@ export function StorePicker({
           call(api.GET('/establishments/nearby', { params: { query: point } }))
             .then(({ items }) => {
               setStores(items);
+              setSearched(true);
               if (items.length === 0) setProblem('No hay tiendas registradas cerca de ti.');
             })
             .catch((failure: unknown) => {
@@ -76,6 +87,7 @@ export function StorePicker({
     call(api.GET('/establishments', { params: { query: { q: wanted } } }))
       .then(({ items }) => {
         setStores(items);
+        setSearched(true);
         if (items.length === 0) setProblem('No encontramos tiendas con ese nombre.');
       })
       .catch((failure: unknown) => {
@@ -109,7 +121,12 @@ export function StorePicker({
   }
 
   return (
-    <fieldset role="radiogroup" className="choices stores">
+    <fieldset
+      role="radiogroup"
+      className="choices stores"
+      aria-invalid={fieldError ? true : undefined}
+      aria-describedby={fieldError ? errorId : undefined}
+    >
       <legend>Tienda</legend>
       {mode === 'report' && (
         <>
@@ -130,6 +147,7 @@ export function StorePicker({
       <div className="store-search">
         <input
           ref={searchBox}
+          id={STORE_SEARCH_ID}
           type="search"
           aria-label="Buscar tienda por nombre"
           placeholder="O busca la tienda por su nombre"
@@ -147,11 +165,18 @@ export function StorePicker({
           Buscar tienda
         </button>
       </div>
+      {/* El cero ya lo dice el aviso «No hay tiendas…» / «No encontramos tiendas…» de abajo. */}
+      <ResultsStatus count={searched ? stores.length : null} silentWhenEmpty />
       {searching && <Loading text="Buscando tiendas…" />}
       {error !== null && <ErrorState error={error} />}
       {problem && (
         <p role="alert" className="banner warn">
           {problem}
+        </p>
+      )}
+      {fieldError && (
+        <p id={errorId} role="alert" className="banner warn">
+          {fieldError}
         </p>
       )}
       {mode === 'report' && (
