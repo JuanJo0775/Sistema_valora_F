@@ -216,7 +216,7 @@ describe('promociones del comercio (#167)', () => {
     await open({
       'GET /v1/commerce/prices': {
         status: 200,
-        body: { items: [{ ...price, freshness: 'desactualizado' }] },
+        body: { items: [{ ...price, freshness: 'desactualizado' }], inReview: [] },
       },
     });
     fireEvent.click(await screen.findByRole('button', { name: 'Ir a Precios' }));

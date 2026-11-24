@@ -98,6 +98,27 @@ export function MerchantPriceUpload({
           Cargar precios
         </button>
       </form>
+      {report && report.outcome.inReview.length > 0 && (
+        <div className="merchant-price-form">
+          <h3>
+            {report.outcome.inReview.length === 1
+              ? '1 fila quedó en revisión'
+              : `${String(report.outcome.inReview.length)} filas quedaron en revisión`}
+          </h3>
+          <p className="muted">
+            No había con qué comparar estos precios: un moderador los verá antes de publicarlos.
+          </p>
+          <ul className="merchant-price-list">
+            {report.outcome.inReview.map(({ row, barcode }) => (
+              <li key={row}>
+                <p>
+                  <strong>Fila {row}</strong> · {barcode}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {report && report.outcome.errors.length > 0 && (
         <div className="merchant-price-form">
           <h3>Filas con errores</h3>
