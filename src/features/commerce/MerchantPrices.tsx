@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { useEffect, useRef, useState } from 'react';
 import { restoreFocus } from '../../shared/focus';
-import { api, call } from '../../shared/api';
+import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { dayInColombia } from '../../shared/days';
 import { formatCop } from '../../shared/money';
@@ -27,6 +27,7 @@ type Promotion = components['schemas']['MerchantPromotion'];
 
 type Price = components['schemas']['OfficialPriceWithFreshness'];
 type Alert = components['schemas']['MerchantAlert'];
+type InReview = components['schemas']['OfficialPriceInReview'];
 type Outcome<T> = { data: T } | { error: unknown };
 const FRESHNESS: Record<Price['freshness'], { label: string; tone: string }> = {
   vigente: { label: 'Vigente', tone: 'ok' },
@@ -47,6 +48,7 @@ function PricePanel() {
   const [profile, setProfile] = useState<Outcome<Profile> | null>(null);
   const [promotions, setPromotions] = useState<Outcome<Promotion[]> | null>(null);
   const [prices, setPrices] = useState<Outcome<Price[]> | null>(null);
+  const [inReview, setInReview] = useState<InReview[]>([]);
   const [alerts, setAlerts] = useState<Outcome<Alert[]> | null>(null);
   const [labels, setLabels] = useState<Map<string, string>>(new Map());
   const [revision, setRevision] = useState(0);
@@ -87,9 +89,11 @@ function PricePanel() {
     const controller = new AbortController();
     const { signal } = controller;
     call(api.GET('/commerce/prices', { signal }))
-      .then(({ items }) => {
+      .then(({ items, inReview: waiting }) => {
         if (signal.aborted) return;
         setPrices({ data: items });
+        // El portal puede salir antes que el backend que trae `inReview`: sin ese campo, no hay nada en revisión.
+        setInReview(Array.isArray(waiting) ? waiting : []);
         const storeId = items[0]?.establishmentId;
         if (!storeId) return;
         return call(
@@ -194,12 +198,31 @@ function PricePanel() {
       return `Precios reconfirmados: ${String(result.reconfirmed)}.`;
     });
 
-  const save = (presentationId: string, priceCop: number) =>
-    update(async () => {
-      await call(api.PUT('/commerce/prices', { body: { presentationId, priceCop } }));
-      setSelection(null);
-      return 'Precio oficial publicado.';
+  // ADR-037: un precio absurdo se rechaza con el mensaje del servidor, que el editor muestra junto
+  // al campo; uno sin referencia queda «en revisión» y no reemplaza al vigente.
+  const save = async (presentationId: string, priceCop: number) => {
+    let rejection: string | undefined;
+    const hadPrevious = listed.some((item) => item.presentationId === presentationId);
+    await update(async () => {
+      try {
+        const saved = await call(
+          api.PUT('/commerce/prices', { body: { presentationId, priceCop } }),
+        );
+        setSelection(null);
+        if (saved.status !== 'en_revision') return 'Precio oficial publicado.';
+        return `Tu precio quedó en revisión: un moderador lo verá antes de publicarlo.${
+          hadPrevious ? ' Mientras tanto sigue vigente el anterior.' : ''
+        }`;
+      } catch (failure: unknown) {
+        if (failure instanceof ApiError && failure.code === 'IMPLAUSIBLE_OFFICIAL_PRICE') {
+          rejection = failure.message;
+          return '';
+        }
+        throw failure;
+      }
     });
+    return rejection;
+  };
 
   const editingListed =
     selection !== null && listed.some((item) => item.presentationId === selection.presentationId);
@@ -384,6 +407,27 @@ function PricePanel() {
               </>
             ))}
         </section>
+
+        {inReview.length > 0 && (
+          <section aria-labelledby="merchant-in-review">
+            <h2 id="merchant-in-review">En revisión</h2>
+            <p className="muted">
+              Estos precios todavía no son públicos: un moderador los revisa antes de publicarlos.
+            </p>
+            <ul className="merchant-price-list">
+              {inReview.map((item) => (
+                <li key={item.presentationId} className="merchant-price-row">
+                  <h3>{productLabel(item.presentationId)}</h3>
+                  <p>
+                    <strong>{formatCop(item.priceCop)}</strong>{' '}
+                    <span className="pill warn">En revisión</span>
+                  </p>
+                  <p className="muted">Enviado el {dayInColombia(item.submittedAt)}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section aria-labelledby="merchant-editor" ref={editorSection}>
           <h2 id="merchant-editor">Publicar o editar un precio</h2>
