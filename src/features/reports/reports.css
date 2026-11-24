@@ -171,3 +171,25 @@
   outline: 3px solid var(--bad);
   outline-offset: 2px;
 }
+
+/* Tienda del selector: el nombre arriba y, debajo, lo que la distingue (municipio, barrio, dirección). */
+.store-choice-text {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  flex: 1;
+  padding-block: 6px;
+}
+
+.store-choice-name {
+  font-weight: 600;
+}
+
+.store-choice-text small {
+  overflow-wrap: anywhere;
+}
+
+.store-choice-distance {
+  flex: none;
+  white-space: nowrap;
+}
