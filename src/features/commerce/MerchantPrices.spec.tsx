@@ -71,6 +71,40 @@ describe('panel de precios oficiales (#166)', () => {
     expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
   });
 
+  it('anuncia cuántos resultados dio la búsqueda de productos', async () => {
+    openPanel({
+      [`GET ${prices}`]: { status: 200, body: { items: [] } },
+      'GET /v1/products': { status: 200, body: { items: [product] } },
+    });
+    fireEvent.change(
+      await screen.findByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+      { target: { value: 'Arroz' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar en el catálogo' }));
+    await screen.findByRole('button', { name: 'Arroz · 500 g' });
+
+    const status = screen.getByText('1 resultado');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveClass('sr-only');
+  });
+
+  it('anuncia que no hubo resultados cuando la búsqueda no encuentra nada', async () => {
+    openPanel({
+      [`GET ${prices}`]: { status: 200, body: { items: [] } },
+      'GET /v1/products': { status: 200, body: { items: [] } },
+    });
+    fireEvent.change(
+      await screen.findByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+      { target: { value: 'Zzz' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar en el catálogo' }));
+
+    expect(await screen.findByText('No encontramos resultados.')).toHaveAttribute(
+      'aria-live',
+      'polite',
+    );
+  });
+
   it('muestra la vigencia y permite corregir el precio desde un aviso', async () => {
     const { calls } = openPanel({
       'GET /v1/commerce/alerts': {
