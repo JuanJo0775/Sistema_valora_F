@@ -466,6 +466,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    // TODO(regenerar): ruta del nombre escrita a mano según el contrato del servidor.
+    "/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el nombre visible de la propia cuenta (TODO(regenerar))
+         */
+        patch: operations["updateMyProfile"];
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -2523,6 +2543,30 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             /** @description code INVALID_PASSWORD (la actual no coincide) o REAUTH_REQUIRED (cuenta sin contraseña con sesión de más de 10 minutos). */
             403: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["Error"] } };
+            429: {
+                headers: { "Retry-After": components["headers"]["RetryAfter"]; [name: string]: unknown };
+                content: { "application/json": components["schemas"]["Error"] };
+            };
+        };
+    };
+    // TODO(regenerar): operación del nombre escrita a mano según el contrato del servidor.
+    updateMyProfile: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never };
+        requestBody: {
+            content: {
+                /** @description Las mismas reglas del nombre que el registro. */
+                "application/json": { displayName: string };
+            };
+        };
+        responses: {
+            200: {
+                headers: { [name: string]: unknown };
+                content: { "application/json": { displayName: string } };
+            };
+            /** @description Nombre inválido: VALIDATION_ERROR, igual que el registro. */
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: {
                 headers: { "Retry-After": components["headers"]["RetryAfter"]; [name: string]: unknown };
                 content: { "application/json": components["schemas"]["Error"] };

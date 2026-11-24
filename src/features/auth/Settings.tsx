@@ -4,6 +4,7 @@ import { type Municipality, MUNICIPALITY_OPTIONS } from '../comparison/criteria'
 import { readMunicipality, saveMunicipality } from '../comparison/lastMunicipality';
 import { readRadius, saveRadius } from '../comparison/radius';
 import { AdvancedOptions } from './AdvancedOptions';
+import { NameSettings } from './NameSettings';
 import { PasswordSettings } from './PasswordSettings';
 import { useSession } from './session';
 import { setPinShapes, usePinShapes } from '../stores/pinShapePref';
@@ -71,6 +72,16 @@ export function Settings() {
           />
         </div>
       </section>
+      {session.status === 'active' && (
+        <section className="profile-block" aria-labelledby="cuenta">
+          <h2 id="cuenta" className="eyebrow">
+            Cuenta
+          </h2>
+          <div className="profile-card profile-pad">
+            <NameSettings />
+          </div>
+        </section>
+      )}
       {session.status === 'active' && (
         <section className="profile-block" aria-labelledby="seguridad">
           <h2 id="seguridad" className="eyebrow">
