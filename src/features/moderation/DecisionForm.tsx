@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { ErrorState } from '../../shared/ui/ErrorState';
 
 const MIN_NOTE = 10;
@@ -22,6 +22,9 @@ export function DecisionForm<T extends string>({
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
+  const problemId = useId();
+  const firstChoice = useRef<HTMLInputElement>(null);
+  const noteBox = useRef<HTMLTextAreaElement>(null);
 
   const send = () => {
     const found = !decision
@@ -30,7 +33,11 @@ export function DecisionForm<T extends string>({
         ? `Escribe el motivo: al menos ${String(MIN_NOTE)} letras.`
         : '';
     setProblem(found);
-    if (found || !decision) return;
+    if (found || !decision) {
+      // El foco va al primer campo inválido: la decisión primero, luego el motivo.
+      (decision ? noteBox : firstChoice).current?.focus();
+      return;
+    }
     setError(null);
     setSending(true);
     onDecide(decision, note.trim()).catch((failure: unknown) => {
@@ -39,14 +46,22 @@ export function DecisionForm<T extends string>({
     });
   };
 
+  const decisionInvalid = problem !== '' && !decision;
+  const noteInvalid = problem !== '' && !!decision;
   const explained = error === null ? null : (explain?.(error) ?? null);
   return (
     <div className="decision">
-      <fieldset role="radiogroup" className="choices">
+      <fieldset
+        role="radiogroup"
+        className="choices"
+        aria-invalid={decisionInvalid || undefined}
+        aria-describedby={decisionInvalid ? problemId : undefined}
+      >
         <legend>Decisión</legend>
-        {options.map((option) => (
+        {options.map((option, index) => (
           <label key={option.value} className="choice">
             <input
+              ref={index === 0 ? firstChoice : undefined}
               type="radio"
               name={`decision-${id}`}
               value={option.value}
@@ -63,6 +78,9 @@ export function DecisionForm<T extends string>({
       <label className="field">
         Motivo de la decisión
         <textarea
+          ref={noteBox}
+          aria-invalid={noteInvalid || undefined}
+          aria-describedby={noteInvalid ? problemId : undefined}
           rows={2}
           maxLength={MAX_NOTE}
           value={note}
@@ -73,7 +91,7 @@ export function DecisionForm<T extends string>({
         />
       </label>
       {problem && (
-        <p role="alert" className="banner warn">
+        <p id={problemId} role="alert" className="banner warn">
           {problem}
         </p>
       )}

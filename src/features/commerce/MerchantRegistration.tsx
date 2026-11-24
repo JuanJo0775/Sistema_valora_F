@@ -15,7 +15,7 @@ import { useSession } from '../auth/session';
 import '../auth/auth.css';
 import { MUNICIPALITY_OPTIONS } from '../comparison/criteria';
 import { readMunicipality } from '../comparison/lastMunicipality';
-import { type Store, StorePicker } from '../reports/StorePicker';
+import { STORE_SEARCH_ID, type Store, StorePicker } from '../reports/StorePicker';
 import { STORE_TYPES } from '../stores/storeTypes';
 import './merchant-registration.css';
 
@@ -192,6 +192,16 @@ const CLAIM_ERROR: Record<string, string> = {
   NOT_FOUND: 'La tienda ya no está disponible. Busca otra tienda en el mapa.',
 };
 
+// Campo que falla la validación y el elemento al que va el foco.
+type Invalid = { field: 'store' | 'name' | 'responsible' | 'phone' | 'accepted'; message: string };
+const FOCUS_ID: Record<Invalid['field'], string> = {
+  store: STORE_SEARCH_ID,
+  name: 'merchant-name',
+  responsible: 'merchant-responsible',
+  phone: 'merchant-phone',
+  accepted: 'merchant-accepted',
+};
+
 function ClaimForm({
   storeId,
   onRegistered,
@@ -212,6 +222,7 @@ function ClaimForm({
   const [nit, setNit] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [problem, setProblem] = useState('');
+  const [invalid, setInvalid] = useState<Invalid | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -223,8 +234,14 @@ function ClaimForm({
     (value: T) => {
       set(value);
       setProblem('');
+      setInvalid(null);
       setError(null);
     };
+
+  // Al fallar la validación el foco va al primer campo inválido, no se queda en el botón de enviar.
+  useEffect(() => {
+    if (invalid) document.getElementById(FOCUS_ID[invalid.field])?.focus();
+  }, [invalid]);
 
   useEffect(
     () => () => {
@@ -267,25 +284,29 @@ function ClaimForm({
       : store && { establishmentId: store.id };
 
     setProblem('');
+    setInvalid(null);
     setError(null);
     if (!target || (isNew && name.trim().length < 2)) {
-      setProblem(
-        isNew ? 'Escribe el nombre de la tienda.' : 'Elige la tienda que quieres registrar.',
+      setInvalid(
+        isNew
+          ? { field: 'name', message: 'Escribe el nombre de la tienda.' }
+          : { field: 'store', message: 'Elige la tienda que quieres registrar.' },
       );
       return;
     }
     if (responsible.trim().length < 2) {
-      setProblem('Escribe el nombre del responsable.');
+      setInvalid({ field: 'responsible', message: 'Escribe el nombre del responsable.' });
       return;
     }
     if (!/^(3\d{9}|60\d{8})$/.test(phone.trim())) {
-      setProblem(
-        'Escribe un celular de 10 dígitos que empiece por 3 o un fijo con 60 y 8 dígitos.',
-      );
+      setInvalid({
+        field: 'phone',
+        message: 'Escribe un celular de 10 dígitos que empiece por 3 o un fijo con 60 y 8 dígitos.',
+      });
       return;
     }
     if (!accepted) {
-      setProblem('Lee y acepta las condiciones para comercios.');
+      setInvalid({ field: 'accepted', message: 'Lee y acepta las condiciones para comercios.' });
       return;
     }
 
@@ -338,10 +359,12 @@ function ClaimForm({
         {isNew ? (
           <>
             <Field
+              id={FOCUS_ID.name}
               label="Nombre de la tienda"
               value={name}
               maxLength={120}
               onValue={edit(setName)}
+              error={invalid?.field === 'name' ? invalid.message : undefined}
             />
             <SelectField
               label="Tipo de tienda"
@@ -368,7 +391,12 @@ function ClaimForm({
             {prefillFailed && (
               <p role="status">No pudimos cargar la tienda de origen. Búscala por su nombre.</p>
             )}
-            <StorePicker value={store} onChange={edit(setPicked)} mode="claim" />
+            <StorePicker
+              value={store}
+              onChange={edit(setPicked)}
+              mode="claim"
+              error={invalid?.field === 'store' ? invalid.message : undefined}
+            />
           </>
         )}
         <button
@@ -377,25 +405,30 @@ function ClaimForm({
           onClick={() => {
             setIsNew((current) => !current);
             setProblem('');
+            setInvalid(null);
             setError(null);
           }}
         >
           {isNew ? 'Buscar una tienda del mapa' : 'Mi tienda no está en el mapa'}
         </button>
         <Field
+          id={FOCUS_ID.responsible}
           label="Nombre del responsable"
           autoComplete="name"
           value={responsible}
           maxLength={80}
           onValue={edit(setResponsible)}
+          error={invalid?.field === 'responsible' ? invalid.message : undefined}
         />
         <Field
+          id={FOCUS_ID.phone}
           label="Teléfono"
           type="tel"
           autoComplete="tel-national"
           value={phone}
           maxLength={10}
           onValue={edit(setPhone)}
+          error={invalid?.field === 'phone' ? invalid.message : undefined}
         />
         <Field
           label="NIT (opcional)"
@@ -427,7 +460,10 @@ function ClaimForm({
         </details>
         <label className="merchant-accept">
           <input
+            id={FOCUS_ID.accepted}
             type="checkbox"
+            aria-invalid={invalid?.field === 'accepted' ? true : undefined}
+            aria-describedby={invalid?.field === 'accepted' ? 'merchant-accepted-error' : undefined}
             checked={accepted}
             onChange={(event) => {
               edit(setAccepted)(event.target.checked);
@@ -440,6 +476,11 @@ function ClaimForm({
             ? 'Comparte tu ubicación desde la tienda. Ese punto se guarda para ubicar la tienda en el mapa si la aprueban.'
             : 'Comparte tu ubicación desde la tienda. Solo se usa una vez para verificar que estás a 50 m o menos y no se guarda.'}
         </p>
+        {invalid?.field === 'accepted' && (
+          <p id="merchant-accepted-error" role="alert" className="banner warn">
+            {invalid.message}
+          </p>
+        )}
         {problem && (
           <p role="alert" className="banner warn">
             {problem}

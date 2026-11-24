@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { api, call } from '../../shared/api';
 import { dayInColombia } from '../../shared/days';
 import { ErrorState } from '../../shared/ui/ErrorState';
@@ -22,10 +22,13 @@ export function AppealForm({
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [sending, setSending] = useState(false);
+  const problemId = useId();
+  const noteBox = useRef<HTMLTextAreaElement>(null);
 
   const send = () => {
     if (note.trim().length < MIN_NOTE) {
       setProblem(`Cuéntanos un poco más: al menos ${String(MIN_NOTE)} letras.`);
+      noteBox.current?.focus();
       return;
     }
     setProblem('');
@@ -65,16 +68,20 @@ export function AppealForm({
       <label className="field">
         ¿Por qué el precio era correcto?
         <textarea
+          ref={noteBox}
+          aria-invalid={problem ? true : undefined}
+          aria-describedby={problem ? problemId : undefined}
           rows={3}
           maxLength={MAX_NOTE}
           value={note}
           onChange={(event) => {
             setNote(event.target.value);
+            setProblem('');
           }}
         />
       </label>
       {problem && (
-        <p role="alert" className="banner warn">
+        <p id={problemId} role="alert" className="banner warn">
           {problem}
         </p>
       )}
