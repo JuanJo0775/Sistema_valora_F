@@ -150,6 +150,22 @@ describe('página de una tienda', () => {
     expect(screen.queryByText(/Sé el primero/)).not.toBeInTheDocument();
   });
 
+  it('el precio oficial del comercio lleva la insignia «Precio oficial» y los de la comunidad no', async () => {
+    const official = price('Arroz Diana', 4800, {
+      source: 'oficial',
+      reportId: undefined,
+      reliability: undefined,
+    });
+    stubStore(storeReply([official, banana]));
+    renderStore();
+    const rows = await screen.findAllByRole('listitem');
+    const arroz = rows.find((row) => within(row).queryByText('Arroz Diana'));
+    const banano = rows.find((row) => within(row).queryByText('Banano'));
+    expect(arroz && within(arroz).getByText('Precio oficial')).toBeInTheDocument();
+    expect(banano && within(banano).queryByText('Precio oficial')).toBeNull();
+    expect(screen.getAllByText('Precio oficial')).toHaveLength(1);
+  });
+
   it('con un solo precio el conteo va en singular', async () => {
     stubStore(storeReply([banana]));
     renderStore();
