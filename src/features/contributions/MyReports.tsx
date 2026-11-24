@@ -101,7 +101,13 @@ export function MyReports() {
       <BackLink fallback="/yo" />
       <h1>Mis aportes</h1>
       {/* #71 del backend: suspendida, la cuenta solo ve el estado de sus aportes y apela. */}
-      {suspendedUntil && <SuspendedNotice until={suspendedUntil} />}
+      {suspendedUntil && (
+        <SuspendedNotice
+          until={suspendedUntil}
+          reason={session.status === 'active' ? session.suspensionReason : undefined}
+          onReports
+        />
+      )}
       <ul className="offers">
         {reports.map((report) => (
           <li key={report.reportId} className="offer">
