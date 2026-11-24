@@ -33,6 +33,8 @@ export interface SessionState {
   endSession: () => void;
   // Se acaba de crear la primera contraseña: la sesión local ya la tiene, sin volver a pedirla.
   passwordCreated: () => void;
+  // El servidor guardó un nombre nuevo: la sesión local lo muestra en toda la app sin recargar.
+  nameChanged: (displayName: string) => void;
   reload: () => void;
   refreshRole: (expectedRole: Role) => void;
 }
@@ -44,6 +46,7 @@ export const SessionContext = createContext<SessionState>({
   signOut: () => Promise.resolve(),
   endSession: () => undefined,
   passwordCreated: () => undefined,
+  nameChanged: () => undefined,
   reload: () => undefined,
   refreshRole: () => undefined,
 });

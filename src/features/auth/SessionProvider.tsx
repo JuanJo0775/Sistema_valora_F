@@ -114,6 +114,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       passwordCreated: () => {
         setSession((now) => (now.status === 'active' ? { ...now, hasPassword: true } : now));
       },
+      nameChanged: (displayName: string) => {
+        setSession((now) => (now.status === 'active' ? { ...now, displayName } : now));
+      },
       reload: () => {
         setSession({ status: 'loading' });
         setAttempt({});

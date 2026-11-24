@@ -62,6 +62,7 @@ export const sessionAs = (
   emailVerified = true,
   emailVerificationRequired = true,
   hasPassword = true,
+  displayName?: string,
 ): FakeReply => ({
   status: 200,
   body: {
@@ -71,6 +72,7 @@ export const sessionAs = (
     emailVerified,
     emailVerificationRequired,
     hasPassword,
+    displayName,
   },
 });
 
