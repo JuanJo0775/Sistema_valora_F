@@ -242,6 +242,100 @@ describe('registro de comercios (#165)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('un teléfono inválido se liga al campo, lo marca y le lleva el foco', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    const phone = screen.getByLabelText('Teléfono');
+    fireEvent.change(phone, { target: { value: '12345' } });
+    submit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/celular de 10 dígitos/);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(phone).toHaveAttribute('aria-invalid', 'true');
+    expect(phone.getAttribute('aria-describedby')).toContain(alert.id);
+    expect(phone).toHaveFocus();
+    expect(screen.getByLabelText('Nombre del responsable')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('con varios errores el foco va al primer campo inválido', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    fireEvent.change(screen.getByLabelText('Nombre del responsable'), { target: { value: ' ' } });
+    fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: '12345' } });
+    submit();
+
+    const name = screen.getByLabelText('Nombre del responsable');
+    await waitFor(() => {
+      expect(name).toHaveFocus();
+    });
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Teléfono')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('sin aceptar las condiciones la casilla queda ligada al aviso y recibe el foco', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    const box = screen.getByRole('checkbox', { name: 'Acepto las condiciones para comercios' });
+    fireEvent.click(box);
+    submit();
+
+    const alert = await screen.findByRole('alert');
+    expect(box).toHaveAttribute('aria-invalid', 'true');
+    expect(box.getAttribute('aria-describedby')).toContain(alert.id);
+    expect(box).toHaveFocus();
+  });
+
+  it('sin tienda elegida el grupo queda inválido y el foco va a su buscador', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+    });
+    open(registration);
+    const search = await screen.findByRole('searchbox', { name: 'Buscar tienda por nombre' });
+    responsible();
+    submit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Elige la tienda que quieres registrar.');
+    const group = screen.getByRole('radiogroup', { name: 'Tienda' });
+    expect(group).toHaveAttribute('aria-invalid', 'true');
+    expect(group.getAttribute('aria-describedby')).toContain(alert.id);
+    expect(search).toHaveFocus();
+  });
+
+  it('anuncia cuántas tiendas encontró la búsqueda', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+
+    const status = screen.getByText('1 resultado');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveClass('sr-only');
+  });
+
   it('dice que espera la ubicación mientras el navegador la obtiene', async () => {
     locate.mockReturnValue(new Promise(() => undefined));
     stubApi({

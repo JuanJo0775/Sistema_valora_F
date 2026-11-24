@@ -2,6 +2,7 @@ import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { ResultsStatus } from '../../shared/ui/ResultsStatus';
 import { Field } from '../auth/Field';
 import { formatPresentation } from '../catalog/presentation';
 
@@ -133,6 +134,11 @@ export function MerchantPriceEditor({
           {searching ? 'Buscando…' : 'Buscar en el catálogo'}
         </button>
       </form>
+      <ResultsStatus
+        count={
+          matches ? matches.reduce((sum, { presentations }) => sum + presentations.length, 0) : null
+        }
+      />
       {error !== null && <ErrorState error={error} />}
       {matches &&
         (matches.some(({ presentations }) => presentations.length > 0) ? (

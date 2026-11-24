@@ -173,6 +173,20 @@ describe('mis aportes', () => {
     expect(api.calls.some(({ method }) => method === 'POST')).toBe(false);
   });
 
+  it('el aviso de la apelación se liga a la caja del motivo y esta recibe el foco', async () => {
+    stubApi({ 'GET /v1/me/reports': page([discarded]) });
+    renderMine();
+    await screen.findByText('Arroz blanco');
+
+    appeal('Era así');
+
+    const row = rowOf('Arroz blanco');
+    const note = row.getByRole('textbox');
+    expect(note).toHaveAttribute('aria-invalid', 'true');
+    expect(note).toHaveAttribute('aria-describedby', row.getByRole('alert').id);
+    expect(note).toHaveFocus();
+  });
+
   it('si el servidor no acepta la apelación muestra por qué', async () => {
     stubApi({
       'GET /v1/auth/session': sessionAs('reportante'),
