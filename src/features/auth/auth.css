@@ -440,6 +440,39 @@
   margin: 0;
 }
 
+/* Ajustes › Cuenta › Nombre: la fila y su formulario en el lugar. */
+.name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.name-form {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.name-form p {
+  margin: 0;
+}
+
+.name-form .banner,
+.name-status {
+  overflow-wrap: anywhere;
+}
+
+.name-form .actions {
+  flex-wrap: wrap;
+}
+
+.name-status {
+  margin: 12px 0 0;
+}
+
 /* Olvidé mi contraseña, restablecer y contraseña en Ajustes. */
 .forgot-link {
   margin: -6px 0 0;
