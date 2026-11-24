@@ -6,8 +6,9 @@ interface Point {
   minPriceCop: number;
 }
 
-const WIDTH = 320;
-const HEIGHT = 140;
+// Dos tamaños del mismo dibujo: el compacto (panel del detalle y celular) y el ancho (historial en
+// pantallas desde 640 px), que llena el ancho de la columna sin agrandar de más el texto del eje.
+const SIZES = { compact: { width: 320, height: 140 }, wide: { width: 640, height: 170 } };
 const PAD = { top: 12, right: 12, bottom: 22, left: 52 };
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -35,12 +36,15 @@ export function HistoryChart({
   from,
   to,
   label,
+  wide = false,
 }: {
   points: Point[];
   from: string;
   to: string;
   label: string;
+  wide?: boolean;
 }) {
+  const { width: WIDTH, height: HEIGHT } = SIZES[wide ? 'wide' : 'compact'];
   const [first] = points;
   const last = points.at(-1);
   if (!first || !last) return null;
@@ -66,7 +70,7 @@ export function HistoryChart({
 
   return (
     <svg
-      className="history-chart"
+      className={wide ? 'history-chart wide' : 'history-chart'}
       viewBox={`0 0 ${String(WIDTH)} ${String(HEIGHT)}`}
       role="img"
       aria-label={summary}

@@ -380,7 +380,7 @@ describe('inicio', () => {
     expect(
       await screen.findByRole(
         'heading',
-        { name: 'Historial de precios · Arroz blanco' },
+        { level: 1, name: 'Historial de precios' },
         { timeout: 5000 },
       ),
     ).toBeInTheDocument();

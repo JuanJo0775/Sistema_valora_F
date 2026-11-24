@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import { askLocation, formatDistance } from '../../shared/location';
@@ -25,6 +25,17 @@ export function StorePicker({
   const [error, setError] = useState<unknown>(null);
   const [searching, setSearching] = useState(false);
   const [name, setName] = useState('');
+  // Con la tienda ya elegida (reporte), el bloque es una sola fila: «Tienda X · Cambiar».
+  const [changing, setChanging] = useState(false);
+  const changeButton = useRef<HTMLButtonElement>(null);
+  const searchBox = useRef<HTMLInputElement>(null);
+  // Al abrir el buscador el foco va a su campo; al cerrarlo, de vuelta a «Cambiar».
+  const wasChanging = useRef(false);
+  useEffect(() => {
+    if (changing) searchBox.current?.focus();
+    else if (wasChanging.current) changeButton.current?.focus();
+    wasChanging.current = changing;
+  }, [changing]);
 
   const findNearby = () => {
     setProblem('');
@@ -75,6 +86,28 @@ export function StorePicker({
       });
   };
 
+  if (mode === 'report' && value && !changing) {
+    return (
+      <div role="group" aria-label="Tienda" className="store-summary">
+        <p className="store-summary-text">
+          <span className="store-summary-label">Tienda</span>
+          <strong>{value.name}</strong>
+        </p>
+        <button
+          ref={changeButton}
+          type="button"
+          className="link-button"
+          aria-label={`Cambiar la tienda (ahora ${value.name})`}
+          onClick={() => {
+            setChanging(true);
+          }}
+        >
+          Cambiar
+        </button>
+      </div>
+    );
+  }
+
   return (
     <fieldset role="radiogroup" className="choices stores">
       <legend>Tienda</legend>
@@ -96,6 +129,7 @@ export function StorePicker({
       {/* Va dentro del formulario del reporte: Enter busca la tienda, no envía el reporte. */}
       <div className="store-search">
         <input
+          ref={searchBox}
           type="search"
           aria-label="Buscar tienda por nombre"
           placeholder="O busca la tienda por su nombre"
@@ -125,6 +159,17 @@ export function StorePicker({
           ¿No está la tienda? Sugiérela
         </Link>
       )}
+      {mode === 'report' && value && (
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => {
+            setChanging(false);
+          }}
+        >
+          {`Seguir con «${value.name}»`}
+        </button>
+      )}
       {/* La tienda ya elegida (la última usada) aparece aunque no se haya pedido la ubicación. */}
       <div className="store-list">
         {withChosen(stores, value).map((store) => (
@@ -136,6 +181,7 @@ export function StorePicker({
               checked={value?.id === store.id}
               onChange={() => {
                 onChange(store);
+                setChanging(false);
               }}
             />
             <span>

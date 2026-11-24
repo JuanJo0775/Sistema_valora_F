@@ -1,8 +1,9 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { MemoryRouter } from 'react-router';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { stubMatchMedia } from '../../test/matchMedia';
 import type { components } from '../../shared/api/schema';
 import { AddToBasket } from './AddToBasket';
 import { BasketProvider } from './BasketProvider';
@@ -17,20 +18,6 @@ const rice: components['schemas']['Product'] = {
   ],
 };
 
-let notify: (intersecting: boolean) => void = () => undefined;
-const disconnect = vi.fn();
-
-class FakeObserver {
-  constructor(callback: IntersectionObserverCallback) {
-    notify = (isIntersecting) => {
-      callback([{ isIntersecting } as IntersectionObserverEntry], this as never);
-    };
-  }
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = disconnect;
-}
-
 const renderAdd = () =>
   render(
     <BasketProvider>
@@ -41,49 +28,84 @@ const renderAdd = () =>
   );
 
 describe('barra de acción del detalle', () => {
-  beforeEach(() => {
-    vi.stubGlobal('IntersectionObserver', FakeObserver);
-  });
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
   });
 
-  it('no existe mientras el botón del panel se ve (sin duplicar la acción)', () => {
+  it('en computador no hay barra: el botón del panel es la acción', () => {
+    stubMatchMedia(false);
     renderAdd();
-    act(() => {
-      notify(true);
-    });
     expect(screen.queryByRole('region', { name: 'Compra rápida' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Agregar a la canasta' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /Agregar a la canasta/ })).toHaveLength(1);
+    expect(screen.getByText('Se agrega 500 g')).toBeInTheDocument();
   });
 
-  it('aparece cuando el botón del panel sale de la pantalla, con la presentación y el precio', () => {
+  it('en celular hay un solo botón de agregar: el de la barra; el del panel no existe', () => {
+    stubMatchMedia(true);
     renderAdd();
-    act(() => {
-      notify(false);
-    });
     const bar = screen.getByRole('region', { name: 'Compra rápida' });
     expect(bar).toHaveTextContent('500 g');
     expect(bar).toHaveTextContent('$ 4.500');
+    // Un solo botón en todo el documento: sin foco doble ni lectura doble.
+    const buttons = screen.getAllByRole('button', { name: /Agregar a la canasta/ });
+    expect(buttons).toHaveLength(1);
+    expect(bar).toContainElement(buttons[0] ?? null);
+    // La presentación elegida va en la descripción del botón, no en un texto aparte.
+    expect(buttons[0]).toHaveAccessibleDescription(/500 g.*4\.500/);
+    expect(screen.queryByText('Se agrega 500 g')).not.toBeInTheDocument();
   });
 
-  it('usa la presentación elegida y agrega esa', () => {
+  it('la elección de presentación sigue en el panel y la barra agrega esa', () => {
+    stubMatchMedia(true);
     renderAdd();
     fireEvent.click(screen.getByRole('radio', { name: '1 kg' }));
-    act(() => {
-      notify(false);
-    });
     const bar = screen.getByRole('region', { name: 'Compra rápida' });
     expect(bar).toHaveTextContent('1 kg');
-    fireEvent.click(bar.querySelector('button') as HTMLButtonElement);
+    fireEvent.click(within(bar).getByRole('button', { name: 'Agregar a la canasta' }));
     expect(localStorage.getItem('valora:canasta')).toContain('1 kg');
   });
 
-  it('sin IntersectionObserver no hay barra', () => {
-    vi.unstubAllGlobals();
+  it('con el hueco del Layout, la barra va después del contenido principal (foco al final)', () => {
+    stubMatchMedia(true);
+    render(
+      <BasketProvider>
+        <MemoryRouter>
+          <main>
+            <aside>
+              <AddToBasket product={rice} />
+            </aside>
+          </main>
+          <div id="acciones-fijas" />
+        </MemoryRouter>
+      </BasketProvider>,
+    );
+    const bar = screen.getByRole('region', { name: 'Compra rápida' });
+    expect(bar.parentElement?.id).toBe('acciones-fijas');
+    expect(screen.getByRole('main')).not.toContainElement(bar);
+    expect(screen.getByRole('main').nextElementSibling).toBe(bar.parentElement);
+  });
+
+  it('al agregar, la barra deja su lugar a «Quitar de mi canasta» (un solo botón)', () => {
+    stubMatchMedia(true);
     renderAdd();
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar a la canasta' }));
     expect(screen.queryByRole('region', { name: 'Compra rápida' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quitar de mi canasta' })).toBeInTheDocument();
+  });
+
+  it('con una sola presentación la barra la nombra y no hay nada que elegir', () => {
+    stubMatchMedia(true);
+    render(
+      <BasketProvider>
+        <MemoryRouter>
+          <AddToBasket product={{ ...rice, presentations: rice.presentations.slice(0, 1) }} />
+        </MemoryRouter>
+      </BasketProvider>,
+    );
+    const bar = screen.getByRole('region', { name: 'Compra rápida' });
+    expect(bar).toHaveTextContent('500 g');
+    expect(bar).not.toHaveTextContent('Más barato');
   });
 });
 
@@ -98,7 +120,7 @@ describe('barra de acción: CSS', () => {
     expect(css).toMatch(/\.action-bar\s*\{[^}]*safe-area-inset-bottom/);
   });
 
-  it('desaparece desde 960 px', () => {
+  it('desaparece desde 960 px (la misma frontera con que el código la muestra)', () => {
     const start = css.indexOf('@media (width >= 960px)');
     expect(start).toBeGreaterThan(-1);
     expect(css.slice(start)).toMatch(/\.action-bar\s*\{\s*display:\s*none/);
