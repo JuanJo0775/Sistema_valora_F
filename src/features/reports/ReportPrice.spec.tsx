@@ -433,6 +433,28 @@ describe('registrar un precio', () => {
       );
     });
 
+    it('buscar y elegir el producto conserva la tienda de la dirección', async () => {
+      stubApi({
+        ...productRoute,
+        ...pepePrices,
+        'GET /v1/products': { status: 200, body: { items: [rice] } },
+      });
+      renderReport(`/registrar?tienda=${donPepe.id}`);
+
+      fireEvent.change(screen.getByRole('combobox', { name: 'Buscar producto' }), {
+        target: { value: 'arroz' },
+      });
+      fireEvent.submit(screen.getByRole('search'));
+      const result = await screen.findByRole('link', { name: /Arroz blanco/ });
+      expect(result).toHaveAttribute('href', `/registrar?producto=${rice.id}&tienda=${donPepe.id}`);
+
+      fireEvent.click(result);
+
+      expect(await screen.findByRole('group', { name: 'Tienda' })).toHaveTextContent(
+        'Tienda Don Pepe',
+      );
+    });
+
     it('si no es un UUID se ignora sin llamar a la API ni romper la pantalla', async () => {
       const api = stubApi(productRoute);
       renderReport(`/registrar?producto=${rice.id}&tienda=otra`);
@@ -988,6 +1010,22 @@ describe('registrar un precio: precio atípico', () => {
       'priceType',
     ]);
     expect(body).toMatchObject({ priceCop: 2400 });
+  });
+
+  it('tras confirmar un precio atípico, «Recibido» dice que un moderador lo revisa antes de mostrarlo', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+    await sendKg(api, '2400');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sí, ese es el precio' }));
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Gracias: un moderador lo revisará antes de mostrarlo. El estado de tu aporte lo ves en «Mis aportes».',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Ya cuenta en la comparación/)).not.toBeInTheDocument();
   });
 
   it('sugiere el precio con los ceros que faltan y «Sí, escribir» lo pone en el campo', async () => {

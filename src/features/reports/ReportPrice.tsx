@@ -103,6 +103,8 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
   // Si lo vio antes, la hora que escribe en el campo (en la hora del teléfono).
   const [seenAt, setSeenAt] = useState<string | null>(null);
   const [done, setDone] = useState<'recibido' | 'guardado' | null>(null);
+  // Verdadero si la persona confirmó un precio atípico: queda en revisión antes de mostrarse.
+  const [inReview, setInReview] = useState(false);
   // #79 y #28: solo en el modo prueba de usabilidad, cuánto tardó el registro (EC-01).
   const [testing] = useState(isUsabilityMode);
   const [tookSeconds, setTookSeconds] = useState<number | null>(null);
@@ -215,7 +217,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
       doubtRef.current?.focus();
       return;
     }
-    send(found.priceCop, observedAt, store);
+    send(found.priceCop, observedAt, store, plausibility === 'atipico');
   };
 
   const submit = (event: SyntheticEvent) => {
@@ -223,7 +225,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
     run(false);
   };
 
-  const send = (priceCop: number, observedAt: Date, chosenStore: Store) => {
+  const send = (priceCop: number, observedAt: Date, chosenStore: Store, reviewed: boolean) => {
     setDoubt(null);
     setError(null);
     const report = {
@@ -258,6 +260,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         saveLastStore(chosenStore);
         if (product) saveRecentProduct({ id: productId, name: product.name });
         setTookSeconds(secondsSince(startedAt));
+        setInReview(reviewed);
         setDone(result.kind);
       });
   };
@@ -273,7 +276,9 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
           focus
           text={
             done === 'recibido'
-              ? 'Gracias: tu precio ayuda a otros a comparar. Ya cuenta en la comparación; el estado de tu aporte lo ves en «Mis aportes».'
+              ? inReview
+                ? 'Gracias: un moderador lo revisará antes de mostrarlo. El estado de tu aporte lo ves en «Mis aportes».'
+                : 'Gracias: tu precio ayuda a otros a comparar. Ya cuenta en la comparación; el estado de tu aporte lo ves en «Mis aportes».'
               : 'Se enviará solo cuando haya conexión; al enviarse cuenta en la comparación.'
           }
           action={

@@ -59,6 +59,24 @@ describe('precios en revisión', () => {
     expect(milk.getByText('«Lo vi en la góndola, el precio era ese.»')).toBeInTheDocument();
   });
 
+  // El backend manda la desviación en valor absoluto: el signo sale de comparar los precios.
+  it.each([
+    ['menor que la mediana', 150, 3950, 96, 'Reportado $150 · mediana $3.950 (−96 %)'],
+    ['mayor que la mediana', 9000, 4500, 100, 'Reportado $9.000 · mediana $4.500 (+100 %)'],
+  ])('el signo de la desviación sigue al precio (%s)', async (_, reported, median, pct, text) => {
+    renderQueue({
+      'GET /v1/moderation/queue': queue(
+        item('Arroz Diana · 500 g', 'desviacion', {
+          reportedPriceCop: reported,
+          medianPriceCop: median,
+          deviationPercent: pct,
+        }),
+      ),
+    });
+
+    expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
   const decide = async (name: string, decision: string, note: string) => {
     const row = within((await screen.findByText(name)).closest('li') as HTMLElement);
     fireEvent.click(row.getByRole('radio', { name: decision }));

@@ -144,15 +144,34 @@ describe('panel de precios oficiales (#166)', () => {
     });
   });
 
-  it('reconfirma el conjunto y vuelve a consultar los precios y los avisos', async () => {
+  it('reconfirma el conjunto solo después de confirmarlo y vuelve a consultar los precios y los avisos', async () => {
     const { calls } = openPanel({
       [`POST ${prices}/reconfirm`]: { status: 200, body: { reconfirmed: 1 } },
     });
     fireEvent.click(await screen.findByRole('button', { name: 'Todos mis precios siguen igual' }));
+    expect(calls.some(({ method }) => method === 'POST')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Precios reconfirmados: 1.')).toBeInTheDocument();
     await waitFor(() => {
       expect(calls.filter(({ path }) => path === '/v1/commerce/alerts')).toHaveLength(2);
     });
+  });
+
+  it('antes de reconfirmar dice cuántos precios renueva, con el foco en «Confirmar»', async () => {
+    const { calls } = openPanel({
+      [`POST ${prices}/reconfirm`]: { status: 200, body: { reconfirmed: 1 } },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Todos mis precios siguen igual' }));
+
+    expect(
+      screen.getByText('Esto renueva la vigencia de 1 precio. ¿Confirmas?'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByText('Esto renueva la vigencia de 1 precio. ¿Confirmas?'),
+    ).not.toBeInTheDocument();
+    expect(calls.some(({ method }) => method === 'POST')).toBe(false);
   });
 
   it('envía el CSV como texto y presenta errores de fila con descarga para corregirlos', async () => {
