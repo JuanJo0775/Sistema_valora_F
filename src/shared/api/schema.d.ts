@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/products/{productId}/online-offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consultar ofertas en línea disponibles para un producto
+         * @description Lectura pública por presentación. El piloto solo admite la zona de prueba armenia-centro. El precio corresponde al producto en COP. El comercio calcula el envío por separado. Solo se devuelven observaciones disponibles y vigentes autorizadas para publicación. Mientras el piloto esté deshabilitado o no tenga ofertas vigentes, items es vacío. No incluye direcciones ni datos de usuarios (EC-08).
+         */
+        get: operations["listProductOnlineOffers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/products/{productId}/comparison": {
         parameters: {
             query?: never;
@@ -1278,6 +1298,24 @@ export interface components {
             unlocks?: components["schemas"]["MerchantUnlocks"];
         };
         /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84) y scheduledFor en el 403 ACCOUNT_PENDING_DELETION (PendingDeletionError, ADR-032). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), MERCHANT_NOT_VERIFIED (403), INVALID_PASSWORD (403), LAST_MODERATOR_CANNOT_DELETE (403), ACCOUNT_PENDING_DELETION (403), NOT_FOUND (404), CONFLICT (409), ESTABLISHMENT_HAS_OWNER (409), ACCOUNT_HAS_ESTABLISHMENT (409), MERCHANT_REPORT_OPEN (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, IMPLAUSIBLE_PRICE, IMPLAUSIBLE_OFFICIAL_PRICE, INVALID_TTL, INVALID_VERIFICATION_TOKEN, NOT_AT_ESTABLISHMENT, UNKNOWN_PRESENTATION, OFFICIAL_PRICE_REQUIRED, INVALID_PROMOTION, INVALID_OPENING_HOURS, OWN_ESTABLISHMENT, REVOKED_FROM_ESTABLISHMENT y los que agreguen las reglas futuras. */
+        OnlineOffer: {
+            /** Format: uuid */
+            presentationId: string;
+            /** @enum {string} */
+            source: "olimpica";
+            /** @enum {string} */
+            zone: "armenia-centro";
+            priceCop: number;
+            /** Format: date-time */
+            observedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /**
+             * Format: uri
+             * @description Enlace de Olímpica cuando el origen haya sido verificado.
+             */
+            productUrl?: string;
+        };
         Error: {
             /** @example INVALID_QUANTITY */
             code: string;
@@ -1823,6 +1861,36 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listProductOnlineOffers: {
+        parameters: {
+            query: {
+                zone: "armenia-centro";
+            };
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ofertas vigentes o lista vacía */
+            200: {
+                headers: {
+                    /** @description Sin caché compartida durante el piloto para respetar el retiro y vencimiento. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["OnlineOffer"][];
+                    };
+                };
             };
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
