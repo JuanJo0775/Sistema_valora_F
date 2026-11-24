@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { SidePanel } from '../../shared/ui/SidePanel';
 import { SkeletonList } from '../../shared/ui/Skeleton';
 import { MUNICIPALITIES } from '../comparison/criteria';
 import { RadiusControl } from '../comparison/RadiusControl';
@@ -97,6 +98,7 @@ export function MapPage() {
             label={`Mapa de las tiendas ${place}`}
             around={around}
             municipality={where.municipality}
+            pinsFocusable={false}
           />
           <ul className="map-legend" aria-label="Leyenda del mapa">
             {Object.entries(STORE_TYPES).map(([type, name]) => (
@@ -137,7 +139,7 @@ export function MapPage() {
           />
         </div>
       </section>
-      <aside className="side map-side" aria-label="Lista de tiendas">
+      <SidePanel className="map-side" aria-label="Lista de tiendas">
         {/* #12: una tienda que nadie ha registrado se sugiere; la revisa un moderador. */}
         <Link to="/proponer/tienda" className="btn ghost suggest-store">
           Sugerir una tienda que no aparece
@@ -159,7 +161,7 @@ export function MapPage() {
             <StoreCard key={store.id} store={store} basket={basketAt(store.id)} />
           ))}
         </ul>
-      </aside>
+      </SidePanel>
     </div>
   );
 }

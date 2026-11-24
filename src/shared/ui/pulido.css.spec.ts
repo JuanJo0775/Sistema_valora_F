@@ -44,24 +44,20 @@ describe('tableta vertical: el detalle del producto', () => {
   });
 });
 
-describe('categorías del Inicio en una sola fila', () => {
-  it('no pasan a varias líneas con el ratón: un renglón que se desliza', () => {
+describe('categorías del Inicio en varias líneas', () => {
+  it('pasan a varias líneas, sin overflow ni scroll horizontal', () => {
+    const rule = /\.category-chips\.chip-row\s*\{([^}]*)\}/.exec(chipRow)?.[1] ?? '';
+    expect(rule).toMatch(/flex-wrap:\s*wrap/);
+    expect(rule).toMatch(/overflow:\s*visible/);
+    expect(chipRow).not.toMatch(/nowrap|overflow-x:\s*auto|mask-image|scroll-behavior/);
+  });
+
+  it('ya no hay flechas de desplazamiento', () => {
+    expect(chipRow).not.toMatch(/chip-arrow/);
+    expect(read('src/shared/ui/highlight.css')).not.toMatch(/chip-arrow/);
     expect(comparison).not.toMatch(
       /pointer:\s*fine\)\s*\{\s*\.category-chips\s*\{\s*flex-wrap:\s*wrap/,
     );
-    expect(chipRow).toMatch(/\.chip-row \.category-chips\s*\{[^}]*flex-wrap:\s*nowrap/);
-    expect(chipRow).toMatch(/overflow-x:\s*auto/);
-  });
-
-  it('el borde se difumina solo hacia donde hay más, y las flechas son solo para el ratón', () => {
-    expect(chipRow).toMatch(/\[data-end='more'\] \.category-chips\s*\{[^}]*mask-image/);
-    expect(chipRow).toMatch(/\[data-start='more'\] \.category-chips\s*\{[^}]*mask-image/);
-    expect(chipRow).toMatch(/\.chip-arrow\s*\{\s*display:\s*none/);
-    expect(chipRow).toMatch(/@media \(pointer: fine\)/);
-  });
-
-  it('respeta la preferencia de menos movimiento', () => {
-    expect(chipRow).toMatch(/prefers-reduced-motion: reduce[\s\S]*scroll-behavior:\s*auto/);
   });
 });
 

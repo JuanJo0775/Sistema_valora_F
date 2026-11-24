@@ -635,6 +635,12 @@
   padding: 12px;
 }
 
+.comparison-promotions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+}
+
 .promotion-conditions {
   grid-column: 1 / -1;
 }

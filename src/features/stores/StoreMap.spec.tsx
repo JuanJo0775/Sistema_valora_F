@@ -139,6 +139,61 @@ describe('mapa de Leaflet', () => {
     expect(screen.getByRole('button', { name: 'Ara' })).toBeInTheDocument();
   });
 
+  // Cuando la lista de tiendas está al lado (el mapa), ella es el camino del teclado: los pines no suman
+  // paradas de Tab (de un municipio con 50 tiendas serían 50) ni caen fuera del orden visual.
+  describe('con la lista como camino del teclado (pinsFocusable={false})', () => {
+    const near = [
+      { id: 'n1', name: 'Uno', type: 'barrio' as const, lat: 4.5339, lng: -75.6811 },
+      { id: 'n2', name: 'Dos', type: 'descuento' as const, lat: 4.53392, lng: -75.68112 },
+      { id: 'n3', name: 'Tres', type: 'barrio' as const, lat: 4.5339, lng: -75.68115 },
+    ];
+    const renderQuiet = (items: typeof stores) =>
+      render(
+        <MemoryRouter initialEntries={['/mapa']}>
+          <Routes>
+            <Route
+              path="/mapa"
+              element={<StoreMap stores={items} label="Mapa" pinsFocusable={false} />}
+            />
+            <Route path="/tiendas/:id" element={<WhereAmI />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+    it('los pines y los grupos no reciben foco, pero conservan su nombre', () => {
+      const { container, unmount } = renderQuiet(stores);
+      const pins = [...container.querySelectorAll('.store-pin')];
+      expect(pins).toHaveLength(2);
+      for (const pin of pins) {
+        expect(pin).not.toHaveAttribute('tabindex');
+        expect(pin).toHaveAttribute('role', 'img');
+      }
+      expect(pins.map((pin) => pin.getAttribute('aria-label'))).toEqual(['Ara', 'D1']);
+      expect(screen.queryByRole('button', { name: 'Ara' })).not.toBeInTheDocument();
+      unmount();
+
+      const grouped = renderQuiet(near);
+      const group = screen.getByRole('img', { name: /Grupo de 3 tiendas/ });
+      expect(group).not.toHaveAttribute('tabindex');
+      expect(grouped.container.querySelectorAll('[tabindex="0"].leaflet-marker-icon')).toHaveLength(
+        0,
+      );
+    });
+
+    it('el clic con ratón sigue abriendo el globo y «Ver precios» lleva a la tienda', async () => {
+      const { container } = renderQuiet(stores);
+      fireEvent.click(container.querySelector('.store-pin') as Element);
+      fireEvent.click(await screen.findByRole('button', { name: 'Ver precios' }));
+      expect(await screen.findByText('Estás en /tiendas/a1')).toBeInTheDocument();
+    });
+
+    it('Enter ya no abre el globo desde el pin (el camino es la lista)', () => {
+      const { container } = renderQuiet(stores);
+      fireEvent.keyDown(container.querySelector('.store-pin') as Element, { key: 'Enter' });
+      expect(screen.queryByRole('link', { name: 'Cómo llegar a Ara' })).not.toBeInTheDocument();
+    });
+  });
+
   it('Enter sobre un pin abre su globo, con «Cómo llegar» y «Ver precios», y el foco entra en él', async () => {
     renderMap();
 

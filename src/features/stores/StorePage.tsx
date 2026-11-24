@@ -9,6 +9,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
+import { SidePanel } from '../../shared/ui/SidePanel';
 import { Skeleton } from '../../shared/ui/Skeleton';
 import { ProductThumb } from '../catalog/ProductThumb';
 import { MUNICIPALITIES } from '../comparison/criteria';
@@ -135,12 +136,12 @@ export function StorePage() {
           <MerchantReport key={store.id} establishmentId={store.id} />
         </header>
       </div>
-      <aside className="side store-side" aria-labelledby="tienda-ubicacion">
+      <SidePanel className="store-side" aria-labelledby="tienda-ubicacion">
         <section className="store-card-box">
           <h2 id="tienda-ubicacion">Ubicación</h2>
           <StoreMap stores={[store]} label={`Mapa: ${store.name}`} />
         </section>
-      </aside>
+      </SidePanel>
       <section className="store-prices" aria-labelledby="tienda-precios">
         <div className="store-prices-head">
           <h2 id="tienda-precios">Precios</h2>

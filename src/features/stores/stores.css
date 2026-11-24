@@ -235,25 +235,12 @@
   border-radius: var(--r-l);
 }
 
-/* En escritorio la lista de tiendas llena la columna derecha hasta el alto útil de la ventana y se
-   desplaza por dentro (el overflow y la barra son los de `.side`, en base.css). No se llama
-   `.store-list`: ese nombre ya lo usa el selector de tienda de los reportes. */
-@media (width >= 960px) {
-  .map-side {
-    height: var(--side-h);
-  }
-}
-
-/* «Sugerir una tienda» queda fijo arriba de la lista; la sombra del color del fondo tapa las
-   tarjetas que pasan por debajo. */
+/* La lista de tiendas es una columna de la página (el panel `.side` de base.css no tiene alto propio ni
+   scroll). No se llama `.store-list`: ese nombre ya lo usa el selector de tienda de los reportes. */
 .suggest-store {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   width: 100%;
   border: 1px solid var(--field-line);
   background: var(--bg);
-  box-shadow: 0 8px 0 var(--bg);
 }
 
 .store-cards {
@@ -481,7 +468,7 @@
 
 /* Página de una tienda (/tiendas/:id): encabezado en tarjeta, mapa y precios. En el celular van uno
    debajo del otro en ese orden; en escritorio, encabezado y precios a la izquierda y el mapa fijo a
-   la derecha (.side y --side-h vienen de base.css). */
+   la derecha (.side viene de base.css). */
 .store-page {
   gap: 16px;
   grid-template-areas: 'top' 'side' 'prices';
@@ -519,6 +506,18 @@
 
 .store-address {
   font-weight: 600;
+}
+
+/* Teléfono y horario semanal: objetivos de 44 px (WCAG 2.5.8) sin mover el resto de la ficha. */
+.store-head p a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+}
+
+.store-head summary {
+  padding-block: 11px;
+  cursor: pointer;
 }
 
 .store-head-actions {
