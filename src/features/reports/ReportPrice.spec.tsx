@@ -433,6 +433,28 @@ describe('registrar un precio', () => {
       );
     });
 
+    it('buscar y elegir el producto conserva la tienda de la dirección', async () => {
+      stubApi({
+        ...productRoute,
+        ...pepePrices,
+        'GET /v1/products': { status: 200, body: { items: [rice] } },
+      });
+      renderReport(`/registrar?tienda=${donPepe.id}`);
+
+      fireEvent.change(screen.getByRole('combobox', { name: 'Buscar producto' }), {
+        target: { value: 'arroz' },
+      });
+      fireEvent.submit(screen.getByRole('search'));
+      const result = await screen.findByRole('link', { name: /Arroz blanco/ });
+      expect(result).toHaveAttribute('href', `/registrar?producto=${rice.id}&tienda=${donPepe.id}`);
+
+      fireEvent.click(result);
+
+      expect(await screen.findByRole('group', { name: 'Tienda' })).toHaveTextContent(
+        'Tienda Don Pepe',
+      );
+    });
+
     it('si no es un UUID se ignora sin llamar a la API ni romper la pantalla', async () => {
       const api = stubApi(productRoute);
       renderReport(`/registrar?producto=${rice.id}&tienda=otra`);
