@@ -15,7 +15,10 @@ import { useWhere } from './useWhere';
 import { WherePicker } from './WherePicker';
 import './comparison.css';
 
-type Featured = operations['listFeaturedProducts']['responses'][200]['content']['application/json'];
+type FeaturedPage =
+  operations['listFeaturedProducts']['responses'][200]['content']['application/json'];
+// El servidor ya entrega total y hasMore, pero la pantalla tolera una respuesta que no los traiga.
+type Featured = Omit<FeaturedPage, 'total' | 'hasMore'> & { total?: number; hasMore?: boolean };
 type Item = Featured['items'][number];
 type Category = components['schemas']['Category'];
 
@@ -129,11 +132,11 @@ export function TodayBasket() {
       ...(category ? { category } : {}),
     };
     call(api.GET('/featured-products', { params: { query } }))
-      .then((page) => {
+      .then((response: Featured) => {
         if (!current) return;
-        setShown((before) => accumulate(before, page, filter, offset, limit));
-        if (page.total !== undefined) {
-          const known = page.total;
+        setShown((before) => accumulate(before, response, filter, offset, limit));
+        if (response.total !== undefined) {
+          const known = response.total;
           setTotals((all) => ({ ...all, [filter]: known }));
         }
         setOutcome({ key });
