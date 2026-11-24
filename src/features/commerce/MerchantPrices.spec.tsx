@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
 import { sessionAs, stubApi } from '../../test/fakeApi';
@@ -28,7 +28,7 @@ function openPanel(overrides: Parameters<typeof stubApi>[0] = {}) {
       status: 200,
       body: { prices: [{ presentationId: 'p1', productName: 'Arroz · 500 g' }] },
     },
-    [`GET ${prices}`]: { status: 200, body: { items: [item] } },
+    [`GET ${prices}`]: { status: 200, body: { items: [item], inReview: [] } },
     'GET /v1/commerce/alerts': { status: 200, body: { items: [] } },
     ...overrides,
   });
@@ -45,7 +45,7 @@ describe('panel de precios oficiales (#166)', () => {
 
   it('publica un precio tras buscar y elegir una presentación del catálogo', async () => {
     const { calls } = openPanel({
-      [`GET ${prices}`]: { status: 200, body: { items: [] } },
+      [`GET ${prices}`]: { status: 200, body: { items: [], inReview: [] } },
       'GET /v1/products': { status: 200, body: { items: [product] } },
       [`PUT ${prices}`]: { status: 200, body: item },
     });
@@ -128,6 +128,7 @@ describe('panel de precios oficiales (#166)', () => {
         status: 200,
         body: {
           published: 1,
+          inReview: [],
           errors: [
             { row: 3, barcode: '01234567', code: 'INVALID_PRICE', message: 'Precio inválido.' },
           ],
@@ -149,6 +150,136 @@ describe('panel de precios oficiales (#166)', () => {
     const request = calls.find(({ path }) => path === `${prices}/bulk`);
     expect(request?.headers.get('Content-Type')).toMatch(/^text\/csv/);
     expect(request?.body).toBe(csv);
+  });
+
+  it('si el servidor dice que el precio es absurdo, muestra su mensaje junto al campo y deja el editor abierto', async () => {
+    const message =
+      'Tu precio de $300 está fuera de lo normal para esta presentación. Lo más barato que vemos es $2.000 y lo más caro $3.500. Revisa si faltan o sobran ceros.';
+    openPanel({
+      [`PUT ${prices}`]: { status: 422, body: { code: 'IMPLAUSIBLE_OFFICIAL_PRICE', message } },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar precio de Arroz · 500 g' }));
+    const input = screen.getByLabelText('Precio oficial en pesos');
+    fireEvent.change(input, { target: { value: '300' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar precio' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    // El mensaje es del campo (no un error genérico de la página) y el foco vuelve a él.
+    expect(input).toHaveAccessibleDescription(message);
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    await waitFor(() => {
+      expect(input).toHaveFocus();
+    });
+    expect(screen.getByRole('button', { name: 'Guardar precio' })).toBeInTheDocument();
+    expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
+    // Al corregir el valor, el aviso desaparece.
+    fireEvent.change(input, { target: { value: '2300' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('avisa que el precio quedó en revisión y que sigue vigente el anterior', async () => {
+    openPanel({
+      [`PUT ${prices}`]: { status: 200, body: { ...item, priceCop: 2300, status: 'en_revision' } },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar precio de Arroz · 500 g' }));
+    fireEvent.change(screen.getByLabelText('Precio oficial en pesos'), {
+      target: { value: '2300' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar precio' }));
+    expect(
+      await screen.findByText(
+        'Tu precio quedó en revisión: un moderador lo verá antes de publicarlo. Mientras tanto sigue vigente el anterior.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
+  });
+
+  it('si no había un precio anterior, el aviso de revisión no promete uno vigente', async () => {
+    openPanel({
+      [`GET ${prices}`]: { status: 200, body: { items: [], inReview: [] } },
+      'GET /v1/products': { status: 200, body: { items: [product] } },
+      [`PUT ${prices}`]: { status: 200, body: { ...item, status: 'en_revision' } },
+    });
+    fireEvent.change(
+      await screen.findByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+      { target: { value: 'Arroz' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar en el catálogo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Arroz · 500 g' }));
+    fireEvent.change(screen.getByLabelText('Precio oficial en pesos'), {
+      target: { value: '2200' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar precio' }));
+    expect(
+      await screen.findByText(
+        'Tu precio quedó en revisión: un moderador lo verá antes de publicarlo.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('lista los precios en revisión con su nota, y no muestra la sección si no hay', async () => {
+    openPanel({
+      [`GET ${prices}`]: {
+        status: 200,
+        body: {
+          items: [item],
+          inReview: [
+            {
+              presentationId: 'p1',
+              priceCop: 2300,
+              submittedAt: '2026-11-23T15:00:00Z',
+              status: 'en_revision',
+            },
+          ],
+        },
+      },
+    });
+    const section = (await screen.findByRole('heading', { name: 'En revisión' })).closest(
+      'section',
+    ) as HTMLElement;
+    expect(within(section).getByText('Arroz · 500 g')).toBeInTheDocument();
+    expect(within(section).getByText('$2.300')).toBeInTheDocument();
+    expect(within(section).getByText(/Enviado el /)).toBeInTheDocument();
+    expect(within(section).getByText(/todavía no son públicos/)).toBeInTheDocument();
+  });
+
+  it('sin precios en revisión no muestra la sección «En revisión»', async () => {
+    openPanel();
+    await screen.findByText('Por confirmar');
+    expect(screen.queryByRole('heading', { name: 'En revisión' })).not.toBeInTheDocument();
+  });
+
+  it('en la carga CSV separa las filas rechazadas de las que quedaron en revisión', async () => {
+    const csv = 'codigo_barras;precio\r\n12345678;300\r\n87654321;2200\r\n';
+    openPanel({
+      [`POST ${prices}/bulk`]: {
+        status: 200,
+        body: {
+          published: 0,
+          inReview: [{ row: 3, barcode: '87654321', priceCop: 2200 }],
+          errors: [
+            {
+              row: 2,
+              barcode: '12345678',
+              code: 'IMPLAUSIBLE_OFFICIAL_PRICE',
+              message: 'Tu precio de $300 está fuera de lo normal.',
+            },
+          ],
+        },
+      },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Carga masiva' }));
+    fireEvent.change(await screen.findByLabelText('Archivo CSV'), {
+      target: { files: [new File([csv], 'precios.csv', { type: 'text/csv' })] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar precios' }));
+    expect(await screen.findByText('Filas publicadas: 0.')).toBeInTheDocument();
+    expect(screen.getByText('Tu precio de $300 está fuera de lo normal.')).toBeInTheDocument();
+    const review = screen.getByRole('heading', { name: '1 fila quedó en revisión' }).parentElement;
+    expect(review).not.toBeNull();
+    const list = within(review as HTMLElement);
+    expect(list.getByText('Fila 3')).toBeInTheDocument();
+    expect(list.getByText(/87654321/)).toBeInTheDocument();
   });
 
   it('rechaza un precio fuera del rango del backend sin publicar', async () => {

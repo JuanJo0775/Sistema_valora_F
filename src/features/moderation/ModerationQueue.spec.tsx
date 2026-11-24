@@ -59,6 +59,34 @@ describe('precios en revisión', () => {
     expect(milk.getByText('«Lo vi en la góndola, el precio era ese.»')).toBeInTheDocument();
   });
 
+  it('un precio oficial sin referencia no muestra mediana ni porcentaje y no ofrece observar cuentas', async () => {
+    renderQueue({
+      'GET /v1/moderation/queue': queue(
+        item('Lentejas Diana · 500 g', 'sin_referencia', {
+          medianPriceCop: undefined,
+          deviationPercent: undefined,
+          reportersCount: 0,
+        }),
+        item('Arroz Diana · 500 g', 'marcado'),
+      ),
+    });
+    await screen.findByText('Lentejas Diana · 500 g');
+    const lentils = caseOf('Lentejas Diana · 500 g');
+    expect(lentils.getByText('Sin referencia para comparar')).toBeInTheDocument();
+    expect(
+      lentils.getByText('Precio oficial de un comercio sin otras tiendas para compararlo'),
+    ).toBeInTheDocument();
+    expect(lentils.queryByText(/mediana/)).not.toBeInTheDocument();
+    expect(lentils.queryByText(/%/)).not.toBeInTheDocument();
+    expect(lentils.getByRole('radio', { name: 'Aprobar' })).toBeInTheDocument();
+    expect(lentils.getByRole('radio', { name: 'Descartar' })).toBeInTheDocument();
+    expect(lentils.queryByRole('radio', { name: 'Observar cuentas' })).not.toBeInTheDocument();
+    // Los demás motivos conservan las tres opciones.
+    expect(
+      caseOf('Arroz Diana · 500 g').getByRole('radio', { name: 'Observar cuentas' }),
+    ).toBeInTheDocument();
+  });
+
   const decide = async (name: string, decision: string, note: string) => {
     const row = within((await screen.findByText(name)).closest('li') as HTMLElement);
     fireEvent.click(row.getByRole('radio', { name: decision }));
