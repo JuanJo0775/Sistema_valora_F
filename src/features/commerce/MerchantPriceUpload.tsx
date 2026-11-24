@@ -64,7 +64,12 @@ export function MerchantPriceUpload({
           bodySerializer: () => text,
         }),
       );
-      setReport({ outcome, retryCsv: csvForRetry(text, outcome.errors) });
+      // Un backend anterior no trae `inReview`: sin ese campo, ninguna fila quedó en revisión.
+      const held = (outcome.inReview as typeof outcome.inReview | undefined) ?? [];
+      setReport({
+        outcome: { ...outcome, inReview: held },
+        retryCsv: csvForRetry(text, outcome.errors),
+      });
       return `Filas publicadas: ${String(outcome.published)}.`;
     });
   };

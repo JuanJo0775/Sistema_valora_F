@@ -92,7 +92,8 @@ function PricePanel() {
       .then(({ items, inReview: waiting }) => {
         if (signal.aborted) return;
         setPrices({ data: items });
-        setInReview(waiting);
+        // El portal puede salir antes que el backend que trae `inReview`: sin ese campo, no hay nada en revisión.
+        setInReview(Array.isArray(waiting) ? waiting : []);
         const storeId = items[0]?.establishmentId;
         if (!storeId) return;
         return call(
