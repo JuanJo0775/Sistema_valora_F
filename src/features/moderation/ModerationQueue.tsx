@@ -34,7 +34,7 @@ const DECISIONS: { value: Decision; label: string; hint?: string; confirm?: stri
     value: 'observar_cuentas',
     label: 'Observar cuentas',
     // Backend (#33): suspende 7 días al autor del reporte y solo anota la decisión; no aprueba ni descarta.
-    hint: 'Observar cuentas suspende por 7 días la cuenta de quien reportó. No aprueba ni descarta este reporte.',
+    hint: 'Observar cuentas suspende por 7 días la cuenta de quien reportó y descarta este reporte.',
     confirm: 'Esto suspende la cuenta por 7 días. ¿Confirmas?',
   },
 ];
