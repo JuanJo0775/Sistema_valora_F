@@ -1,5 +1,8 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+// Los estilos del mapa viven con el componente: sin esto, quien lo usa fuera de /mapa y de la ficha
+// de tienda (por ejemplo «Cambiar ubicación» en el portal de comercios) lo ve con 0 px de alto.
+import './stores.css';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { directionsTo } from '../../shared/directions';
