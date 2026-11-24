@@ -3,10 +3,9 @@ import { Link, useLocation, useSearchParams } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { type BasketItem, useBasket } from './basketContext';
 import { ProductThumb } from '../catalog/ProductThumb';
-import { useWhere } from '../comparison/useWhere';
-import { WhereToBuy } from './WhereToBuy';
+import { WhereSummary } from './WhereSummary';
 import { nearbyTotals } from '../plan/nearby';
-import { useStoreTotals } from './useStoreTotals';
+import { useCanasta } from './canastaContext';
 import { BasketTabs, type BasketTab, panelId, tabId } from './BasketTabs';
 import { SavedLists } from './SavedLists';
 import type { SavedPlan } from '../plan/savedPlan';
@@ -46,12 +45,8 @@ export function BasketPage() {
       panel.current?.focus();
     }
   }, [tab]);
-  // Dónde buscar (municipio guardado, o la ubicación del momento con su radio) manda en las fichas de
-  // «Dónde comprar» y en el «dónde sale más barato» de cada producto: las mismas cuentas para todo.
-  const where = useWhere();
-  // ADR-031: se consulta siempre por municipio (misma URL para todos, caché compartida); la cercanía
-  // se calcula aquí, en el dispositivo, con la ubicación en memoria.
-  const { totals: all } = useStoreTotals(items, { municipality: where.municipality });
+  // La tienda más barata del área manda en cada fila: las mismas cuentas que «Dónde comprar».
+  const { where, totals: all } = useCanasta();
   const totals = nearbyTotals(all, where.point, where.radiusKm);
   const bestStore = totals.status === 'ready' ? totals.best?.store.name : undefined;
   const ordered = [...items].sort((a, b) => Number(a.bought) - Number(b.bought));
@@ -102,7 +97,6 @@ export function BasketPage() {
             />
           ) : (
             <>
-              <p className="muted">Te decimos dónde te sale más barata.</p>
               <ul className="basket-list">
                 {ordered.map((item) => (
                   <BasketRow
@@ -127,14 +121,7 @@ export function BasketPage() {
           )}
         </div>
       </section>
-      {tab === 'lista' && items.length > 0 && (
-        <WhereToBuy
-          where={where}
-          municipality={where.municipality}
-          totals={all}
-          items={items.filter(({ bought }) => !bought)}
-        />
-      )}
+      {tab === 'lista' && items.length > 0 && <WhereSummary />}
     </div>
   );
 }

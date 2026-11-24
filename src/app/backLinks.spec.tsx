@@ -68,6 +68,28 @@ describe('botón de volver', () => {
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/mapa');
   });
 
+  it('«Dónde comprar» vuelve a la canasta', async () => {
+    localStorage.setItem(
+      'valora:canasta',
+      JSON.stringify([
+        {
+          productId: '3f1c2a64-5c1e-4b8a-9d61-0a7b1f2e3c4d',
+          productName: 'Arroz',
+          presentationId: 'a',
+          presentationLabel: '1 kg',
+          quantity: 1,
+          bought: false,
+        },
+      ]),
+    );
+    stubApi({ 'GET /v1/auth/session': NO_SESSION });
+    open('/canasta/donde-comprar');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dónde comprar' })).toBeVisible();
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/canasta');
+    localStorage.clear();
+  });
+
   it('ajustes sigue volviendo a Yo', async () => {
     stubApi({ 'GET /v1/auth/session': NO_SESSION });
     open('/yo/ajustes');

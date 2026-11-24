@@ -4,7 +4,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { basketOf, fakeApi, PRODUCTS, savedPlan, seed } from './support/planFake';
 
 // Listas guardadas dentro de la canasta (/canasta): pestañas «Mi lista | Guardadas», «Guardar lista»
-// en «Dónde comprar» y las tarjetas con sus acciones. Sin backend: /v1 es falso. Con LISTAS_EVIDENCIA
+// (en su pantalla /canasta/donde-comprar) y las tarjetas con sus acciones. Sin backend: /v1 es falso. Con LISTAS_EVIDENCIA
 // se guardan capturas (escala 1) en esa carpeta, que debe quedar fuera del repo.
 const EVIDENCIA = process.env['LISTAS_EVIDENCIA'];
 const SIZES = [
@@ -114,12 +114,12 @@ for (const size of SIZES) {
     await shot(page, `guardadas-${size.name}`);
   });
 
-  test(`/canasta con «Guardar lista» a ${size.name}`, async ({ page }) => {
+  test(`/canasta/donde-comprar con «Guardar lista» a ${size.name}`, async ({ page }) => {
     await page.setViewportSize({ width: size.width, height: size.height });
     await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
     await fakeApi(page);
-    await page.goto('/canasta');
-    const where = page.getByRole('complementary', { name: 'Dónde comprar' });
+    await page.goto('/canasta/donde-comprar');
+    const where = page.getByRole('complementary', { name: 'Guardar lista' });
     await expect(where.getByRole('button', { name: 'Guardar lista' })).toBeVisible();
     await noOverflow(page);
     expect(await smallTargets(where)).toEqual([]);
@@ -135,7 +135,9 @@ test('guardar «Mercado semanal», vaciar la canasta y volver a usarla', async (
   await seed(page, 'valora:canasta', basketOf(PRODUCTS.slice(0, 3)));
   await fakeApi(page);
   await page.goto('/canasta');
-  const where = page.getByRole('complementary', { name: 'Dónde comprar' });
+  // Guardar vive en su pantalla: «Ver dónde comprar» en el resumen lleva a ella.
+  await page.getByRole('link', { name: 'Ver dónde comprar' }).click();
+  const where = page.getByRole('complementary', { name: 'Guardar lista' });
   await where.getByRole('textbox', { name: 'Nombre de la lista' }).fill('Mercado semanal');
   await where.getByRole('button', { name: 'Guardar lista' }).click();
   await where.getByRole('link', { name: 'Ver en Guardadas' }).click();

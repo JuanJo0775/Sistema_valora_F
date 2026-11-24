@@ -30,6 +30,8 @@ const MerchantRegistration = screen(
 const Profile = screen(() => import('../features/auth/Profile'), 'Profile');
 const PendingReports = screen(() => import('../pwa/PendingReports'), 'PendingReports');
 const BasketPage = screen(() => import('../features/basket/BasketPage'), 'BasketPage');
+const CanastaScope = screen(() => import('../features/basket/CanastaScope'), 'CanastaScope');
+const WherePage = screen(() => import('../features/basket/WherePage'), 'WherePage');
 const SavedPlanPage = screen(() => import('../features/plan/SavedPlanPage'), 'SavedPlanPage');
 const ReportPrice = screen(() => import('../features/reports/ReportPrice'), 'ReportPrice');
 const InstallAndUninstall = screen(
@@ -146,7 +148,10 @@ export function App() {
                   }
                 />
                 <Route path="/pendientes" element={<PendingReports />} />
-                <Route path="/canasta" element={<BasketPage />} />
+                <Route element={<CanastaScope />}>
+                  <Route path="/canasta" element={<BasketPage />} />
+                  <Route path="/canasta/donde-comprar" element={<WherePage />} />
+                </Route>
                 <Route path="/canasta/plan" element={<LegacyPlanRedirect />} />
                 <Route path="/canasta/plan/:id" element={<SavedPlanPage />} />
                 <Route path="/yo" element={<Profile />} />

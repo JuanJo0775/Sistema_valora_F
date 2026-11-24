@@ -1,5 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '../../test/fakeApi';
 import { MILK, RICE, item, offer, planDraft, shop } from '../../test/planFixtures';
@@ -11,8 +10,7 @@ import {
   toSavedPlan,
   type PlanDraft,
 } from '../plan/savedPlan';
-import { BasketPage } from './BasketPage';
-import { BasketProvider } from './BasketProvider';
+import { renderCanasta } from '../../test/renderCanasta';
 
 const rice = item(RICE, 'Arroz blanco', 'arroz-500g', 2);
 const milk = item(MILK, 'Leche entera', 'leche-1l');
@@ -38,13 +36,7 @@ const prices = () =>
 
 const renderBasket = (items: ReturnType<typeof item>[], at = '/canasta') => {
   localStorage.setItem('valora:canasta', JSON.stringify(items));
-  return render(
-    <BasketProvider>
-      <MemoryRouter initialEntries={[at]}>
-        <BasketPage />
-      </MemoryRouter>
-    </BasketProvider>,
-  );
+  return renderCanasta(at);
 };
 
 const NOW = new Date('2026-11-17T15:00:00Z');
@@ -130,10 +122,10 @@ describe('pestañas «Mi lista | Guardadas»', () => {
 });
 
 describe('«Guardar lista» en «Dónde comprar»', () => {
-  const panel = () => screen.findByRole('complementary', { name: 'Dónde comprar' });
+  const panel = () => screen.findByRole('complementary', { name: 'Guardar lista' });
   const open = async () => {
     prices();
-    renderBasket([rice, milk]);
+    renderBasket([rice, milk], '/canasta/donde-comprar');
     const aside = await panel();
     await within(aside).findByRole('button', { name: 'Guardar lista' });
     return aside;
@@ -150,7 +142,7 @@ describe('«Guardar lista» en «Dónde comprar»', () => {
       'href',
       '/canasta?tab=guardadas',
     );
-    expect(screen.getByRole('tab', { name: 'Guardadas (1)' })).toBeInTheDocument();
+    expect(readPlans()).toHaveLength(1);
     const json = localStorage.getItem('valora:planes') ?? '';
     expect(json).not.toContain('distanceM');
   });
@@ -196,7 +188,7 @@ describe('«Guardar lista» en «Dónde comprar»', () => {
       ...comparison(RICE),
       ...comparison(MILK),
     });
-    renderBasket([rice, milk]);
+    renderBasket([rice, milk], '/canasta/donde-comprar');
     const aside = await panel();
     fireEvent.click(await within(aside).findByRole('button', { name: 'Guardar solo la lista' }));
     const [plan] = readPlans();
