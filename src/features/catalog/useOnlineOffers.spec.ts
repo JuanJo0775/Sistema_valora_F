@@ -26,3 +26,38 @@ it('lee la oferta sintética del producto para la zona de prueba', async () => {
   });
   expect(requested[0]?.searchParams.get('zone')).toBe('armenia-centro');
 });
+
+it('entrega una lista vacía cuando la API no publica ofertas vigentes', async () => {
+  stubApi({ ['GET ' + path]: { status: 200, body: { items: [] } } });
+  const { result } = renderHook(() => useOnlineOffers(productId));
+  await waitFor(() => {
+    expect(result.current).toEqual({ status: 'ready', items: [] });
+  });
+});
+
+it('aísla el error de ofertas del resto de la ficha', async () => {
+  stubApi({ ['GET ' + path]: { status: 503 } });
+  const { result } = renderHook(() => useOnlineOffers(productId));
+  await waitFor(() => {
+    expect(result.current).toEqual({ status: 'unavailable' });
+  });
+});
+
+it('deja de mostrar la oferta anterior cuando cambia el producto', async () => {
+  const nextId = '8afdec69-8d0b-4557-898c-1807415478c1';
+  stubApi({
+    ['GET ' + path]: { status: 200, body: { items: [offer] } },
+    ['GET /v1/products/' + nextId + '/online-offers']: { status: 200, body: { items: [] } },
+  });
+  const { result, rerender } = renderHook(({ id }) => useOnlineOffers(id), {
+    initialProps: { id: productId },
+  });
+  await waitFor(() => {
+    expect(result.current).toEqual({ status: 'ready', items: [offer] });
+  });
+  rerender({ id: nextId });
+  expect(result.current).toEqual({ status: 'loading' });
+  await waitFor(() => {
+    expect(result.current).toEqual({ status: 'ready', items: [] });
+  });
+});
