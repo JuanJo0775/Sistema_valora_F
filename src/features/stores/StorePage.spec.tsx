@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { type FakeReply, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { SessionProvider } from '../auth/SessionProvider';
 import { StorePage } from './StorePage';
 
 vi.mock('./StoreMap', () => ({
@@ -55,6 +56,41 @@ const renderStore = () =>
 describe('página de una tienda', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  const renderAs = (role: 'comercio' | 'reportante') => {
+    stubApi({
+      [`GET /v1/establishments/${ARA}/prices`]: storeReply([banana]),
+      'GET /v1/auth/session': sessionAs(role),
+    });
+    return render(
+      <SessionProvider>
+        <MemoryRouter initialEntries={[`/tiendas/${ARA}`]}>
+          <Routes>
+            <Route path="/tiendas/:establishmentId" element={<StorePage />} />
+          </Routes>
+        </MemoryRouter>
+      </SessionProvider>,
+    );
+  };
+
+  it('a un reportante le ofrece reclamar la tienda', async () => {
+    renderAs('reportante');
+
+    expect(
+      await screen.findByRole('link', { name: '¿Eres el dueño? Registra tu tienda' }),
+    ).toBeInTheDocument();
+  });
+
+  it('a un comercio no le ofrece reclamar una tienda: ya no puede registrar otra', async () => {
+    renderAs('comercio');
+
+    await screen.findByRole('heading', { level: 1, name: 'Ara' });
+    await vi.waitFor(() => {
+      expect(
+        screen.queryByRole('link', { name: '¿Eres el dueño? Registra tu tienda' }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('muestra la tienda en una tarjeta con su tipo, dirección, municipio y acciones', async () => {
