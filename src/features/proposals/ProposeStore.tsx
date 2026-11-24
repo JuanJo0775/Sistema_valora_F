@@ -70,6 +70,7 @@ export function ProposeStore() {
     return (
       <EmptyState
         title="Recibido"
+        focus
         text="Aparecerá en el mapa cuando un moderador la apruebe."
         action={
           <div className="actions">

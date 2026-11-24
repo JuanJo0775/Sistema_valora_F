@@ -270,6 +270,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         )}
         <EmptyState
           title={done === 'recibido' ? 'Recibido' : 'Guardado en tu teléfono'}
+          focus
           text={
             done === 'recibido'
               ? 'Gracias: tu precio ayuda a otros a comparar. Ya cuenta en la comparación; el estado de tu aporte lo ves en «Mis aportes».'

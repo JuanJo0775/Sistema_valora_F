@@ -56,12 +56,20 @@ describe('panel de precios oficiales (#166)', () => {
       },
     );
     fireEvent.click(screen.getByRole('button', { name: 'Buscar en el catálogo' }));
+    // El campo no se deshabilita mientras busca: así no pierde el foco del teclado.
+    expect(
+      screen.getByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+    ).toBeEnabled();
     fireEvent.click(await screen.findByRole('button', { name: 'Arroz · 500 g' }));
     fireEvent.change(screen.getByLabelText('Precio oficial en pesos'), {
       target: { value: '2200' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Publicar precio' }));
     expect(await screen.findByText('Precio oficial publicado.')).toBeInTheDocument();
+    // El formulario de precio desaparece al guardar: el foco vuelve al buscador, listo para el siguiente.
+    expect(
+      screen.getByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+    ).toHaveFocus();
     const request = calls.find(({ method, path }) => method === 'PUT' && path === prices);
     expect(request?.body).toBe(JSON.stringify({ presentationId: 'p1', priceCop: 2200 }));
     expect(request?.headers.get('X-CSRF-Token')).toBe('token-1');

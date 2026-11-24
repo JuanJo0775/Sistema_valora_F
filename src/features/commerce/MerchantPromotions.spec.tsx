@@ -169,14 +169,26 @@ describe('promociones del comercio (#167)', () => {
     if (!first) throw new Error('Falta el botón para retirar');
     fireEvent.click(first);
     expect(calls.some(({ method }) => method === 'DELETE')).toBe(false);
+    // «Retirar» se reemplaza por «Confirmar retiro»: el foco pasa a este botón.
+    expect(screen.getByRole('button', { name: 'Confirmar retiro' })).toHaveFocus();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar retiro' }));
-    expect(await screen.findByText('Promoción retirada.')).toBeInTheDocument();
+    expect(await screen.findByText('Promoción retirada.')).toHaveFocus();
     await waitFor(() => {
       expect(
         calls.some(({ method, path: url }) => method === 'DELETE' && url === `${path}/promo-1`),
       ).toBe(true);
       expect(screen.getByText('Aún no tienes promociones publicadas.')).toBeInTheDocument();
     });
+  });
+
+  it('al cancelar el retiro, el foco vuelve a «Retirar promoción»', async () => {
+    await open({
+      [`GET ${path}`]: { status: 200, body: { items: [promotion] } },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Retirar promoción' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.getByRole('button', { name: 'Retirar promoción' })).toHaveFocus();
   });
 
   it('guía a publicar o reconfirmar si no tiene precios vigentes', async () => {
