@@ -363,8 +363,13 @@ function storePricesOf(index: number) {
 const SVG = (size: number, fill: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${String(size)}" height="${String(size)}"><rect width="${String(size)}" height="${String(size)}" fill="${fill}"/></svg>`;
 
-// Responde el catálogo, las tiendas y sus precios; sin sesión (401) y sin teselas ni fotos de verdad.
-export async function richApi(page: Page) {
+// Los ids reales de tienda son UUID y /registrar?tienda= ignora lo que no lo sea: la tienda e-2 también
+// responde con este UUID (en la auditoría, «?tienda=e-2» no se tomaba por eso, no por un defecto).
+export const STORE_E2_UUID = '3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b';
+
+// Responde el catálogo, las tiendas y sus precios; sin sesión (401) salvo `session: true` (una persona
+// con el rol de reportante) y sin teselas ni fotos de verdad.
+export async function richApi(page: Page, { session = false }: { session?: boolean } = {}) {
   await page.route('https://img.valora.test/**', (route) =>
     route.fulfill({ contentType: 'image/svg+xml', body: SVG(200, '#d9c9a3') }),
   );
@@ -376,6 +381,15 @@ export async function richApi(page: Page) {
     const path = url.pathname.replace(/^.*\/v1/, '');
     const query = url.searchParams;
     const json = (body: unknown, status = 200) => route.fulfill({ status, json: body });
+    if (session && path === '/auth/session')
+      return json({
+        role: 'reportante',
+        emailVerified: true,
+        emailVerificationRequired: true,
+        hasPassword: true,
+        displayName: 'Persona de prueba',
+        csrfToken: 'token-1',
+      });
     if (path === '/categories') return json({ items: CATEGORIES });
     if (path === '/featured-products') {
       const category = query.get('category');
@@ -404,7 +418,9 @@ export async function richApi(page: Page) {
       return json({ items: STORES.map((_, i) => estabWithCount(i, true)) });
     const prices = /^\/establishments\/([^/]+)\/prices$/.exec(path);
     if (prices) {
-      const index = STORES.findIndex(([id]) => id === prices[1]);
+      const index = STORES.findIndex(
+        ([id]) => id === prices[1] || (id === 'e-2' && prices[1] === STORE_E2_UUID),
+      );
       return index < 0
         ? json({ code: 'NOT_FOUND', message: 'No existe.' }, 404)
         : json(storePricesOf(index));

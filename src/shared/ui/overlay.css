@@ -150,6 +150,9 @@
 }
 
 .option-search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   width: 100%;
   min-height: var(--touch);
   padding: 0 14px;
@@ -163,18 +166,27 @@
 .option-items {
   display: grid;
   gap: 2px;
-  max-height: min(46dvh, 288px);
   margin: 0;
   padding: 4px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
   border: 1px solid var(--line);
   border-radius: var(--r-m);
   background: var(--bg);
   list-style: none;
 }
 
+/* Un solo desplazamiento: el de la hoja (.overlay-body). La lista larga va en dos columnas, llenas de
+   arriba abajo, desde 960 px; `--option-rows` lo pone OptionList. */
+@media (width >= 960px) {
+  .option-items-cols {
+    grid-auto-flow: column;
+    grid-template-rows: repeat(var(--option-rows), auto);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 4px;
+  }
+}
+
 .option {
+  scroll-margin-top: calc(var(--touch) + 12px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -195,6 +207,14 @@
   background: var(--accent-soft);
   color: var(--accent-ink);
   font-weight: 600;
+}
+
+/* Con ratón (no con el dedo) las filas de las dos columnas miden 36 px (WCAG 2.5.8 pide 24): así la
+   lista de municipios cabe entera, sin desplazar, en un portátil de 1280×720. */
+@media (width >= 960px) and (pointer: fine) {
+  .option-items-cols .option {
+    min-height: 36px;
+  }
 }
 
 .option-check {

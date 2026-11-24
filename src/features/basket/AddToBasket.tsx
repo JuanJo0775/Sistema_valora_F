@@ -1,6 +1,8 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, useId, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import type { components } from '../../shared/api/schema';
 import { formatPresentation } from '../catalog/presentation';
+import { useMediaQuery } from '../../shared/useMediaQuery';
 import { PresentationChoices } from '../catalog/PresentationChoices';
 import { useBasket } from './basketContext';
 import './basket.css';
@@ -32,8 +34,8 @@ export function AddToBasket({
   const selected = product.presentations.find(({ id }) => id === presentationId);
   const [problem, setProblem] = useState('');
   const inBasket = items.filter(({ productId }) => productId === product.id);
-  const primary = useRef<HTMLButtonElement>(null);
-  const offscreen = useOffscreen(primary, inBasket.length === 0);
+  // En celular y tableta (hasta 959 px) la acción es la barra fija de abajo; en computador, el panel.
+  const narrow = useMediaQuery('(width < 960px)');
 
   const addChosen = () => {
     const presentation = product.presentations.find(({ id }) => id === presentationId);
@@ -78,32 +80,36 @@ export function AddToBasket({
               {problem}
             </p>
           )}
-          <button
-            ref={primary}
-            type="button"
-            className="btn"
-            onClick={addChosen}
-            aria-describedby={selected && !only ? hint : undefined}
-          >
-            Agregar a la canasta
-          </button>
-          {selected && !only && (
-            <p id={hint} className="muted add-hint">
-              {`Se agrega ${formatPresentation(selected)}`}
-            </p>
-          )}
-          {/* En el celular, cuando el botón de arriba sale de la pantalla, la misma acción queda
-              fija abajo. Solo existe mientras hace falta: no duplica el botón para lectores. */}
-          {offscreen && selected && (
-            <section className="action-bar" aria-label="Compra rápida">
-              <p className="action-bar-info">
-                <strong>{formatPresentation(selected)}</strong>
-                {lowestPrice && <span className="muted">{`Más barato ${lowestPrice}`}</span>}
-              </p>
-              <button type="button" className="btn" onClick={addChosen}>
+          {/* Solo hay un botón de agregar a la vez: en celular existe el de la barra y el del panel no
+              se dibuja (así no recibe foco ni lo lee dos veces el lector de pantalla). */}
+          {narrow ? (
+            selected && (
+              <ActionBar>
+                <p id={hint} className="action-bar-info">
+                  <strong>{formatPresentation(selected)}</strong>
+                  {lowestPrice && <span className="muted">{`Más barato ${lowestPrice}`}</span>}
+                </p>
+                <button type="button" className="btn" onClick={addChosen} aria-describedby={hint}>
+                  Agregar a la canasta
+                </button>
+              </ActionBar>
+            )
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn"
+                onClick={addChosen}
+                aria-describedby={selected && !only ? hint : undefined}
+              >
                 Agregar a la canasta
               </button>
-            </section>
+              {selected && !only && (
+                <p id={hint} className="muted add-hint">
+                  {`Se agrega ${formatPresentation(selected)}`}
+                </p>
+              )}
+            </>
           )}
         </>
       )}
@@ -111,22 +117,19 @@ export function AddToBasket({
   );
 }
 
-// true cuando el elemento está fuera de la pantalla. Sin IntersectionObserver (pruebas, navegadores
-// viejos) vale false: la barra simplemente no aparece y el botón del panel sigue siendo la acción.
-function useOffscreen(target: React.RefObject<HTMLElement | null>, active: boolean): boolean {
-  const [offscreen, setOffscreen] = useState(false);
-  useEffect(() => {
-    const element = target.current;
-    if (!active || !element || typeof IntersectionObserver === 'undefined') {
-      return;
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry) setOffscreen(!entry.isIntersecting);
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, [target, active]);
-  return offscreen;
+// La barra fija va en el hueco que deja el Layout después del contenido principal: está abajo en la
+// pantalla, así que el foco llega a ella después de todo lo demás y no antes (orden de foco = orden
+// visual). Sin ese hueco (pruebas de la pieza sola) queda donde se dibuja.
+function ActionBar({ children }: { children: ReactNode }) {
+  const bar = (
+    <section className="action-bar" aria-label="Compra rápida">
+      {children}
+    </section>
+  );
+  // El hueco existe cuando esta pieza ya se dibujó: se vuelve a leer tras montar.
+  const target = useSyncExternalStore(noSubscription, slot, () => null);
+  return target ? createPortal(bar, target) : bar;
 }
+
+const noSubscription = () => () => undefined;
+const slot = () => document.getElementById('acciones-fijas');

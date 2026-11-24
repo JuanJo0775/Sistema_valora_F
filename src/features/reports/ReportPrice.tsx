@@ -346,51 +346,56 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
             }}
           />
         </label>
-        <p id="ayuda-precio" className="muted">
+        <p id="ayuda-precio" className="muted price-note">
           {chosenSize
             ? `Es el precio de ${formatPresentation(chosenSize)}.`
-            : 'Es el precio de la presentación que elijas.'}{' '}
-          Puedes escribirlo como 4600, 4.600 o $4.600.
+            : 'Es el precio de la presentación que elijas.'}
         </p>
+        <details className="price-help">
+          <summary>¿Cómo escribirlo?</summary>
+          <p className="muted">Puedes escribirlo como 4600, 4.600 o $4.600.</p>
+        </details>
         <FieldProblem problem={problem} field="price" id="error-precio" />
       </div>
-      {seenAt === null ? (
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            setSeenAt(toLocalInput(startedAt));
-          }}
-        >
-          Lo vi otro día
-        </button>
-      ) : (
-        <label className="field">
-          ¿Cuándo lo viste?
+      <div className="report-extras">
+        {seenAt === null ? (
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setSeenAt(toLocalInput(startedAt));
+            }}
+          >
+            Lo vi otro día
+          </button>
+        ) : (
+          <label className="field">
+            ¿Cuándo lo viste?
+            <input
+              ref={timeRef}
+              type="datetime-local"
+              value={seenAt}
+              aria-invalid={problem?.field === 'time' ? true : undefined}
+              aria-describedby={problem?.field === 'time' ? 'error-hora' : undefined}
+              onChange={(event) => {
+                setSeenAt(event.target.value);
+                clear('time');
+              }}
+            />
+          </label>
+        )}
+        <label className="check">
           <input
-            ref={timeRef}
-            type="datetime-local"
-            value={seenAt}
-            aria-invalid={problem?.field === 'time' ? true : undefined}
-            aria-describedby={problem?.field === 'time' ? 'error-hora' : undefined}
+            type="checkbox"
+            checked={onSale}
             onChange={(event) => {
-              setSeenAt(event.target.value);
-              clear('time');
+              setOnSale(event.target.checked);
             }}
           />
+          Es oferta
         </label>
-      )}
+      </div>
       <FieldProblem problem={problem} field="time" id="error-hora" />
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={onSale}
-          onChange={(event) => {
-            setOnSale(event.target.checked);
-          }}
-        />
-        Es oferta
-      </label>
       {doubt !== null && reference && (
         <div
           ref={doubtRef}
@@ -439,9 +444,12 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         </div>
       )}
       {error !== null && <ReportProblem error={error} />}
-      <button type="submit" className="btn" disabled={sending}>
-        {sending ? 'Enviando…' : 'Enviar'}
-      </button>
+      {/* En el celular «Enviar» es una barra fija abajo, sobre la barra de navegación. */}
+      <div className="report-bar">
+        <button type="submit" className="btn" disabled={sending}>
+          {sending ? 'Enviando…' : 'Enviar'}
+        </button>
+      </div>
     </form>
   );
 }

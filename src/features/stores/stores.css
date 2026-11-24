@@ -617,6 +617,29 @@
   background: var(--bg);
 }
 
+/* En el celular el nombre (largo) no comparte la fila con la miniatura y el precio: va en una fila
+   completa y debajo, en otra, la miniatura a la izquierda y el precio a la derecha. */
+@media (width < 640px) {
+  .store-offer {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'body body'
+      'thumb price';
+  }
+
+  .store-offer > :first-child {
+    grid-area: thumb;
+  }
+
+  .store-offer-body {
+    grid-area: body;
+  }
+
+  .store-offer-price {
+    grid-area: price;
+  }
+}
+
 .store-offer-body {
   display: grid;
   gap: 6px;

@@ -259,11 +259,13 @@ function StorePageSkeleton() {
           {[0, 1, 2].map((item) => (
             <li key={item} className="offer store-offer">
               <Skeleton variant="block" className="thumb-row" />
-              <span className="skeleton-lines">
+              <span className="skeleton-lines store-offer-body">
                 <Skeleton width="60%" />
                 <Skeleton width="40%" />
               </span>
-              <Skeleton width="4.5rem" height="1.15rem" />
+              <span className="store-offer-price">
+                <Skeleton width="4.5rem" height="1.15rem" />
+              </span>
             </li>
           ))}
         </ul>

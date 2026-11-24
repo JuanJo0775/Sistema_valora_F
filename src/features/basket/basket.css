@@ -328,7 +328,7 @@
   white-space: nowrap;
 }
 
-.side .add-to-basket .action-bar .btn {
+.action-bar .btn {
   flex: none;
   width: auto;
 }

@@ -40,6 +40,12 @@
   max-height: 220px;
 }
 
+/* En el historial la gráfica llena el ancho de la columna (el dibujo ancho trae su propio tamaño). */
+.history-chart.wide {
+  max-width: none;
+  max-height: none;
+}
+
 .history-single {
   margin: 0;
   color: var(--ink-2);
@@ -99,4 +105,72 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* Subtítulo: el producto, debajo del título corto. */
+.history > p {
+  margin: 0;
+}
+
+.history > h1 {
+  margin-bottom: 0;
+}
+
+.history-product {
+  color: var(--ink-2);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+/* Resumen del periodo: cuatro tarjetas (dos por fila en celular, cuatro desde 640 px). */
+.history-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-stat {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  background: var(--bg-2);
+}
+
+.history-stat-label {
+  color: var(--ink-3);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.history-stat-value {
+  font-family: var(--f-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+@media (width >= 640px) {
+  .history-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* La tabla va plegada: es la alternativa de la gráfica, sin desplazamiento propio. */
+.history-table > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.history-table > summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
