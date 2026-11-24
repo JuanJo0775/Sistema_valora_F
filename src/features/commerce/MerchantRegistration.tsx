@@ -214,8 +214,17 @@ function ClaimForm({
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [locating, setLocating] = useState(false);
   const inFlight = useRef<AbortController | null>(null);
   const store = picked ?? prefill;
+  // Un aviso de error describe el dato anterior: se retira apenas la persona lo corrige.
+  const edit =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      set(value);
+      setProblem('');
+      setError(null);
+    };
 
   useEffect(
     () => () => {
@@ -284,7 +293,9 @@ function ClaimForm({
     inFlight.current = controller;
     setBusy(true);
     try {
+      setLocating(true);
       const location = await askLocation({ enableHighAccuracy: true }).catch(() => null);
+      setLocating(false);
       if (controller.signal.aborted) return;
       if (!location) {
         setProblem(
@@ -311,6 +322,7 @@ function ClaimForm({
       if (!controller.signal.aborted) setError(failure);
     } finally {
       inFlight.current = null;
+      setLocating(false);
       if (!controller.signal.aborted) setBusy(false);
     }
   };
@@ -325,25 +337,30 @@ function ClaimForm({
       <fieldset disabled={busy} className="merchant-fields">
         {isNew ? (
           <>
-            <Field label="Nombre de la tienda" value={name} maxLength={120} onValue={setName} />
+            <Field
+              label="Nombre de la tienda"
+              value={name}
+              maxLength={120}
+              onValue={edit(setName)}
+            />
             <SelectField
               label="Tipo de tienda"
               value={type}
               options={STORE_TYPE_OPTIONS}
-              onChange={setType}
+              onChange={edit(setType)}
             />
             <SelectField
               label="Municipio"
               value={municipality}
               options={MUNICIPALITY_OPTIONS}
-              onChange={setMunicipality}
+              onChange={edit(setMunicipality)}
             />
             <Field
               label="Dirección (opcional)"
               value={address}
               required={false}
               maxLength={200}
-              onValue={setAddress}
+              onValue={edit(setAddress)}
             />
           </>
         ) : (
@@ -351,7 +368,7 @@ function ClaimForm({
             {prefillFailed && (
               <p role="status">No pudimos cargar la tienda de origen. Búscala por su nombre.</p>
             )}
-            <StorePicker value={store} onChange={setPicked} mode="claim" />
+            <StorePicker value={store} onChange={edit(setPicked)} mode="claim" />
           </>
         )}
         <button
@@ -370,7 +387,7 @@ function ClaimForm({
           autoComplete="name"
           value={responsible}
           maxLength={80}
-          onValue={setResponsible}
+          onValue={edit(setResponsible)}
         />
         <Field
           label="Teléfono"
@@ -378,14 +395,14 @@ function ClaimForm({
           autoComplete="tel-national"
           value={phone}
           maxLength={10}
-          onValue={setPhone}
+          onValue={edit(setPhone)}
         />
         <Field
           label="NIT (opcional)"
           value={nit}
           required={false}
           maxLength={20}
-          onValue={setNit}
+          onValue={edit(setNit)}
           aria-describedby="merchant-nit"
         />
         <p id="merchant-nit" className="muted">
@@ -413,7 +430,7 @@ function ClaimForm({
             type="checkbox"
             checked={accepted}
             onChange={(event) => {
-              setAccepted(event.target.checked);
+              edit(setAccepted)(event.target.checked);
             }}
           />
           Acepto las condiciones para comercios
@@ -436,7 +453,11 @@ function ClaimForm({
         )}
         {error !== null && !errorMessage && <ErrorState error={error} />}
         <button type="submit" className="btn" aria-describedby="merchant-location">
-          {busy ? 'Registrando…' : 'Compartir mi ubicación y registrar'}
+          {busy
+            ? locating
+              ? 'Obteniendo tu ubicación…'
+              : 'Registrando…'
+            : 'Compartir mi ubicación y registrar'}
         </button>
       </fieldset>
     </form>
