@@ -114,7 +114,12 @@ describe('promociones del comercio (#167)', () => {
     fill('Desde', '2026-11-22');
     fill('Hasta', '2026-12-22');
     fireEvent.click(screen.getByRole('button', { name: 'Publicar promoción' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('1 a 30 días');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('1 a 30 días');
+    // El aviso está pegado al botón que lo provocó, y el botón lo referencia.
+    const publish = screen.getByRole('button', { name: 'Publicar promoción' });
+    expect(publish.closest('form')).toContainElement(alert);
+    expect(publish).toHaveAccessibleDescription(/1 a 30 días/);
     expect(calls.some(({ method, path: url }) => method === 'POST' && url === path)).toBe(false);
   });
 
@@ -238,6 +243,61 @@ describe('promociones del comercio (#167)', () => {
       ).toBe(true);
       expect(screen.getByText('Aún no tienes promociones publicadas.')).toBeInTheDocument();
     });
+  });
+
+  it('el aviso de publicar sale bajo el botón, dentro del formulario, y es el único status (H21)', async () => {
+    await open({ [`POST ${path}`]: { status: 201, body: promotion } });
+    await screen.findByRole('option', { name: /Arroz/ });
+    fill('Presentación', 'p1');
+    fill('Descuento (%)', '10');
+    fill('Desde', '2026-11-22');
+    fill('Hasta', '2026-11-25');
+    const publish = screen.getByRole('button', { name: 'Publicar promoción' });
+    fireEvent.click(publish);
+
+    const notice = await screen.findByText('Promoción publicada.');
+    expect(screen.getAllByRole('status')).toEqual([notice]);
+    expect(publish.closest('form')).toContainElement(notice);
+    expect(publish.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('el aviso de retirar sale bajo la lista, antes del formulario, y reemplaza al anterior (H21, H27)', async () => {
+    await open({
+      [`GET ${path}`]: [
+        { status: 200, body: { items: [promotion] } },
+        { status: 200, body: { items: [] } },
+      ],
+      [`DELETE ${path}/promo-1`]: { status: 204 },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Retirar promoción' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar retiro' }));
+
+    const notice = await screen.findByText('Promoción retirada.');
+    expect(screen.getAllByRole('status')).toEqual([notice]);
+    const form = screen.getByRole('button', { name: 'Publicar promoción' }).closest('form');
+    expect(form).not.toContainElement(notice);
+    expect(
+      notice.compareDocumentPosition(form as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('el rechazo de un retiro sale en la promoción, con role="alert"', async () => {
+    await open({
+      [`GET ${path}`]: { status: 200, body: { items: [promotion] } },
+      [`DELETE ${path}/promo-1`]: {
+        status: 409,
+        body: { code: 'CONFLICT', message: 'No se pudo retirar la promoción.' },
+      },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Retirar promoción' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar retiro' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('No se pudo retirar la promoción.');
+    expect(alert.closest('li')).toContainElement(
+      screen.getByRole('button', { name: 'Confirmar retiro' }),
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('al cancelar el retiro, el foco vuelve a «Retirar promoción»', async () => {

@@ -46,6 +46,11 @@ it('envía solo los datos modificados y distingue lo aplicado de lo pendiente', 
   fireEvent.click(screen.getByRole('button', { name: 'Marcar ubicación' }));
   fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
   expect(await screen.findByText(/Cambios aplicados: teléfono/)).toBeInTheDocument();
+  // H21, H4: el resultado sale justo bajo el botón «Guardar cambios», y es el único status.
+  const save = screen.getByRole('button', { name: 'Guardar cambios' });
+  const status = screen.getByRole('status');
+  expect(screen.getAllByRole('status')).toHaveLength(1);
+  expect(save.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByText(/En revisión: nombre y ubicación/)).toBeInTheDocument();
   await waitFor(() => {
     expect(calls.find(({ method }) => method === 'PATCH')?.body).toBe(
