@@ -69,6 +69,42 @@ const renderWithSession = (productId: string) =>
   );
 
 describe('detalle del producto', () => {
+  it('muestra el precio en línea de Olímpica en una sección con su presentación y fecha', async () => {
+    const presentation = rice.presentations[0];
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([]),
+      [`GET /v1/products/${rice.id}/online-offers`]: {
+        status: 200,
+        body: {
+          items: [
+            {
+              source: 'olimpica',
+              zone: 'armenia-centro',
+              presentationId: presentation?.id,
+              priceCop: 3456,
+              observedAt: '2026-11-24T14:00:00Z',
+              expiresAt: '2026-11-26T14:00:00Z',
+              productUrl: 'https://www.olimpica.com/arroz-de-prueba/p',
+            },
+          ],
+        },
+      },
+    });
+    renderDetail(rice.id);
+    const section = await screen.findByRole('region', {
+      name: 'Olímpica en línea · Armenia centro',
+    });
+    expect(within(section).getByText('500 g')).toBeInTheDocument();
+    expect(within(section).getByText(/3[.\s]456/)).toBeInTheDocument();
+    expect(within(section).getByText('24 de noviembre de 2026')).toBeInTheDocument();
+    expect(within(section).getByText('Envío se calcula en Olímpica')).toBeInTheDocument();
+    expect(within(section).getByRole('link', { name: 'Ver en Olímpica' })).toHaveAttribute(
+      'href',
+      'https://www.olimpica.com/arroz-de-prueba/p',
+    );
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
