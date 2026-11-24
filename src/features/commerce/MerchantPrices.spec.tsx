@@ -79,6 +79,39 @@ describe('panel de precios oficiales (#166)', () => {
     expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
   });
 
+  it('usa el nombre del servidor en la lista y en «En revisión», sin pedir la lista pública (H3)', async () => {
+    const named = { productName: 'Arroz blanco Diana', presentationLabel: '1 kg' };
+    const { calls } = openPanel({
+      [`GET ${prices}`]: {
+        status: 200,
+        body: {
+          items: [{ ...item, ...named }],
+          inReview: [
+            {
+              presentationId: 'p2',
+              establishmentId: 's1',
+              priceCop: 3000,
+              submittedAt: '2026-11-13T12:00:00Z',
+              productName: 'Aceite Gourmet',
+              presentationLabel: '900 ml',
+            },
+          ],
+        },
+      },
+    });
+    expect(
+      await screen.findByRole('heading', { name: 'Arroz blanco Diana · 1 kg' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Aceite Gourmet · 900 ml' })).toBeInTheDocument();
+    expect(screen.queryByText(/Producto nuevo/)).not.toBeInTheDocument();
+    expect(calls.some(({ path }) => path === '/v1/establishments/s1/prices')).toBe(false);
+  });
+
+  it('sin los campos del servidor conserva el respaldo anterior', async () => {
+    openPanel();
+    expect(await screen.findByRole('heading', { name: 'Arroz · 500 g' })).toBeInTheDocument();
+  });
+
   it('anuncia cuántos resultados dio la búsqueda de productos', async () => {
     openPanel({
       [`GET ${prices}`]: { status: 200, body: { items: [] } },

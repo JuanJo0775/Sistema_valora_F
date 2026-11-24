@@ -154,8 +154,12 @@ export function MerchantPromotions({
 
   const needsPrice = error instanceof ApiError && error.code === 'OFFICIAL_PRICE_REQUIRED';
   // ADR-037: el mensaje del servidor dice el rango; va junto al botón que lo provocó.
-  const implausible =
-    error instanceof ApiError && error.code === 'IMPLAUSIBLE_OFFICIAL_PRICE' ? error.message : '';
+  // H20: dos promociones de la misma presentación no pueden solaparse; el mensaje dice las fechas.
+  const rejected =
+    error instanceof ApiError &&
+    (error.code === 'IMPLAUSIBLE_OFFICIAL_PRICE' || error.code === 'PROMOTION_OVERLAP')
+      ? error.message
+      : '';
 
   return (
     <>
@@ -167,7 +171,7 @@ export function MerchantPromotions({
           {problem}
         </p>
       )}
-      {error !== null && !implausible && <ErrorState error={error} />}
+      {error !== null && !rejected && <ErrorState error={error} />}
       {needsPrice && (
         <button type="button" className="btn ghost" onClick={onPrices}>
           Ir a Precios
@@ -357,16 +361,16 @@ export function MerchantPromotions({
                 <input name="whileStocksLast" type="checkbox" /> Hasta agotar existencias
               </label>
             </fieldset>
-            {implausible && (
-              <p id="promotion-implausible" role="alert" className="field-error">
-                {implausible}
+            {rejected && (
+              <p id="promotion-rejected" role="alert" className="field-error">
+                {rejected}
               </p>
             )}
             <button
               className="btn"
               type="submit"
               disabled={busy}
-              aria-describedby={implausible ? 'promotion-implausible' : undefined}
+              aria-describedby={rejected ? 'promotion-rejected' : undefined}
             >
               Publicar promoción
             </button>
