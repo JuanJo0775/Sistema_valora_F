@@ -81,6 +81,7 @@ async function verifyOfficialPrices(page: Page) {
   ).toBeVisible();
 
   await page.getByRole('button', { name: 'Todos mis precios siguen igual' }).click();
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   await expect(page.getByText('Precios reconfirmados: 1.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Carga masiva' }).click();

@@ -60,7 +60,12 @@ export function ProductSearch({
       return;
     }
     setHint('');
-    setParams({ q: wanted });
+    // Conserva el resto de la dirección (p. ej. ?tienda=), que debe seguir en el enlace de cada resultado.
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('q', wanted);
+      return next;
+    });
   };
 
   const result = query && outcome?.key === key ? outcome : null;

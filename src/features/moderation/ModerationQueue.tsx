@@ -39,16 +39,19 @@ const OTHER_MODERATOR = {
 };
 const explain = explainWith(OTHER_MODERATOR);
 
-// «−73 %»: con el signo menos tipográfico, como se lee.
-const deviation = (percent: number) =>
-  `${percent < 0 ? '−' : '+'}${String(Math.abs(Math.round(percent)))} %`;
+// «−73 %»: con el signo menos tipográfico, como se lee. El backend manda la desviación en
+// valor absoluto, así que el signo sale de si lo reportado está por debajo o por encima.
+const deviation = (percent: number, below: boolean) =>
+  `${below ? '−' : '+'}${String(Math.abs(Math.round(percent)))} %`;
 
 function comparison(item: Item) {
   const median =
     item.medianPriceCop === undefined
       ? false
       : `mediana ${formatCop(item.medianPriceCop)}${
-          item.deviationPercent === undefined ? '' : ` (${deviation(item.deviationPercent)})`
+          item.deviationPercent === undefined
+            ? ''
+            : ` (${deviation(item.deviationPercent, item.reportedPriceCop < item.medianPriceCop)})`
         }`;
   return [
     `Reportado ${formatCop(item.reportedPriceCop)}`,
