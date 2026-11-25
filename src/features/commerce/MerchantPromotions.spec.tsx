@@ -263,7 +263,6 @@ describe('promociones del comercio (#167)', () => {
     expect(notice).toBe(region);
     expect(screen.getAllByRole('status')).toEqual([notice]);
     expect(publish.closest('form')).toContainElement(notice);
-    expect(notice).toBe(region);
   });
 
   it('el aviso de retirar sale bajo la lista, antes del formulario, y reemplaza al anterior (H21, H27)', async () => {
