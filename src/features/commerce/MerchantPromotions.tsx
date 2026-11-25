@@ -5,6 +5,7 @@ import type { components } from '../../shared/api/schema';
 import { shortDay } from '../../shared/days';
 import { formatCop } from '../../shared/money';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { ResultNotice } from '../../shared/ui/ResultNotice';
 
 type Promotion = components['schemas']['MerchantPromotion'];
 type Draft = components['schemas']['Promotion'];
@@ -57,6 +58,8 @@ export function MerchantPromotions({
   const [notice, setNotice] = useState('');
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
+  // Qué acción dio el último resultado, para mostrarlo junto a ella.
+  const [where, setWhere] = useState<'publish' | 'retire'>('publish');
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const statusRef = useRef<HTMLParagraphElement>(null);
@@ -76,9 +79,15 @@ export function MerchantPromotions({
   const eligible = prices?.filter(({ freshness }) => freshness === 'vigente') ?? [];
   const selected = eligible.find(({ presentationId }) => presentationId === presentation);
 
-  async function mutate(action: () => Promise<unknown>, success: string, finish: () => void) {
+  async function mutate(
+    at: 'publish' | 'retire',
+    action: () => Promise<unknown>,
+    success: string,
+    finish: () => void,
+  ) {
     if (lock.current) return;
     lock.current = true;
+    setWhere(at);
     setBusy(true);
     setNotice('');
     setError(null);
@@ -111,11 +120,13 @@ export function MerchantPromotions({
     const payX = Number(value('payX'));
     const takeY = Number(value('takeY'));
     if (!Number.isFinite(span) || span < 1 || span > 30) {
+      setNotice('');
       setError(null);
       setProblem('Elige un período de 1 a 30 días, con ambas fechas incluidas.');
       return;
     }
     if (type === 'pague_x_lleve_y' && takeY <= payX) {
+      setNotice('');
       setError(null);
       setProblem('Las unidades que lleva el cliente deben ser más que las que paga.');
       return;
@@ -142,6 +153,7 @@ export function MerchantPromotions({
       },
     };
     void mutate(
+      'publish',
       () => call(api.POST('/commerce/promotions', { body })),
       'Promoción publicada.',
       () => {
@@ -161,23 +173,14 @@ export function MerchantPromotions({
       ? error.message
       : '';
 
+  // H21, H27: un único aviso a la vez, junto a la acción que lo dio.
+  const result = (at: 'publish' | 'retire') => (
+    <ResultNotice ref={where === at ? statusRef : undefined} text={where === at ? notice : ''} />
+  );
+  const failure = error !== null && !rejected && <ErrorState error={error} />;
+
   return (
     <>
-      <p role="status" ref={statusRef} tabIndex={-1} className={notice ? 'banner' : 'sr-only'}>
-        {notice}
-      </p>
-      {problem && (
-        <p className="banner warn" role="alert">
-          {problem}
-        </p>
-      )}
-      {error !== null && !rejected && <ErrorState error={error} />}
-      {needsPrice && (
-        <button type="button" className="btn ghost" onClick={onPrices}>
-          Ir a Precios
-        </button>
-      )}
-
       {items &&
         (items.length > 0 ? (
           <ul className="merchant-price-list">
@@ -209,6 +212,7 @@ export function MerchantPromotions({
                 {promotion.status === 'pausada' && (
                   <p className="muted">Reconfirma el precio oficial para volver a activarla.</p>
                 )}
+                {where === 'retire' && confirm === promotion.id && failure}
                 {confirm === promotion.id ? (
                   <div className="actions">
                     <button
@@ -218,6 +222,7 @@ export function MerchantPromotions({
                       autoFocus
                       onClick={() => {
                         void mutate(
+                          'retire',
                           () =>
                             call(
                               api.DELETE('/commerce/promotions/{promotionId}', {
@@ -239,6 +244,7 @@ export function MerchantPromotions({
                       disabled={busy}
                       onClick={() => {
                         cancelled.current = promotion.id;
+                        setError(null);
                         setConfirm(null);
                       }}
                     >
@@ -255,6 +261,7 @@ export function MerchantPromotions({
                       else retireButtons.current.delete(promotion.id);
                     }}
                     onClick={() => {
+                      setError(null);
                       setConfirm(promotion.id);
                     }}
                   >
@@ -267,6 +274,7 @@ export function MerchantPromotions({
         ) : (
           <p className="muted">Aún no tienes promociones publicadas.</p>
         ))}
+      {result('retire')}
 
       {prices &&
         (eligible.length > 0 ? (
@@ -361,6 +369,17 @@ export function MerchantPromotions({
                 <input name="whileStocksLast" type="checkbox" /> Hasta agotar existencias
               </label>
             </fieldset>
+            {problem && (
+              <p id="promotion-problem" className="banner warn" role="alert">
+                {problem}
+              </p>
+            )}
+            {where === 'publish' && failure}
+            {where === 'publish' && needsPrice && (
+              <button type="button" className="btn ghost" onClick={onPrices}>
+                Ir a Precios
+              </button>
+            )}
             {rejected && (
               <p id="promotion-rejected" role="alert" className="field-error">
                 {rejected}
@@ -370,10 +389,13 @@ export function MerchantPromotions({
               className="btn"
               type="submit"
               disabled={busy}
-              aria-describedby={rejected ? 'promotion-rejected' : undefined}
+              aria-describedby={
+                problem ? 'promotion-problem' : rejected ? 'promotion-rejected' : undefined
+              }
             >
               Publicar promoción
             </button>
+            {result('publish')}
           </form>
         ) : (
           <>

@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useState } from 'react';
+import { type ReactNode, type SyntheticEvent, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { operations } from '../../shared/api/schema';
 
@@ -38,9 +38,12 @@ function readText(file: File): Promise<string> {
 export function MerchantPriceUpload({
   disabled,
   onUpload,
+  result,
 }: {
   disabled: boolean;
   onUpload: (action: () => Promise<string>) => Promise<void>;
+  // Aviso del resultado de la carga: va justo bajo el botón que la pidió.
+  result?: ReactNode;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [problem, setProblem] = useState('');
@@ -102,6 +105,7 @@ export function MerchantPriceUpload({
         <button type="submit" className="btn" disabled={!file || disabled}>
           Cargar precios
         </button>
+        {result}
       </form>
       {report && report.outcome.inReview.length > 0 && (
         <div className="merchant-price-form">

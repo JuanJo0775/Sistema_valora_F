@@ -46,6 +46,11 @@ it('envía solo los datos modificados y distingue lo aplicado de lo pendiente', 
   fireEvent.click(screen.getByRole('button', { name: 'Marcar ubicación' }));
   fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
   expect(await screen.findByText(/Cambios aplicados: teléfono/)).toBeInTheDocument();
+  // H21, H4: el resultado sale justo bajo el botón «Guardar cambios», y es el único status.
+  const save = screen.getByRole('button', { name: 'Guardar cambios' });
+  const status = screen.getByRole('status');
+  expect(screen.getAllByRole('status')).toHaveLength(1);
+  expect(save.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByText(/En revisión: nombre y ubicación/)).toBeInTheDocument();
   await waitFor(() => {
     expect(calls.find(({ method }) => method === 'PATCH')?.body).toBe(
@@ -193,6 +198,38 @@ describe('editor de horario', () => {
       expect(screen.getByLabelText('Apertura del ' + label)).toHaveValue('07:30');
       expect(screen.getByLabelText('Cierre del ' + label)).toHaveValue('20:00');
     }
+    expect(screen.getByRole('status')).toHaveTextContent('Horario del lunes copiado');
+  });
+
+  it('copiar el horario y guardar nunca dejan dos avisos a la vez (H27)', async () => {
+    stubApi({
+      'GET /v1/auth/session': { status: 200, body: { csrfToken: 'csrf' } },
+      'GET /v1/establishments/s1/prices': {
+        status: 200,
+        body: { establishment: { id: 's1', name: 'La Rosa', lat: 4.53, lng: -75.68 }, prices: [] },
+      },
+      'PATCH /v1/commerce/establishment': {
+        status: 200,
+        body: { applied: ['openingHours'], inReview: [] },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <MerchantStoreEditor storeId="s1" onChanged={() => undefined} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar horario' }));
+    fireEvent.click(screen.getByLabelText('Abre el lunes'));
+    const copy = screen.getByRole('button', {
+      name: 'Copiar el horario del lunes a los demás días',
+    });
+    fireEvent.click(copy);
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await screen.findByText(/Cambios aplicados/)).toBeInTheDocument();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    fireEvent.click(copy);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
     expect(screen.getByRole('status')).toHaveTextContent('Horario del lunes copiado');
   });
 });

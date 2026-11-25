@@ -84,7 +84,7 @@ async function verifyOfficialPrices(page: Page) {
   await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   await expect(page.getByText('Precios reconfirmados: 1.')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Carga masiva' }).click();
+  await page.getByRole('tab', { name: 'Carga masiva' }).click();
   await page.getByLabel('Archivo CSV').setInputFiles({
     name: 'precios.csv',
     mimeType: 'text/csv',
@@ -114,7 +114,7 @@ async function verifyOfficialPrices(page: Page) {
 }
 
 async function verifyPromotions(page: Page, productId: string) {
-  await page.getByRole('button', { name: 'Promociones' }).click();
+  await page.getByRole('tab', { name: 'Promociones' }).click();
   const section = page.getByRole('region', { name: 'Promociones' });
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
   await section.getByLabel('Presentación').selectOption({ index: 1 });
@@ -139,7 +139,7 @@ async function verifyPromotions(page: Page, productId: string) {
   await expect(comparison.locator('ol.offer-list').getByText('10 % de descuento')).toHaveCount(0);
 
   await page.goto('/comercios');
-  await page.getByRole('button', { name: 'Promociones' }).click();
+  await page.getByRole('tab', { name: 'Promociones' }).click();
   await section.getByRole('button', { name: 'Retirar promoción' }).click();
   await section.getByRole('button', { name: 'Confirmar retiro' }).click();
   await expect(section.getByText('Promoción retirada.')).toBeVisible();
