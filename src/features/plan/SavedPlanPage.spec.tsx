@@ -72,6 +72,9 @@ describe('plan guardado', () => {
   });
 
   it('muestra tiendas, dirección, cómo llegar, precios con fecha y sin precio aparte', () => {
+    // El reloj queda en el día del plan: con la fecha real, a los 7 días se vería «desactualizado».
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
     renderAt(stored(NOW).id);
 
     expect(screen.getByText(/Guardada el 17 nov/)).toBeInTheDocument();
@@ -90,6 +93,7 @@ describe('plan guardado', () => {
       screen.getByText('Los precios cambian y vencen; actualízalo antes de salir.'),
     ).toBeInTheDocument();
     expect(screen.queryByText('Puede estar desactualizado')).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it('cada producto sin precio es una sola fila que se lee seguida', () => {
