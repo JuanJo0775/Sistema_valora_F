@@ -145,10 +145,115 @@
   }
 }
 
-.merchant-store-hours {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
-  gap: 10px;
+/* «Mi tienda»: los campos ocupan el ancho útil (el formulario centra y encoge sus hijos). */
+.store-editor > :is(.field, .store-hours) {
+  justify-self: stretch;
+}
+
+.store-editor .field input {
   width: 100%;
   min-width: 0;
+}
+
+/* Editor de horario: una fila por día, sin el borde nativo del fieldset (la leyenda sigue
+   siendo la del grupo para los lectores de pantalla). */
+.store-hours {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.store-hours > legend {
+  float: left;
+  width: 100%;
+  padding: 12px 14px 4px;
+  font-family: var(--f-display);
+  font-weight: 700;
+}
+
+.store-hours-tools {
+  display: grid;
+  gap: 6px;
+  clear: both;
+  padding: 8px 14px 12px;
+}
+
+.store-hours-tools p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.store-hours-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+
+.store-hours-day {
+  font-weight: 600;
+}
+
+.store-hours-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch);
+  cursor: pointer;
+}
+
+.store-hours-open input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.store-hours-times {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+}
+
+.store-hours-times input {
+  min-width: 0;
+  min-height: var(--touch);
+  padding: 0 10px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.store-hours-closed {
+  grid-column: 1 / -1;
+  margin-top: -6px;
+}
+
+@media (min-width: 640px) {
+  .store-hours-row {
+    grid-template-columns: 7rem auto minmax(0, 1fr);
+  }
+
+  .store-hours-times {
+    grid-column: auto;
+    max-width: 18rem;
+  }
+
+  .store-hours-closed {
+    grid-column: auto;
+    margin-top: 0;
+  }
 }

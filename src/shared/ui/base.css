@@ -397,3 +397,11 @@ button {
 .state .actions {
   justify-content: center;
 }
+
+/* Precio publicado por el comercio de la tienda: azul de información, con escudo y texto (la forma, no
+   solo el color, lo distingue de la comunidad). */
+.pill.official {
+  background: var(--info-soft);
+  color: var(--info);
+  border: 1px solid currentcolor;
+}
