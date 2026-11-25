@@ -6,6 +6,7 @@ import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { ResultsStatus } from '../../shared/ui/ResultsStatus';
+import { MUNICIPALITIES } from '../comparison/criteria';
 import './reports.css';
 
 export type Store = components['schemas']['Establishment'];
@@ -197,29 +198,32 @@ export function StorePicker({
       )}
       {/* La tienda ya elegida (la última usada) aparece aunque no se haya pedido la ubicación. */}
       <div className="store-list">
-        {withChosen(stores, value).map((store) => (
-          <label key={store.id} className="choice store">
-            <input
-              type="radio"
-              name="store"
-              value={store.id}
-              checked={value?.id === store.id}
-              onChange={() => {
-                onChange(store);
-                setChanging(false);
-              }}
-            />
-            <span>
-              {store.name}
-              {mode === 'claim' && store.address && (
-                <small className="muted">{store.address}</small>
-              )}
-            </span>
-            {store.distanceM !== undefined && (
-              <span className="muted">{formatDistance(store.distanceM)}</span>
-            )}
-          </label>
-        ))}
+        {withChosen(byProximity(stores), value).map((store) => {
+          const place = placeOf(store);
+          const distance =
+            store.distanceM === undefined ? null : `a ${formatDistance(store.distanceM)}`;
+          return (
+            <label key={store.id} className="choice store">
+              <input
+                type="radio"
+                name="store"
+                value={store.id}
+                // Varias tiendas llevan el mismo nombre (D1, Ara…): el nombre accesible suma lo que las distingue.
+                aria-label={[store.name, place, distance].filter(Boolean).join(' · ')}
+                checked={value?.id === store.id}
+                onChange={() => {
+                  onChange(store);
+                  setChanging(false);
+                }}
+              />
+              <span className="store-choice-text">
+                <span className="store-choice-name">{store.name}</span>
+                {place && <small className="muted">{place}</small>}
+              </span>
+              {distance && <span className="muted store-choice-distance">{distance}</span>}
+            </label>
+          );
+        })}
       </div>
     </fieldset>
   );
@@ -227,3 +231,15 @@ export function StorePicker({
 
 const withChosen = (stores: Store[], chosen: Store | null) =>
   chosen && !stores.some(({ id }) => id === chosen.id) ? [chosen, ...stores] : stores;
+
+// Lo que distingue una tienda de otra con el mismo nombre: municipio, barrio y dirección, los que haya.
+const placeOf = (store: Store) =>
+  [MUNICIPALITIES[store.municipality], store.neighborhood, store.address]
+    .filter(Boolean)
+    .join(' · ');
+
+// Con distancia, de la más cercana a la más lejana; las que no la traen quedan al final, como llegaron.
+const byProximity = (stores: Store[]) =>
+  stores.some(({ distanceM }) => distanceM !== undefined)
+    ? [...stores].sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity))
+    : stores;

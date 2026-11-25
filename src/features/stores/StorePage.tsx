@@ -8,6 +8,7 @@ import { formatCop, formatUnitPrice } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
+import { OfficialBadge } from '../../shared/ui/OfficialBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
 import { SidePanel } from '../../shared/ui/SidePanel';
 import { Skeleton } from '../../shared/ui/Skeleton';
@@ -182,6 +183,7 @@ export function StorePage() {
                     <Link to={`/productos/${price.productId}`}>{price.productName}</Link>
                   </h3>
                   <p className="badges">
+                    {price.source === 'oficial' && <OfficialBadge />}
                     <FreshnessBadge freshness={price.freshness} observedAt={price.observedAt} />
                     {price.reliability && <ReliabilityBadge level={price.reliability} />}
                   </p>
