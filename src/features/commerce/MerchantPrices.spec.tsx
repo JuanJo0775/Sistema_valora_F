@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
 import { sessionAs, stubApi } from '../../test/fakeApi';
@@ -28,7 +28,7 @@ function openPanel(overrides: Parameters<typeof stubApi>[0] = {}) {
       status: 200,
       body: { prices: [{ presentationId: 'p1', productName: 'Arroz · 500 g' }] },
     },
-    [`GET ${prices}`]: { status: 200, body: { items: [item] } },
+    [`GET ${prices}`]: { status: 200, body: { items: [item], inReview: [] } },
     'GET /v1/commerce/alerts': { status: 200, body: { items: [] } },
     ...overrides,
   });
@@ -45,7 +45,7 @@ describe('panel de precios oficiales (#166)', () => {
 
   it('publica un precio tras buscar y elegir una presentación del catálogo', async () => {
     const { calls } = openPanel({
-      [`GET ${prices}`]: { status: 200, body: { items: [] } },
+      [`GET ${prices}`]: { status: 200, body: { items: [], inReview: [] } },
       'GET /v1/products': { status: 200, body: { items: [product] } },
       [`PUT ${prices}`]: { status: 200, body: item },
     });
@@ -56,15 +56,94 @@ describe('panel de precios oficiales (#166)', () => {
       },
     );
     fireEvent.click(screen.getByRole('button', { name: 'Buscar en el catálogo' }));
+    // El campo no se deshabilita mientras busca: así no pierde el foco del teclado.
+    expect(
+      screen.getByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+    ).toBeEnabled();
     fireEvent.click(await screen.findByRole('button', { name: 'Arroz · 500 g' }));
     fireEvent.change(screen.getByLabelText('Precio oficial en pesos'), {
       target: { value: '2200' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Publicar precio' }));
     expect(await screen.findByText('Precio oficial publicado.')).toBeInTheDocument();
+    // El formulario de precio desaparece al guardar: el foco vuelve al buscador, listo para el siguiente.
+    expect(
+      screen.getByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+    ).toHaveFocus();
     const request = calls.find(({ method, path }) => method === 'PUT' && path === prices);
     expect(request?.body).toBe(JSON.stringify({ presentationId: 'p1', priceCop: 2200 }));
     expect(request?.headers.get('X-CSRF-Token')).toBe('token-1');
+
+    // El aviso de éxito es de esta acción: no sigue visible al pasar a otra sección.
+    fireEvent.click(screen.getByRole('tab', { name: 'Carga masiva' }));
+    expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
+  });
+
+  it('usa el nombre del servidor en la lista y en «En revisión», sin pedir la lista pública (H3)', async () => {
+    const named = { productName: 'Arroz blanco Diana', presentationLabel: '1 kg' };
+    const { calls } = openPanel({
+      [`GET ${prices}`]: {
+        status: 200,
+        body: {
+          items: [{ ...item, ...named }],
+          inReview: [
+            {
+              presentationId: 'p2',
+              establishmentId: 's1',
+              priceCop: 3000,
+              submittedAt: '2026-11-13T12:00:00Z',
+              productName: 'Aceite Gourmet',
+              presentationLabel: '900 ml',
+            },
+          ],
+        },
+      },
+    });
+    expect(
+      await screen.findByRole('heading', { name: 'Arroz blanco Diana · 1 kg' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Aceite Gourmet · 900 ml' })).toBeInTheDocument();
+    expect(screen.queryByText(/Producto nuevo/)).not.toBeInTheDocument();
+    expect(calls.some(({ path }) => path === '/v1/establishments/s1/prices')).toBe(false);
+  });
+
+  it('sin los campos del servidor conserva el respaldo anterior', async () => {
+    openPanel();
+    expect(await screen.findByRole('heading', { name: 'Arroz · 500 g' })).toBeInTheDocument();
+  });
+
+  it('anuncia cuántos resultados dio la búsqueda de productos', async () => {
+    openPanel({
+      [`GET ${prices}`]: { status: 200, body: { items: [] } },
+      'GET /v1/products': { status: 200, body: { items: [product] } },
+    });
+    fireEvent.change(
+      await screen.findByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+      { target: { value: 'Arroz' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar en el catálogo' }));
+    await screen.findByRole('button', { name: 'Arroz · 500 g' });
+
+    const status = screen.getByText('1 resultado');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveClass('sr-only');
+  });
+
+  it('anuncia que no hubo resultados cuando la búsqueda no encuentra nada', async () => {
+    openPanel({
+      [`GET ${prices}`]: { status: 200, body: { items: [] } },
+      'GET /v1/products': { status: 200, body: { items: [] } },
+    });
+    fireEvent.change(
+      await screen.findByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+      { target: { value: 'Zzz' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar en el catálogo' }));
+
+    expect(await screen.findByText('No encontramos resultados.')).toHaveAttribute(
+      'aria-live',
+      'polite',
+    );
   });
 
   it('muestra la vigencia y permite corregir el precio desde un aviso', async () => {
@@ -98,15 +177,34 @@ describe('panel de precios oficiales (#166)', () => {
     });
   });
 
-  it('reconfirma el conjunto y vuelve a consultar los precios y los avisos', async () => {
+  it('reconfirma el conjunto solo después de confirmarlo y vuelve a consultar los precios y los avisos', async () => {
     const { calls } = openPanel({
       [`POST ${prices}/reconfirm`]: { status: 200, body: { reconfirmed: 1 } },
     });
     fireEvent.click(await screen.findByRole('button', { name: 'Todos mis precios siguen igual' }));
+    expect(calls.some(({ method }) => method === 'POST')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Precios reconfirmados: 1.')).toBeInTheDocument();
     await waitFor(() => {
       expect(calls.filter(({ path }) => path === '/v1/commerce/alerts')).toHaveLength(2);
     });
+  });
+
+  it('antes de reconfirmar dice cuántos precios renueva, con el foco en «Confirmar»', async () => {
+    const { calls } = openPanel({
+      [`POST ${prices}/reconfirm`]: { status: 200, body: { reconfirmed: 1 } },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Todos mis precios siguen igual' }));
+
+    expect(
+      screen.getByText('Esto renueva la vigencia de 1 precio. ¿Confirmas?'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByText('Esto renueva la vigencia de 1 precio. ¿Confirmas?'),
+    ).not.toBeInTheDocument();
+    expect(calls.some(({ method }) => method === 'POST')).toBe(false);
   });
 
   it('envía el CSV como texto y presenta errores de fila con descarga para corregirlos', async () => {
@@ -116,13 +214,14 @@ describe('panel de precios oficiales (#166)', () => {
         status: 200,
         body: {
           published: 1,
+          inReview: [],
           errors: [
             { row: 3, barcode: '01234567', code: 'INVALID_PRICE', message: 'Precio inválido.' },
           ],
         },
       },
     });
-    fireEvent.click(await screen.findByRole('button', { name: 'Carga masiva' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Carga masiva' }));
     fireEvent.change(await screen.findByLabelText('Archivo CSV'), {
       target: { files: [new File([csv], 'precios.csv', { type: 'text/csv' })] },
     });
@@ -137,6 +236,136 @@ describe('panel de precios oficiales (#166)', () => {
     const request = calls.find(({ path }) => path === `${prices}/bulk`);
     expect(request?.headers.get('Content-Type')).toMatch(/^text\/csv/);
     expect(request?.body).toBe(csv);
+  });
+
+  it('si el servidor dice que el precio es absurdo, muestra su mensaje junto al campo y deja el editor abierto', async () => {
+    const message =
+      'Tu precio de $300 está fuera de lo normal para esta presentación. Lo más barato que vemos es $2.000 y lo más caro $3.500. Revisa si faltan o sobran ceros.';
+    openPanel({
+      [`PUT ${prices}`]: { status: 422, body: { code: 'IMPLAUSIBLE_OFFICIAL_PRICE', message } },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar precio de Arroz · 500 g' }));
+    const input = screen.getByLabelText('Precio oficial en pesos');
+    fireEvent.change(input, { target: { value: '300' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar precio' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    // El mensaje es del campo (no un error genérico de la página) y el foco vuelve a él.
+    expect(input).toHaveAccessibleDescription(message);
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    await waitFor(() => {
+      expect(input).toHaveFocus();
+    });
+    expect(screen.getByRole('button', { name: 'Guardar precio' })).toBeInTheDocument();
+    expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
+    // Al corregir el valor, el aviso desaparece.
+    fireEvent.change(input, { target: { value: '2300' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('avisa que el precio quedó en revisión y que sigue vigente el anterior', async () => {
+    openPanel({
+      [`PUT ${prices}`]: { status: 200, body: { ...item, priceCop: 2300, status: 'en_revision' } },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar precio de Arroz · 500 g' }));
+    fireEvent.change(screen.getByLabelText('Precio oficial en pesos'), {
+      target: { value: '2300' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar precio' }));
+    expect(
+      await screen.findByText(
+        'Tu precio quedó en revisión: un moderador lo verá antes de publicarlo. Mientras tanto sigue vigente el anterior.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
+  });
+
+  it('si no había un precio anterior, el aviso de revisión no promete uno vigente', async () => {
+    openPanel({
+      [`GET ${prices}`]: { status: 200, body: { items: [], inReview: [] } },
+      'GET /v1/products': { status: 200, body: { items: [product] } },
+      [`PUT ${prices}`]: { status: 200, body: { ...item, status: 'en_revision' } },
+    });
+    fireEvent.change(
+      await screen.findByRole('searchbox', { name: 'Buscar producto o código de barras' }),
+      { target: { value: 'Arroz' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar en el catálogo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Arroz · 500 g' }));
+    fireEvent.change(screen.getByLabelText('Precio oficial en pesos'), {
+      target: { value: '2200' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar precio' }));
+    expect(
+      await screen.findByText(
+        'Tu precio quedó en revisión: un moderador lo verá antes de publicarlo.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('lista los precios en revisión con su nota, y no muestra la sección si no hay', async () => {
+    openPanel({
+      [`GET ${prices}`]: {
+        status: 200,
+        body: {
+          items: [item],
+          inReview: [
+            {
+              presentationId: 'p1',
+              priceCop: 2300,
+              submittedAt: '2026-11-23T15:00:00Z',
+              status: 'en_revision',
+            },
+          ],
+        },
+      },
+    });
+    const section = (await screen.findByRole('heading', { name: 'En revisión' })).closest(
+      'section',
+    ) as HTMLElement;
+    expect(within(section).getByText('Arroz · 500 g')).toBeInTheDocument();
+    expect(within(section).getByText('$2.300')).toBeInTheDocument();
+    expect(within(section).getByText(/Enviado el /)).toBeInTheDocument();
+    expect(within(section).getByText(/todavía no son públicos/)).toBeInTheDocument();
+  });
+
+  it('sin precios en revisión no muestra la sección «En revisión»', async () => {
+    openPanel();
+    await screen.findByText('Por confirmar');
+    expect(screen.queryByRole('heading', { name: 'En revisión' })).not.toBeInTheDocument();
+  });
+
+  it('en la carga CSV separa las filas rechazadas de las que quedaron en revisión', async () => {
+    const csv = 'codigo_barras;precio\r\n12345678;300\r\n87654321;2200\r\n';
+    openPanel({
+      [`POST ${prices}/bulk`]: {
+        status: 200,
+        body: {
+          published: 0,
+          inReview: [{ row: 3, barcode: '87654321', priceCop: 2200 }],
+          errors: [
+            {
+              row: 2,
+              barcode: '12345678',
+              code: 'IMPLAUSIBLE_OFFICIAL_PRICE',
+              message: 'Tu precio de $300 está fuera de lo normal.',
+            },
+          ],
+        },
+      },
+    });
+    fireEvent.click(await screen.findByRole('tab', { name: 'Carga masiva' }));
+    fireEvent.change(await screen.findByLabelText('Archivo CSV'), {
+      target: { files: [new File([csv], 'precios.csv', { type: 'text/csv' })] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar precios' }));
+    expect(await screen.findByText('Filas publicadas: 0.')).toBeInTheDocument();
+    expect(screen.getByText('Tu precio de $300 está fuera de lo normal.')).toBeInTheDocument();
+    const review = screen.getByRole('heading', { name: '1 fila quedó en revisión' }).parentElement;
+    expect(review).not.toBeNull();
+    const list = within(review as HTMLElement);
+    expect(list.getByText('Fila 3')).toBeInTheDocument();
+    expect(list.getByText(/87654321/)).toBeInTheDocument();
   });
 
   it('rechaza un precio fuera del rango del backend sin publicar', async () => {
@@ -165,17 +394,104 @@ describe('panel de precios oficiales (#166)', () => {
     openPanel({ 'GET /v1/commerce/promotions': { status: 200, body: { items: [] } } });
     expect(await screen.findByRole('heading', { name: 'La Rosa' })).toBeInTheDocument();
     expect(screen.getByText('Verificado')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Precios' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('tab', { name: 'Precios' })).toHaveAttribute('aria-selected', 'true');
     expect(
       screen.queryByRole('heading', { name: 'Cargar precios por CSV' }),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Promociones' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Promociones' }));
     expect(await screen.findByText('Aún no tienes promociones publicadas.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Mi tienda' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Mi tienda' }));
     expect(screen.getByRole('link', { name: 'Ver ficha pública' })).toHaveAttribute(
       'href',
       '/tiendas/s1',
     );
+  });
+
+  it('las secciones son pestañas WAI-ARIA con teclado y foco estable (H28)', async () => {
+    openPanel({ 'GET /v1/commerce/promotions': { status: 200, body: { items: [] } } });
+    const list = await screen.findByRole('tablist', { name: 'Secciones del portal de comercios' });
+    expect(
+      within(list)
+        .getAllByRole('tab')
+        .map(({ textContent }) => textContent),
+    ).toEqual(['Precios', 'Carga masiva', 'Promociones', 'Mi tienda']);
+    const precios = screen.getByRole('tab', { name: 'Precios' });
+    expect(screen.getAllByRole('tab').filter((tab) => tab.tabIndex === 0)).toEqual([precios]);
+    expect(screen.getByRole('tabpanel', { name: 'Precios' })).toHaveAttribute(
+      'id',
+      precios.getAttribute('aria-controls'),
+    );
+
+    precios.focus();
+    fireEvent.keyDown(precios, { key: 'ArrowRight' });
+    const carga = screen.getByRole('tab', { name: 'Carga masiva' });
+    expect(carga).toHaveFocus();
+    expect(screen.getByRole('tabpanel', { name: 'Carga masiva' })).toBeVisible();
+
+    fireEvent.keyDown(carga, { key: 'End' });
+    expect(screen.getByRole('tab', { name: 'Mi tienda' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Mi tienda' }), { key: 'ArrowRight' });
+    expect(precios).toHaveFocus();
+    expect(precios).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('el aviso de reconfirmar sale bajo su botón y es el único status visible (H21, H27)', async () => {
+    openPanel({ [`POST ${prices}/reconfirm`]: { status: 200, body: { reconfirmed: 1 } } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Todos mis precios siguen igual' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    const notice = await screen.findByText('Precios reconfirmados: 1.');
+    expect(screen.getAllByRole('status')).toEqual([notice]);
+    expect(within(screen.getByRole('region', { name: 'Mis precios' })).getByRole('status')).toBe(
+      notice,
+    );
+    // El botón desapareció: el foco pasa al aviso, que es lo único que cambió.
+    await waitFor(() => {
+      expect(notice).toHaveFocus();
+    });
+  });
+
+  it('el aviso de publicar un precio sale junto al formulario y reemplaza al anterior (H21, H27)', async () => {
+    openPanel({
+      [`PUT ${prices}`]: { status: 200, body: item },
+      [`POST ${prices}/reconfirm`]: { status: 200, body: { reconfirmed: 1 } },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar precio de Arroz · 500 g' }));
+    fireEvent.change(screen.getByLabelText('Precio oficial en pesos'), {
+      target: { value: '2300' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar precio' }));
+
+    const published = await screen.findByText('Precio oficial publicado.');
+    expect(
+      within(screen.getByRole('region', { name: 'Publicar o editar un precio' })).getByRole(
+        'status',
+      ),
+    ).toBe(published);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Todos mis precios siguen igual' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+    await screen.findByText('Precios reconfirmados: 1.');
+    expect(screen.queryByText('Precio oficial publicado.')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+  });
+
+  it('el aviso de la carga masiva sale bajo el formulario de la pestaña (H21)', async () => {
+    openPanel({
+      [`POST ${prices}/bulk`]: { status: 200, body: { published: 1, inReview: [], errors: [] } },
+    });
+    fireEvent.click(await screen.findByRole('tab', { name: 'Carga masiva' }));
+    fireEvent.change(await screen.findByLabelText('Archivo CSV'), {
+      target: { files: [new File(['codigo_barras;precio\r\n1;2200\r\n'], 'p.csv')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar precios' }));
+
+    const notice = await screen.findByText('Filas publicadas: 1.');
+    expect(screen.getAllByRole('status')).toEqual([notice]);
+    expect(
+      within(screen.getByRole('region', { name: 'Cargar precios por CSV' })).getByRole('status'),
+    ).toBe(notice);
   });
 
   it('no consulta datos comerciales desde una cuenta reportante', async () => {

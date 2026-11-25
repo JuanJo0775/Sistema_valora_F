@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '../../test/fakeApi';
 import { MerchantStoreEditor } from './MerchantStoreEditor';
 
@@ -46,6 +46,11 @@ it('envía solo los datos modificados y distingue lo aplicado de lo pendiente', 
   fireEvent.click(screen.getByRole('button', { name: 'Marcar ubicación' }));
   fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
   expect(await screen.findByText(/Cambios aplicados: teléfono/)).toBeInTheDocument();
+  // H21, H4: el resultado sale justo bajo el botón «Guardar cambios», y es el único status.
+  const save = screen.getByRole('button', { name: 'Guardar cambios' });
+  const status = screen.getByRole('status');
+  expect(screen.getAllByRole('status')).toHaveLength(1);
+  expect(save.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByText(/En revisión: nombre y ubicación/)).toBeInTheDocument();
   await waitFor(() => {
     expect(calls.find(({ method }) => method === 'PATCH')?.body).toBe(
@@ -129,4 +134,102 @@ it('reintenta la carga de los datos de la tienda', async () => {
   );
   fireEvent.click(await screen.findByRole('button', { name: /reintentar/i }));
   expect(await screen.findByLabelText('Nombre de la tienda')).toHaveValue('La Rosa');
+});
+
+describe('editor de horario', () => {
+  const open = async () => {
+    stubApi({
+      'GET /v1/auth/session': { status: 200, body: { csrfToken: 'csrf' } },
+      'GET /v1/establishments/s1/prices': {
+        status: 200,
+        body: { establishment: { id: 's1', name: 'La Rosa', lat: 4.53, lng: -75.68 }, prices: [] },
+      },
+    });
+    const view = render(
+      <MemoryRouter>
+        <MerchantStoreEditor storeId="s1" onChanged={() => undefined} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar horario' }));
+    return view;
+  };
+
+  it('es un grupo con leyenda y una fila con nombre por cada día, sin fieldset anidados', async () => {
+    const { container } = await open();
+    expect(screen.getByRole('group', { name: 'Horario semanal' })).toBeInTheDocument();
+    expect(container.querySelectorAll('fieldset fieldset')).toHaveLength(0);
+    for (const day of ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']) {
+      expect(screen.getByRole('group', { name: day })).toBeInTheDocument();
+    }
+  });
+
+  it('cada día cerrado dice «Cerrado» y al abrirlo muestra sus dos horas con nombre claro', async () => {
+    await open();
+    const monday = screen.getByRole('group', { name: 'Lunes' });
+    expect(within(monday).getByText('Cerrado')).toBeInTheDocument();
+    expect(within(monday).queryByLabelText('Apertura del lunes')).not.toBeInTheDocument();
+    fireEvent.click(within(monday).getByLabelText('Abre el lunes'));
+    expect(within(monday).getByLabelText('Apertura del lunes')).toHaveValue('08:00');
+    expect(within(monday).getByLabelText('Cierre del lunes')).toHaveValue('18:00');
+    expect(within(monday).queryByText('Cerrado')).not.toBeInTheDocument();
+  });
+
+  it('«Copiar el horario del lunes a los demás días» solo se puede usar con el lunes abierto', async () => {
+    await open();
+    const copy = screen.getByRole('button', {
+      name: 'Copiar el horario del lunes a los demás días',
+    });
+    expect(copy).toBeDisabled();
+    fireEvent.click(screen.getByLabelText('Abre el lunes'));
+    expect(copy).toBeEnabled();
+  });
+
+  it('copia el horario del lunes a los demás días, los abre y lo anuncia', async () => {
+    await open();
+    fireEvent.click(screen.getByLabelText('Abre el lunes'));
+    fireEvent.change(screen.getByLabelText('Apertura del lunes'), { target: { value: '07:30' } });
+    fireEvent.change(screen.getByLabelText('Cierre del lunes'), { target: { value: '20:00' } });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Copiar el horario del lunes a los demás días' }),
+    );
+    for (const day of ['martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']) {
+      const label = day === 'miercoles' ? 'miércoles' : day === 'sabado' ? 'sábado' : day;
+      expect(screen.getByLabelText('Abre el ' + label)).toBeChecked();
+      expect(screen.getByLabelText('Apertura del ' + label)).toHaveValue('07:30');
+      expect(screen.getByLabelText('Cierre del ' + label)).toHaveValue('20:00');
+    }
+    expect(screen.getByRole('status')).toHaveTextContent('Horario del lunes copiado');
+  });
+
+  it('copiar el horario y guardar nunca dejan dos avisos a la vez (H27)', async () => {
+    stubApi({
+      'GET /v1/auth/session': { status: 200, body: { csrfToken: 'csrf' } },
+      'GET /v1/establishments/s1/prices': {
+        status: 200,
+        body: { establishment: { id: 's1', name: 'La Rosa', lat: 4.53, lng: -75.68 }, prices: [] },
+      },
+      'PATCH /v1/commerce/establishment': {
+        status: 200,
+        body: { applied: ['openingHours'], inReview: [] },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <MerchantStoreEditor storeId="s1" onChanged={() => undefined} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar horario' }));
+    fireEvent.click(screen.getByLabelText('Abre el lunes'));
+    const copy = screen.getByRole('button', {
+      name: 'Copiar el horario del lunes a los demás días',
+    });
+    fireEvent.click(copy);
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await screen.findByText(/Cambios aplicados/)).toBeInTheDocument();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    fireEvent.click(copy);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent('Horario del lunes copiado');
+  });
 });

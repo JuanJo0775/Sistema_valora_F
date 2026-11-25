@@ -5,6 +5,7 @@ import type { components } from '../../shared/api/schema';
 import { formatCop } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { SidePanel } from '../../shared/ui/SidePanel';
 import { SkeletonDetail } from '../../shared/ui/Skeleton';
 import { formatPresentation } from './presentation';
 import { useSession } from '../auth/session';
@@ -15,6 +16,7 @@ import { MUNICIPALITIES } from '../comparison/criteria';
 import { HistorySummary } from '../history/HistorySummary';
 import { ChangeProductPhoto } from '../moderation/ChangeProductPhoto';
 import { ProductImage } from './ProductImage';
+import { ProductOnlineOffers } from './ProductOnlineOffers';
 import './catalog.css';
 import { BackLink } from '../../shared/ui/BackLink';
 
@@ -117,11 +119,12 @@ export function ProductDetail() {
             <p className="muted">{summary(product, comparison)}</p>
           </div>
         </header>
+        <ProductOnlineOffers key={product.id} product={product} />
       </article>
       {/* #48: en escritorio, el panel fijo de la derecha; en el celular, entre el producto y la
           lista de tiendas, para que lo que decide la compra quede primero. Orden del panel: el más
           barato, la presentación, agregar a la canasta (primaria) y registrar un precio. */}
-      <aside className="side" aria-label="Precios y acciones">
+      <SidePanel aria-label="Precios y acciones">
         {comparison ? (
           <CheapestCard comparison={comparison} sizeOf={sizeOf(product)} />
         ) : (
@@ -133,11 +136,15 @@ export function ProductDetail() {
           suggestedPresentationId={cheapestPresentationId}
           lowestPrice={cheapest ? formatCop(cheapest.priceCop) : undefined}
         />
-        <Link to={`/registrar?producto=${product.id}`} className="btn ghost">
-          {`Registrar un precio de ${product.name}`}
+        <Link
+          to={`/registrar?producto=${product.id}`}
+          className="btn ghost"
+          aria-label={`Registrar un precio de ${product.name}`}
+        >
+          Registrar un precio
         </Link>
         <HistorySummary productId={product.id} />
-      </aside>
+      </SidePanel>
       <AllStores
         product={product}
         onComparison={(latest) => {

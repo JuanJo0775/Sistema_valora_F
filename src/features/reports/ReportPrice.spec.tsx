@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi, stubPendingApi } from '../../test/fakeApi';
@@ -316,7 +316,11 @@ describe('registrar un precio', () => {
 
     renderReport();
 
-    expect(await screen.findByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+    // Con la tienda ya elegida, el bloque es una fila: «Tienda X · Cambiar».
+    const row = await screen.findByRole('group', { name: 'Tienda' });
+    expect(row).toHaveTextContent('Tienda Don Pepe');
+    expect(within(row).getByRole('button', { name: /^Cambiar/ })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Tienda Don Pepe/ })).toBeNull();
   });
 
   it('la tienda recordada no muestra la distancia de la vez anterior', async () => {
@@ -328,8 +332,88 @@ describe('registrar un precio', () => {
 
     renderReport();
 
-    const stores = await screen.findByRole('radiogroup', { name: 'Tienda' });
+    const stores = await screen.findByRole('group', { name: 'Tienda' });
     expect(stores).not.toHaveTextContent('350 m');
+  });
+
+  describe('el bloque «Tienda» elegido es una sola fila', () => {
+    const remembered = () => {
+      localStorage.setItem('valora:ultima-tienda', JSON.stringify(donPepe));
+      stubApi({
+        ...productRoute,
+        'GET /v1/establishments': { status: 200, body: { items: [donPepe, otherStore] } },
+      });
+    };
+    const otherStore = {
+      ...donPepe,
+      id: '6e3d2c1b-0a9f-4b8c-9d7e-6f5a4b3c2d1e',
+      name: 'D1 Bolívar',
+    };
+
+    it('«Cambiar» reabre el buscador, con el foco en su campo y la tienda actual elegida', async () => {
+      remembered();
+      renderReport();
+      fireEvent.click(await screen.findByRole('button', { name: /^Cambiar/ }));
+
+      expect(screen.getByRole('searchbox', { name: 'Buscar tienda por nombre' })).toHaveFocus();
+      expect(screen.getByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+      expect(screen.queryByRole('group', { name: 'Tienda' })).toBeNull();
+    });
+
+    it('elegir otra tienda vuelve a la fila y devuelve el foco a «Cambiar»', async () => {
+      remembered();
+      renderReport();
+      fireEvent.click(await screen.findByRole('button', { name: /^Cambiar/ }));
+      searchStore('bol');
+
+      fireEvent.click(await screen.findByRole('radio', { name: /D1 Bolívar/ }));
+
+      const row = screen.getByRole('group', { name: 'Tienda' });
+      expect(row).toHaveTextContent('D1 Bolívar');
+      expect(within(row).getByRole('button', { name: /^Cambiar/ })).toHaveFocus();
+    });
+
+    it('«Seguir con» la tienda actual cierra el buscador sin cambiar nada', async () => {
+      remembered();
+      renderReport();
+      fireEvent.click(await screen.findByRole('button', { name: /^Cambiar/ }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Seguir con «Tienda Don Pepe»' }));
+
+      expect(screen.getByRole('group', { name: 'Tienda' })).toHaveTextContent('Tienda Don Pepe');
+      expect(screen.getByRole('button', { name: /^Cambiar/ })).toHaveFocus();
+    });
+
+    it('sin tienda elegida se ve el buscador completo, sin «Seguir con»', async () => {
+      stubApi(productRoute);
+      renderReport();
+
+      expect(await screen.findByRole('radiogroup', { name: 'Tienda' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Seguir con/ })).toBeNull();
+    });
+  });
+
+  it('la nota del precio es una línea y el formato va plegado', async () => {
+    stubApi(productRoute);
+    renderReport();
+
+    await screen.findByRole('heading', { name: 'Arroz blanco' });
+    expect(screen.getByText('Es el precio de la presentación que elijas.')).toHaveAttribute(
+      'id',
+      'ayuda-precio',
+    );
+    const help = screen.getByText('¿Cómo escribirlo?').closest('details');
+    expect(help).not.toHaveAttribute('open');
+    expect(help).toHaveTextContent('Puedes escribirlo como 4600, 4.600 o $4.600.');
+  });
+
+  it('«Enviar» va en la barra de acción del formulario', async () => {
+    stubApi(productRoute);
+    renderReport();
+
+    const send = await screen.findByRole('button', { name: 'Enviar' });
+    expect(send.closest('.report-bar')).not.toBeNull();
+    expect(send.closest('form')).not.toBeNull();
   });
 
   describe('tienda preseleccionada con ?tienda=', () => {
@@ -344,7 +428,31 @@ describe('registrar un precio', () => {
       stubApi({ ...productRoute, ...pepePrices });
       renderReport(`/registrar?producto=${rice.id}&tienda=${donPepe.id}`);
 
-      expect(await screen.findByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+      expect(await screen.findByRole('group', { name: 'Tienda' })).toHaveTextContent(
+        'Tienda Don Pepe',
+      );
+    });
+
+    it('buscar y elegir el producto conserva la tienda de la dirección', async () => {
+      stubApi({
+        ...productRoute,
+        ...pepePrices,
+        'GET /v1/products': { status: 200, body: { items: [rice] } },
+      });
+      renderReport(`/registrar?tienda=${donPepe.id}`);
+
+      fireEvent.change(screen.getByRole('combobox', { name: 'Buscar producto' }), {
+        target: { value: 'arroz' },
+      });
+      fireEvent.submit(screen.getByRole('search'));
+      const result = await screen.findByRole('link', { name: /Arroz blanco/ });
+      expect(result).toHaveAttribute('href', `/registrar?producto=${rice.id}&tienda=${donPepe.id}`);
+
+      fireEvent.click(result);
+
+      expect(await screen.findByRole('group', { name: 'Tienda' })).toHaveTextContent(
+        'Tienda Don Pepe',
+      );
     });
 
     it('si no es un UUID se ignora sin llamar a la API ni romper la pantalla', async () => {
@@ -362,7 +470,7 @@ describe('registrar un precio', () => {
       renderReport(`/registrar?producto=${rice.id}&tienda=11111111-2222-4333-8444-555555555555`);
 
       expect(await screen.findByRole('heading', { name: 'Arroz blanco' })).toBeInTheDocument();
-      expect(screen.getByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
+      expect(screen.getByRole('group', { name: 'Tienda' })).toHaveTextContent('Tienda Don Pepe');
     });
 
     it('sin producto, la tienda sigue en los enlaces de cada resultado reciente', () => {
@@ -618,14 +726,15 @@ describe('registrar un precio', () => {
 
     searchStore('don pepe');
 
-    fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
-    expect(screen.getByRole('radio', { name: /Tienda Don Pepe/ })).toBeChecked();
-    const asked = api.requested.find(({ pathname }) => pathname === '/v1/establishments');
-    expect(asked?.searchParams.get('q')).toBe('don pepe');
+    const pepe = await screen.findByRole('radio', { name: /Tienda Don Pepe/ });
     expect(screen.getByRole('link', { name: '¿No está la tienda? Sugiérela' })).toHaveAttribute(
       'href',
       '/proponer/tienda',
     );
+    fireEvent.click(pepe);
+    expect(screen.getByRole('group', { name: 'Tienda' })).toHaveTextContent('Tienda Don Pepe');
+    const asked = api.requested.find(({ pathname }) => pathname === '/v1/establishments');
+    expect(asked?.searchParams.get('q')).toBe('don pepe');
   });
 
   it.each([
@@ -901,6 +1010,22 @@ describe('registrar un precio: precio atípico', () => {
       'priceType',
     ]);
     expect(body).toMatchObject({ priceCop: 2400 });
+  });
+
+  it('tras confirmar un precio atípico, «Recibido» dice que un moderador lo revisa antes de mostrarlo', async () => {
+    const api = stubApi({ ...reportRoutes, ...comparisonRoute(seen) });
+    renderReport();
+    await sendKg(api, '2400');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sí, ese es el precio' }));
+
+    expect(await screen.findByRole('heading', { name: 'Recibido' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Gracias: un moderador lo revisará antes de mostrarlo. El estado de tu aporte lo ves en «Mis aportes».',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Ya cuenta en la comparación/)).not.toBeInTheDocument();
   });
 
   it('sugiere el precio con los ceros que faltan y «Sí, escribir» lo pone en el campo', async () => {

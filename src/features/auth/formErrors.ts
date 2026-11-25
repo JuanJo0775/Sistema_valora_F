@@ -22,12 +22,11 @@ export function emailProblem(email: string): string {
 // el servidor; aquí solo se dice antes de enviar.
 const NAME = /^\p{L}+(?:[ '-]\p{L}+)*$/u;
 
+export const NAME_PROBLEM = 'Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.';
+
 export function nameProblem(name: string): string {
   const trimmed = name.trim();
-  if (trimmed.length < 2 || trimmed.length > 40 || !NAME.test(trimmed)) {
-    return 'Escribe tu nombre: de 2 a 40 letras, sin números ni símbolos.';
-  }
-  return '';
+  return trimmed.length < 2 || trimmed.length > 40 || !NAME.test(trimmed) ? NAME_PROBLEM : '';
 }
 
 // Ley 1581: sin consentimiento no se crea la cuenta.

@@ -59,6 +59,52 @@ describe('precios en revisión', () => {
     expect(milk.getByText('«Lo vi en la góndola, el precio era ese.»')).toBeInTheDocument();
   });
 
+  it('un precio oficial sin referencia no muestra mediana ni porcentaje y no ofrece observar cuentas', async () => {
+    renderQueue({
+      'GET /v1/moderation/queue': queue(
+        item('Lentejas Diana · 500 g', 'sin_referencia', {
+          medianPriceCop: undefined,
+          deviationPercent: undefined,
+          reportersCount: 0,
+        }),
+        item('Arroz Diana · 500 g', 'marcado'),
+      ),
+    });
+    await screen.findByText('Lentejas Diana · 500 g');
+    const lentils = caseOf('Lentejas Diana · 500 g');
+    expect(lentils.getByText('Sin referencia para comparar')).toBeInTheDocument();
+    expect(
+      lentils.getByText('Precio oficial de un comercio sin otras tiendas para compararlo'),
+    ).toBeInTheDocument();
+    expect(lentils.queryByText(/mediana/)).not.toBeInTheDocument();
+    expect(lentils.queryByText(/%/)).not.toBeInTheDocument();
+    expect(lentils.getByRole('radio', { name: 'Aprobar' })).toBeInTheDocument();
+    expect(lentils.getByRole('radio', { name: 'Descartar' })).toBeInTheDocument();
+    expect(lentils.queryByRole('radio', { name: 'Observar cuentas' })).not.toBeInTheDocument();
+    // Los demás motivos conservan las tres opciones.
+    expect(
+      caseOf('Arroz Diana · 500 g').getByRole('radio', { name: 'Observar cuentas' }),
+    ).toBeInTheDocument();
+  });
+
+  // El backend manda la desviación en valor absoluto: el signo sale de comparar los precios.
+  it.each([
+    ['menor que la mediana', 150, 3950, 96, 'Reportado $150 · mediana $3.950 (−96 %)'],
+    ['mayor que la mediana', 9000, 4500, 100, 'Reportado $9.000 · mediana $4.500 (+100 %)'],
+  ])('el signo de la desviación sigue al precio (%s)', async (_, reported, median, pct, text) => {
+    renderQueue({
+      'GET /v1/moderation/queue': queue(
+        item('Arroz Diana · 500 g', 'desviacion', {
+          reportedPriceCop: reported,
+          medianPriceCop: median,
+          deviationPercent: pct,
+        }),
+      ),
+    });
+
+    expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
   const decide = async (name: string, decision: string, note: string) => {
     const row = within((await screen.findByText(name)).closest('li') as HTMLElement);
     fireEvent.click(row.getByRole('radio', { name: decision }));

@@ -14,6 +14,7 @@ type Decision = 'aprobar' | 'descartar' | 'observar_cuentas';
 
 export const REASONS: Record<Reason, string> = {
   desviacion: 'Muy distinto a la mediana',
+  sin_referencia: 'Sin referencia para comparar',
   rafaga: 'Muchos reportes seguidos',
   marcado: 'Marcado como dudoso',
   apelacion: 'Apelación',
@@ -26,10 +27,16 @@ const REASON_OPTIONS: { value: Reason | ''; label: string }[] = [
   ...(Object.keys(REASONS) as Reason[]).map((value) => ({ value, label: REASONS[value] })),
 ];
 
-const DECISIONS: { value: Decision; label: string }[] = [
+const DECISIONS: { value: Decision; label: string; hint?: string; confirm?: string }[] = [
   { value: 'aprobar', label: 'Aprobar' },
   { value: 'descartar', label: 'Descartar' },
-  { value: 'observar_cuentas', label: 'Observar cuentas' },
+  {
+    value: 'observar_cuentas',
+    label: 'Observar cuentas',
+    // Backend (#33): suspende 7 días al autor del reporte y solo anota la decisión; no aprueba ni descarta.
+    hint: 'Observar cuentas suspende por 7 días la cuenta de quien reportó y descarta este reporte.',
+    confirm: 'Esto suspende la cuenta por 7 días. ¿Confirmas?',
+  },
 ];
 
 // #73 y #71 del backend: nadie decide su propio reporte ni la apelación de lo que descartó.
@@ -39,16 +46,19 @@ const OTHER_MODERATOR = {
 };
 const explain = explainWith(OTHER_MODERATOR);
 
-// «−73 %»: con el signo menos tipográfico, como se lee.
-const deviation = (percent: number) =>
-  `${percent < 0 ? '−' : '+'}${String(Math.abs(Math.round(percent)))} %`;
+// «−73 %»: con el signo menos tipográfico, como se lee. El backend manda la desviación en
+// valor absoluto, así que el signo sale de si lo reportado está por debajo o por encima.
+const deviation = (percent: number, below: boolean) =>
+  `${below ? '−' : '+'}${String(Math.abs(Math.round(percent)))} %`;
 
 function comparison(item: Item) {
   const median =
     item.medianPriceCop === undefined
       ? false
       : `mediana ${formatCop(item.medianPriceCop)}${
-          item.deviationPercent === undefined ? '' : ` (${deviation(item.deviationPercent)})`
+          item.deviationPercent === undefined
+            ? ''
+            : ` (${deviation(item.deviationPercent, item.reportedPriceCop < item.medianPriceCop)})`
         }`;
   return [
     `Reportado ${formatCop(item.reportedPriceCop)}`,
@@ -85,6 +95,9 @@ export function ModerationQueue() {
             <h2>{item.productName}</h2>
             <p className="muted">{item.establishmentName}</p>
             <p>{comparison(item)}</p>
+            {item.reason === 'sin_referencia' && (
+              <p>Precio oficial de un comercio sin otras tiendas para compararlo</p>
+            )}
             <p className="muted">{`Reportado el ${dayInColombia(item.createdAt)} (${relativeDay(item.createdAt).toLowerCase()})`}</p>
             {item.reportersCount > 0 && (
               <p className="muted">
@@ -96,7 +109,11 @@ export function ModerationQueue() {
             )}
             <DecisionForm
               id={item.id}
-              options={DECISIONS}
+              options={
+                item.reason === 'sin_referencia'
+                  ? DECISIONS.filter(({ value }) => value !== 'observar_cuentas')
+                  : DECISIONS
+              }
               onDecide={(decision: Decision, note) =>
                 call(
                   api.POST('/moderation/{itemId}/decision', {

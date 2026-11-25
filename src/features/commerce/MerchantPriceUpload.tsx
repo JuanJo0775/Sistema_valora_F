@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useState } from 'react';
+import { type ReactNode, type SyntheticEvent, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { operations } from '../../shared/api/schema';
 
@@ -38,9 +38,12 @@ function readText(file: File): Promise<string> {
 export function MerchantPriceUpload({
   disabled,
   onUpload,
+  result,
 }: {
   disabled: boolean;
   onUpload: (action: () => Promise<string>) => Promise<void>;
+  // Aviso del resultado de la carga: va justo bajo el botón que la pidió.
+  result?: ReactNode;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [problem, setProblem] = useState('');
@@ -64,7 +67,12 @@ export function MerchantPriceUpload({
           bodySerializer: () => text,
         }),
       );
-      setReport({ outcome, retryCsv: csvForRetry(text, outcome.errors) });
+      // Un backend anterior no trae `inReview`: sin ese campo, ninguna fila quedó en revisión.
+      const held = (outcome.inReview as typeof outcome.inReview | undefined) ?? [];
+      setReport({
+        outcome: { ...outcome, inReview: held },
+        retryCsv: csvForRetry(text, outcome.errors),
+      });
       return `Filas publicadas: ${String(outcome.published)}.`;
     });
   };
@@ -97,7 +105,29 @@ export function MerchantPriceUpload({
         <button type="submit" className="btn" disabled={!file || disabled}>
           Cargar precios
         </button>
+        {result}
       </form>
+      {report && report.outcome.inReview.length > 0 && (
+        <div className="merchant-price-form">
+          <h3>
+            {report.outcome.inReview.length === 1
+              ? '1 fila quedó en revisión'
+              : `${String(report.outcome.inReview.length)} filas quedaron en revisión`}
+          </h3>
+          <p className="muted">
+            No había con qué comparar estos precios: un moderador los verá antes de publicarlos.
+          </p>
+          <ul className="merchant-price-list">
+            {report.outcome.inReview.map(({ row, barcode }) => (
+              <li key={row}>
+                <p>
+                  <strong>Fila {row}</strong> · {barcode}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {report && report.outcome.errors.length > 0 && (
         <div className="merchant-price-form">
           <h3>Filas con errores</h3>

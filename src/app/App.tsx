@@ -9,6 +9,7 @@ import { ProductDetail } from '../features/catalog/ProductDetail';
 import { TodayBasket } from '../features/comparison/TodayBasket';
 import { ProductSearch } from '../features/catalog/ProductSearch';
 import { ReportInvite } from '../features/reports/ReportInvite';
+import { SidePanel } from '../shared/ui/SidePanel';
 import { Layout } from './Layout';
 import { LegacyPlanRedirect } from './LegacyPlanRedirect';
 
@@ -79,10 +80,10 @@ function Home() {
         {search}
         <TodayBasket />
       </div>
-      <aside className="side" aria-label="Tu canasta y registrar">
+      <SidePanel aria-label="Tu canasta y registrar">
         <BasketSummary />
         <ReportInvite />
-      </aside>
+      </SidePanel>
     </div>
   );
 }

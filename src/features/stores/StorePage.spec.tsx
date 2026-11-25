@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { type FakeReply, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { SessionProvider } from '../auth/SessionProvider';
 import { StorePage } from './StorePage';
 
 vi.mock('./StoreMap', () => ({
@@ -55,6 +56,55 @@ const renderStore = () =>
 describe('página de una tienda', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  const renderAs = (role: 'comercio' | 'reportante', type = 'barrio') => {
+    stubApi({
+      [`GET /v1/establishments/${ARA}/prices`]: {
+        status: 200,
+        body: { establishment: { ...ara, type }, prices: [banana] },
+      },
+      'GET /v1/auth/session': sessionAs(role),
+    });
+    return render(
+      <SessionProvider>
+        <MemoryRouter initialEntries={[`/tiendas/${ARA}`]}>
+          <Routes>
+            <Route path="/tiendas/:establishmentId" element={<StorePage />} />
+          </Routes>
+        </MemoryRouter>
+      </SessionProvider>,
+    );
+  };
+
+  it('a un reportante le ofrece reclamar la tienda', async () => {
+    renderAs('reportante');
+
+    expect(
+      await screen.findByRole('link', { name: '¿Eres el dueño? Registra tu tienda' }),
+    ).toBeInTheDocument();
+  });
+
+  it('en una tienda de cadena (tipo descuento) no ofrece reclamarla (H11)', async () => {
+    renderAs('reportante', 'descuento');
+
+    await screen.findByRole('heading', { level: 1, name: 'Ara' });
+    await vi.waitFor(() => {
+      expect(
+        screen.queryByRole('link', { name: '¿Eres el dueño? Registra tu tienda' }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('a un comercio no le ofrece reclamar una tienda: ya no puede registrar otra', async () => {
+    renderAs('comercio');
+
+    await screen.findByRole('heading', { level: 1, name: 'Ara' });
+    await vi.waitFor(() => {
+      expect(
+        screen.queryByRole('link', { name: '¿Eres el dueño? Registra tu tienda' }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('muestra la tienda en una tarjeta con su tipo, dirección, municipio y acciones', async () => {
@@ -112,6 +162,22 @@ describe('página de una tienda', () => {
     expect(row.getByText('$450 por 100 g')).toBeInTheDocument();
     expect(row.getByText('Confiabilidad alta')).toBeInTheDocument();
     expect(screen.queryByText(/Sé el primero/)).not.toBeInTheDocument();
+  });
+
+  it('el precio oficial del comercio lleva la insignia «Precio oficial» y los de la comunidad no', async () => {
+    const official = price('Arroz Diana', 4800, {
+      source: 'oficial',
+      reportId: undefined,
+      reliability: undefined,
+    });
+    stubStore(storeReply([official, banana]));
+    renderStore();
+    const rows = await screen.findAllByRole('listitem');
+    const arroz = rows.find((row) => within(row).queryByText('Arroz Diana'));
+    const banano = rows.find((row) => within(row).queryByText('Banano'));
+    expect(arroz && within(arroz).getByText('Precio oficial')).toBeInTheDocument();
+    expect(banano && within(banano).queryByText('Precio oficial')).toBeNull();
+    expect(screen.getAllByText('Precio oficial')).toHaveLength(1);
   });
 
   it('con un solo precio el conteo va en singular', async () => {

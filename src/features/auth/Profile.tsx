@@ -107,7 +107,9 @@ export function Profile() {
             <p className="pill mute">{ROLE_LABEL[session.role]}</p>
           </div>
         </header>
-        {session.suspendedUntil && <SuspendedNotice until={session.suspendedUntil} />}
+        {session.suspendedUntil && (
+          <SuspendedNotice until={session.suspendedUntil} reason={session.suspensionReason} />
+        )}
         {error !== null && <ErrorState error={error} />}
         {section && (
           <Group id="actividad" title="Mi actividad">

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sessionAs, stubApi } from '../../test/fakeApi';
 import { SessionProvider } from '../auth/SessionProvider';
 import { MerchantReport } from '../stores/MerchantReport';
@@ -29,16 +29,41 @@ it('ofrece denunciar solo si la API autoriza y envía el motivo', async () => {
   fireEvent.click(
     await screen.findByRole('button', { name: '¿Este comercio no es de quien dice?' }),
   );
+  // El botón que abrió el formulario desaparece: el foco pasa al campo del motivo.
+  expect(screen.getByLabelText('Motivo de la denuncia')).toHaveFocus();
   fireEvent.change(screen.getByLabelText('Motivo de la denuncia'), {
     target: { value: 'La tienda tiene otro dueño.' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Enviar denuncia' }));
   expect(
     await screen.findByText('Denuncia recibida. Un moderador revisará el caso.'),
-  ).toBeInTheDocument();
+  ).toHaveFocus();
   expect(calls.find((request) => request.method === 'POST')?.body).toBe(
     JSON.stringify({ reason: 'La tienda tiene otro dueño.' }),
   );
+});
+
+it('si la cuenta ya denunció el comercio lo dice en lugar del formulario (H31)', async () => {
+  stubApi({
+    'GET /v1/auth/session': sessionAs('reportante'),
+    'GET /v1/establishments/s1/merchant-reports': {
+      status: 200,
+      body: { canReport: false, alreadyReported: true },
+    },
+  });
+  render(
+    <MemoryRouter>
+      <SessionProvider>
+        <MerchantReport establishmentId="s1" />
+      </SessionProvider>
+    </MemoryRouter>,
+  );
+  expect(
+    await screen.findByText('Ya denunciaste este comercio; moderación lo está revisando.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '¿Este comercio no es de quien dice?' }),
+  ).not.toBeInTheDocument();
 });
 
 it('no habilita la denuncia al consultar una tienda propia', async () => {
@@ -97,6 +122,76 @@ it('permite al moderador revocar un comercio con motivo', async () => {
   expect(calls.find((request) => request.path.endsWith('/c1/decision'))?.body).toBe(
     JSON.stringify({ decision: 'revocar', note: 'Motivo verificado por moderación.' }),
   );
+});
+
+describe('reclamos de tienda (H11)', () => {
+  const path = '/v1/moderation/merchant-cases';
+  const claim = {
+    id: 'r1',
+    kind: 'reclamo',
+    establishment: { id: 's1', name: 'Supermercado La Rosa' },
+    owner: {
+      responsibleName: 'Rosa Gómez',
+      nit: '900123456-7',
+      phone: '3001234567',
+      status: 'pre_aprobado',
+      verifiedAt: null,
+    },
+    reason: 'Reclamo de la tienda.',
+    createdAt: '2026-11-22T12:00:00Z',
+  };
+  const open = (reply: Record<string, unknown>) => {
+    const api = stubApi({
+      'GET /v1/auth/session': sessionAs('moderador'),
+      [`GET ${path}`]: { status: 200, body: { items: [claim] } },
+      ...reply,
+    });
+    render(
+      <MemoryRouter initialEntries={['/moderacion?vista=comercios']}>
+        <ModerationPanel />
+      </MemoryRouter>,
+    );
+    return api;
+  };
+
+  it('ofrece aprobar o rechazar el reclamo y muestra quién reclama', async () => {
+    const { calls } = open({ [`POST ${path}/r1/decision`]: { status: 204 } });
+    expect(await screen.findByText(/Reclamo de tienda · /)).toBeInTheDocument();
+    expect(screen.getByText('Rosa Gómez')).toBeInTheDocument();
+    expect(screen.getByText('900123456-7')).toBeInTheDocument();
+    expect(screen.getByText('3001234567')).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Revocar comercio' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Descartar caso' })).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Rechazar reclamo' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'Aprobar reclamo' }));
+    fireEvent.change(screen.getByLabelText('Motivo de la decisión'), {
+      target: { value: 'Documentos verificados.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar decisión' }));
+    expect(
+      await screen.findByText('Decisión registrada: Supermercado La Rosa.'),
+    ).toBeInTheDocument();
+    expect(calls.find((request) => request.path.endsWith('/r1/decision'))?.body).toBe(
+      JSON.stringify({ decision: 'aprobar', note: 'Documentos verificados.' }),
+    );
+  });
+
+  it('explica una decisión que no corresponde al caso', async () => {
+    open({
+      [`POST ${path}/r1/decision`]: {
+        status: 422,
+        body: { code: 'DECISION_NOT_APPLICABLE', message: 'No aplica.' },
+      },
+    });
+    fireEvent.click(await screen.findByRole('radio', { name: 'Rechazar reclamo' }));
+    fireEvent.change(screen.getByLabelText('Motivo de la decisión'), {
+      target: { value: 'Datos que no coinciden.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar decisión' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /no corresponde a este tipo de caso/,
+    );
+  });
 });
 
 it('permite aprobar una corrección en Tiendas y muestra los cambios propuestos', async () => {

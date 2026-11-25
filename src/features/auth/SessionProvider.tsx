@@ -5,7 +5,7 @@ import { readLastRole, saveLastRole } from './lastRole';
 import { type Role, type Session, SessionContext } from './session';
 
 // MerchantVerified cambia el rol por el relé. El segundo reintento cubre el intervalo de 5 s.
-async function fetchSession(signal: AbortSignal, expectedRole?: Role) {
+async function loadSession(signal: AbortSignal, expectedRole?: Role) {
   let session = await call(api.GET('/auth/session', { signal }));
   for (
     let retries = 0;
@@ -16,6 +16,11 @@ async function fetchSession(signal: AbortSignal, expectedRole?: Role) {
     if (signal.aborted) return session;
     session = await call(api.GET('/auth/session', { signal }));
   }
+  return session;
+}
+
+async function fetchSession(signal: AbortSignal, expectedRole?: Role) {
+  const session = await loadSession(signal, expectedRole);
   return session;
 }
 
@@ -33,6 +38,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         ({
           role,
           suspendedUntil,
+          suspension,
           displayName,
           emailVerified,
           emailVerificationRequired,
@@ -44,6 +50,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             status: 'active',
             role,
             suspendedUntil,
+            suspensionReason: suspension?.reason,
             displayName,
             emailVerified,
             emailVerificationRequired,
@@ -113,6 +120,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       },
       passwordCreated: () => {
         setSession((now) => (now.status === 'active' ? { ...now, hasPassword: true } : now));
+      },
+      nameChanged: (displayName: string) => {
+        setSession((now) => (now.status === 'active' ? { ...now, displayName } : now));
       },
       reload: () => {
         setSession({ status: 'loading' });

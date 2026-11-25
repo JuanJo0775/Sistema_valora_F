@@ -66,8 +66,7 @@ html {
   .suggest-option,
   .stepper button,
   .overlay-close,
-  .field-eye,
-  .chip-arrow
+  .field-eye
 ):active {
   background: var(--press-bg);
 }
@@ -185,8 +184,7 @@ html {
   .suggest-option:hover,
   .stepper button:hover,
   .overlay-close:hover,
-  .field-eye:hover,
-  .chip-arrow:hover {
+  .field-eye:hover {
     background: var(--hover-bg);
   }
 

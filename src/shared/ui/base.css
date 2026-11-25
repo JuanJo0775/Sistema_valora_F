@@ -237,7 +237,10 @@ button {
 }
 
 /* #48: contenido principal y panel lateral. En el celular, uno debajo del otro; desde 960 px, dos
-   columnas (1,5 : 1) con el panel fijo al desplazarse, como en el prototipo de referencia. */
+   columnas (1,5 : 1). El panel (.side) nunca tiene altura máxima ni scroll propio: un scroll dentro
+   del scroll de la página deja partes cortadas y no se alcanza bien con teclado ni lector de pantalla.
+   Se queda fijo al desplazar solo si cabe entero en la ventana: SidePanel mide y le pone `fit`; si no
+   cabe, fluye con la página como una columna más. */
 .with-side {
   display: grid;
   gap: 24px;
@@ -255,57 +258,17 @@ button {
     align-items: start;
   }
 
-  /* La columna fija nunca debe ser más alta que la pantalla: si lo es (ventana baja, muchas tarjetas),
-     se desplaza por dentro y todo se puede alcanzar; antes la parte de abajo quedaba cortada y sin
-     scroll. 88 px es el alto de la barra superior más su aire; 16 px, el aire de abajo. */
-  .with-side {
-    --side-h: calc(100dvh - 88px - 16px);
-  }
-
-  .side {
+  /* 88 px es el alto de la barra superior más su aire (SidePanel usa el mismo número). */
+  .side.fit {
     position: sticky;
     top: 88px;
-    max-height: var(--side-h);
-    overflow-y: auto;
-    overscroll-behavior: contain;
   }
+}
 
-  /* Una sola barra de desplazamiento, discreta y sin flechas de botones. Chrome y Safari: barra de
-     WebKit; Firefox, que no la tiene, usa la fina estándar. No se mezclan: con scrollbar-width Chrome
-     ignora la de WebKit y vuelve a pintar las flechas. */
-  /* Un panel corto que siempre cabe (.fit: el resumen de la canasta y guardar la lista) no se
-     desplaza por dentro: sin barra ni scroll anidado. */
-  .side.fit {
-    max-height: none;
-    overflow: visible;
-  }
-
-  .side::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .side::-webkit-scrollbar-button {
-    display: none;
-    width: 0;
-    height: 0;
-  }
-
-  .side::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .side::-webkit-scrollbar-thumb {
-    border: 2px solid transparent;
-    border-radius: 999px;
-    background: var(--line-2);
-    background-clip: padding-box;
-  }
-
-  @supports not selector(::-webkit-scrollbar) {
-    .side {
-      scrollbar-width: thin;
-      scrollbar-color: var(--line-2) transparent;
-    }
+/* La barra superior es fija en computador: lo que se enfoca con Tab no queda debajo de ella (WCAG 2.4.11). */
+@media (width >= 960px) {
+  html {
+    scroll-padding-top: 88px;
   }
 }
 
@@ -407,7 +370,8 @@ button {
 .banner a,
 .cookie-notice a,
 .legal p a,
-.legal li a {
+.legal li a,
+.wholesale p a {
   padding-block: 5px;
 }
 
@@ -432,4 +396,12 @@ button {
 /* Las acciones de un estado vacío van centradas, como su texto. */
 .state .actions {
   justify-content: center;
+}
+
+/* Precio publicado por el comercio de la tienda: azul de información, con escudo y texto (la forma, no
+   solo el color, lo distingue de la comunidad). */
+.pill.official {
+  background: var(--info-soft);
+  color: var(--info);
+  border: 1px solid currentcolor;
 }

@@ -23,6 +23,13 @@ export const LAPTOPS = [
   { name: 'portatil-1728x1117', width: 1728, height: 1117 },
 ];
 
+// Los siete tamaños de la regresión «sin scroll anidado» de Inicio, producto, mapa y tienda: tres de
+// celular y tableta y los cuatro portátiles.
+export const SEVEN_SIZES = [
+  ...SIZES.filter(({ width }) => width === 360 || width === 390 || width === 768),
+  ...LAPTOPS,
+];
+
 export const noOverflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 
@@ -57,9 +64,13 @@ export const smallTargets = (page: Page, selector: string) =>
       const small: string[] = [];
       for (const scope of document.querySelectorAll(root)) {
         for (const el of scope.querySelectorAll(
-          'a[href], button, summary, input, label.rec-option',
+          'a[href], button, summary, input, label.rec-option, label:has(> input[type=checkbox])',
         )) {
           if (el.matches('input[type=radio]')) continue;
+          // Una casilla dentro de su etiqueta se toca por la etiqueta entera (WCAG 2.5.8): se mide ella.
+          if (el.matches('input[type=checkbox]') && el.closest('label')) continue;
+          // La atribución de OpenStreetMap la pone Leaflet, es un enlace dentro de una frase.
+          if (el.closest('.leaflet-container') && !el.closest('.leaflet-bar')) continue;
           const r = el.getBoundingClientRect();
           if (r.width === 0 || r.height === 0) continue;
           if (r.width < min || r.height < min)
@@ -89,14 +100,25 @@ export async function expectNoSeriousAxe(page: Page) {
   expect(bad, 'fallas graves o críticas de axe').toEqual([]);
 }
 
-// Recorre el contenido con Tab desde `start` y dice si el foco va como se ve: primero todo lo de la
-// columna principal, de arriba abajo, y al final lo del panel (`aside`: a la derecha en computador, abajo
-// o fijo abajo en celular). `slack` es lo que puede subir un elemento respecto del anterior (los de una
-// misma fila tienen centros distintos).
-export async function focusOrderProblems(page: Page, start: Locator, slack: number) {
+export interface TabStop {
+  inAside: boolean;
+  cy: number;
+  top: number;
+  // El borde de arriba queda tapado por la barra superior fija (WCAG 2.4.11).
+  covered: boolean;
+  // El mapa de Leaflet al que pertenece (sus pines, zoom y atribución van en el orden de Leaflet).
+  map: number;
+  // La caja en la página: un control dentro de la caja de la parada anterior no cuenta como un salto.
+  box: { top: number; bottom: number; left: number; right: number };
+  name: string;
+}
+
+// Recorre el contenido con Tab desde `start` (hasta salir de <main>) y anota dónde cae el foco: si está
+// en el panel (`aside`), su centro vertical en la página, su borde superior en la ventana y su nombre.
+export async function tabStops(page: Page, start: Locator, max = 120) {
   await start.focus();
-  const stops: { inAside: boolean; cy: number; name: string }[] = [];
-  for (let i = 0; i < 120; i++) {
+  const stops: TabStop[] = [];
+  for (let i = 0; i < max; i++) {
     await page.keyboard.press('Tab');
     const stop = await page.evaluate(() => {
       const el = document.activeElement;
@@ -105,24 +127,55 @@ export async function focusOrderProblems(page: Page, start: Locator, slack: numb
       const t = (
         el.matches('input[type=radio]') ? (el.closest('label') ?? el) : el
       ).getBoundingClientRect();
+      const bar = document.querySelector('header.top');
+      const barBottom =
+        bar && getComputedStyle(bar).position === 'sticky' ? bar.getBoundingClientRect().bottom : 0;
       return {
         inAside: Boolean(el.closest('aside')),
         cy: t.y + window.scrollY + t.height / 2,
-        name: (el.getAttribute('aria-label') ?? el.textContent).trim().slice(0, 50),
+        top: t.y,
+        covered: t.y < barBottom - 1,
+        map: [...document.querySelectorAll('.leaflet-container')].findIndex((m) => m.contains(el)),
+        box: {
+          top: t.y + window.scrollY,
+          bottom: t.bottom + window.scrollY,
+          left: t.left,
+          right: t.right,
+        },
+        name:
+          (el.getAttribute('aria-label') ?? el.textContent).trim().slice(0, 50) ||
+          `${el.tagName.toLowerCase()}.${String(el.getAttribute('class'))}`,
       };
     });
     if (!stop) break;
     stops.push(stop);
   }
+  return stops;
+}
+
+// Los saltos hacia arriba de una secuencia de paradas: cada una debe estar a la altura de la anterior o
+// más abajo. Una parada que comparte altura con la anterior (la misma fila, o la columna de al lado:
+// la barra del radio y sus chips) no sube; `slack` es lo que puede quedar por encima. Dentro de un mismo
+// mapa de Leaflet el orden es el de Leaflet (pines, zoom, atribución).
+export function upwardJumps(stops: TabStop[], slack: number) {
+  const problems: string[] = [];
+  for (let i = 1; i < stops.length; i++) {
+    const [a, b] = [stops[i - 1], stops[i]];
+    if (!a || !b || (a.map >= 0 && a.map === b.map)) continue;
+    if (b.box.bottom + slack < a.box.top) problems.push(`«${b.name}» sube respecto de «${a.name}»`);
+  }
+  return problems;
+}
+
+// Recorre el contenido con Tab desde `start` y dice si el foco va como se ve: primero todo lo de la
+// columna principal, de arriba abajo, y al final lo del panel (`aside`: a la derecha en computador, abajo
+// o fijo abajo en celular).
+export async function focusOrderProblems(page: Page, start: Locator, slack: number) {
+  const stops = await tabStops(page, start);
   const problems: string[] = [];
   const first = stops.findIndex((s) => s.inAside);
   if (first === -1) problems.push('el panel no recibe el foco');
   else if (stops.slice(first).some((s) => !s.inAside))
     problems.push('el contenido principal vuelve después del panel');
-  const main = first === -1 ? stops : stops.slice(0, first);
-  for (let i = 1; i < main.length; i++) {
-    const [a, b] = [main[i - 1], main[i]];
-    if (a && b && b.cy + slack < a.cy) problems.push(`«${b.name}» sube respecto de «${a.name}»`);
-  }
-  return problems;
+  return [...problems, ...upwardJumps(first === -1 ? stops : stops.slice(0, first), slack)];
 }

@@ -1,13 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import { askLocation, formatDistance } from '../../shared/location';
 import type { components } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { ResultsStatus } from '../../shared/ui/ResultsStatus';
+import { MUNICIPALITIES } from '../comparison/criteria';
 import './reports.css';
 
 export type Store = components['schemas']['Establishment'];
+
+// Id del buscador por nombre: el formulario que contiene el selector lo usa para llevarle el foco
+// cuando falta elegir la tienda.
+export const STORE_SEARCH_ID = 'store-search-box';
 
 // RF-005: la ubicación del momento solo sirve para buscar las tiendas cercanas. No se guarda ni va
 // en el reporte, que solo lleva la tienda (EC-08).
@@ -15,16 +21,32 @@ export function StorePicker({
   value,
   onChange,
   mode = 'report',
+  error: fieldError,
 }: {
   mode?: 'report' | 'claim';
+  /** Error de validación del selector (falta elegir): marca el grupo y se enlaza con `aria-describedby`. */
+  error?: string;
   value: Store | null;
   onChange: (store: Store) => void;
 }) {
   const [stores, setStores] = useState<Store[]>([]);
+  const [searched, setSearched] = useState(false);
+  const errorId = useId();
   const [problem, setProblem] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [searching, setSearching] = useState(false);
   const [name, setName] = useState('');
+  // Con la tienda ya elegida (reporte), el bloque es una sola fila: «Tienda X · Cambiar».
+  const [changing, setChanging] = useState(false);
+  const changeButton = useRef<HTMLButtonElement>(null);
+  const searchBox = useRef<HTMLInputElement>(null);
+  // Al abrir el buscador el foco va a su campo; al cerrarlo, de vuelta a «Cambiar».
+  const wasChanging = useRef(false);
+  useEffect(() => {
+    if (changing) searchBox.current?.focus();
+    else if (wasChanging.current) changeButton.current?.focus();
+    wasChanging.current = changing;
+  }, [changing]);
 
   const findNearby = () => {
     setProblem('');
@@ -36,6 +58,7 @@ export function StorePicker({
           call(api.GET('/establishments/nearby', { params: { query: point } }))
             .then(({ items }) => {
               setStores(items);
+              setSearched(true);
               if (items.length === 0) setProblem('No hay tiendas registradas cerca de ti.');
             })
             .catch((failure: unknown) => {
@@ -65,6 +88,7 @@ export function StorePicker({
     call(api.GET('/establishments', { params: { query: { q: wanted } } }))
       .then(({ items }) => {
         setStores(items);
+        setSearched(true);
         if (items.length === 0) setProblem('No encontramos tiendas con ese nombre.');
       })
       .catch((failure: unknown) => {
@@ -75,8 +99,35 @@ export function StorePicker({
       });
   };
 
+  if (mode === 'report' && value && !changing) {
+    return (
+      <div role="group" aria-label="Tienda" className="store-summary">
+        <p className="store-summary-text">
+          <span className="store-summary-label">Tienda</span>
+          <strong>{value.name}</strong>
+        </p>
+        <button
+          ref={changeButton}
+          type="button"
+          className="link-button"
+          aria-label={`Cambiar la tienda (ahora ${value.name})`}
+          onClick={() => {
+            setChanging(true);
+          }}
+        >
+          Cambiar
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <fieldset role="radiogroup" className="choices stores">
+    <fieldset
+      role="radiogroup"
+      className="choices stores"
+      aria-invalid={fieldError ? true : undefined}
+      aria-describedby={fieldError ? errorId : undefined}
+    >
       <legend>Tienda</legend>
       {mode === 'report' && (
         <>
@@ -96,6 +147,8 @@ export function StorePicker({
       {/* Va dentro del formulario del reporte: Enter busca la tienda, no envía el reporte. */}
       <div className="store-search">
         <input
+          ref={searchBox}
+          id={STORE_SEARCH_ID}
           type="search"
           aria-label="Buscar tienda por nombre"
           placeholder="O busca la tienda por su nombre"
@@ -113,6 +166,8 @@ export function StorePicker({
           Buscar tienda
         </button>
       </div>
+      {/* El cero ya lo dice el aviso «No hay tiendas…» / «No encontramos tiendas…» de abajo. */}
+      <ResultsStatus count={searched ? stores.length : null} silentWhenEmpty />
       {searching && <Loading text="Buscando tiendas…" />}
       {error !== null && <ErrorState error={error} />}
       {problem && (
@@ -120,35 +175,55 @@ export function StorePicker({
           {problem}
         </p>
       )}
+      {fieldError && (
+        <p id={errorId} role="alert" className="banner warn">
+          {fieldError}
+        </p>
+      )}
       {mode === 'report' && (
         <Link to="/proponer/tienda" className="link-button">
           ¿No está la tienda? Sugiérela
         </Link>
       )}
+      {mode === 'report' && value && (
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => {
+            setChanging(false);
+          }}
+        >
+          {`Seguir con «${value.name}»`}
+        </button>
+      )}
       {/* La tienda ya elegida (la última usada) aparece aunque no se haya pedido la ubicación. */}
       <div className="store-list">
-        {withChosen(stores, value).map((store) => (
-          <label key={store.id} className="choice store">
-            <input
-              type="radio"
-              name="store"
-              value={store.id}
-              checked={value?.id === store.id}
-              onChange={() => {
-                onChange(store);
-              }}
-            />
-            <span>
-              {store.name}
-              {mode === 'claim' && store.address && (
-                <small className="muted">{store.address}</small>
-              )}
-            </span>
-            {store.distanceM !== undefined && (
-              <span className="muted">{formatDistance(store.distanceM)}</span>
-            )}
-          </label>
-        ))}
+        {withChosen(byProximity(stores), value).map((store) => {
+          const place = placeOf(store);
+          const distance =
+            store.distanceM === undefined ? null : `a ${formatDistance(store.distanceM)}`;
+          return (
+            <label key={store.id} className="choice store">
+              <input
+                type="radio"
+                name="store"
+                value={store.id}
+                // Varias tiendas llevan el mismo nombre (D1, Ara…): el nombre accesible suma lo que las distingue.
+                aria-label={[store.name, place, distance].filter(Boolean).join(' · ')}
+                checked={value?.id === store.id}
+                onChange={() => {
+                  onChange(store);
+                  setChanging(false);
+                }}
+              />
+              <span className="store-choice-text">
+                <span className="store-choice-name">{store.name}</span>
+                {place && <small className="muted">{place}</small>}
+              </span>
+              {distance && <span className="muted store-choice-distance">{distance}</span>}
+            </label>
+          );
+        })}
       </div>
     </fieldset>
   );
@@ -156,3 +231,15 @@ export function StorePicker({
 
 const withChosen = (stores: Store[], chosen: Store | null) =>
   chosen && !stores.some(({ id }) => id === chosen.id) ? [chosen, ...stores] : stores;
+
+// Lo que distingue una tienda de otra con el mismo nombre: municipio, barrio y dirección, los que haya.
+const placeOf = (store: Store) =>
+  [MUNICIPALITIES[store.municipality], store.neighborhood, store.address]
+    .filter(Boolean)
+    .join(' · ');
+
+// Con distancia, de la más cercana a la más lejana; las que no la traen quedan al final, como llegaron.
+const byProximity = (stores: Store[]) =>
+  stores.some(({ distanceM }) => distanceM !== undefined)
+    ? [...stores].sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity))
+    : stores;

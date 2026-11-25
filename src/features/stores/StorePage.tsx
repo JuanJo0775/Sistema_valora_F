@@ -8,10 +8,13 @@ import { formatCop, formatUnitPrice } from '../../shared/money';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
+import { OfficialBadge } from '../../shared/ui/OfficialBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
+import { SidePanel } from '../../shared/ui/SidePanel';
 import { Skeleton } from '../../shared/ui/Skeleton';
 import { ProductThumb } from '../catalog/ProductThumb';
 import { MUNICIPALITIES } from '../comparison/criteria';
+import { useSession } from '../auth/session';
 import { MerchantReport } from './MerchantReport';
 import { PinShape } from './pinShapes';
 import { StoreMap } from './StoreMap';
@@ -26,6 +29,10 @@ type StorePrices =
 // como en la comparación. El orden (por producto) lo da el backend.
 export function StorePage() {
   const { establishmentId = '' } = useParams();
+  const { session } = useSession();
+  // Un comercio o un moderador no puede registrar otra tienda: no se le ofrece reclamarla. Las tiendas
+  // de cadena (tipo descuento) no tienen dueño individual y tampoco se reclaman (H11).
+  const canClaim = session.status !== 'active' || session.role === 'reportante';
   const [onlyCurrent, setOnlyCurrent] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const key = `${establishmentId}|${String(onlyCurrent)}|${String(attempt)}`;
@@ -128,19 +135,21 @@ export function StorePage() {
               <Icon name="plus" />
               Registrar un precio aquí
             </Link>
-            <Link to={`/comercios/registro?tienda=${store.id}`} className="btn ghost">
-              ¿Eres el dueño? Registra tu tienda
-            </Link>
+            {canClaim && store.type !== 'descuento' && (
+              <Link to={`/comercios/registro?tienda=${store.id}`} className="btn ghost">
+                ¿Eres el dueño? Registra tu tienda
+              </Link>
+            )}
           </div>
           <MerchantReport key={store.id} establishmentId={store.id} />
         </header>
       </div>
-      <aside className="side store-side" aria-labelledby="tienda-ubicacion">
+      <SidePanel className="store-side" aria-labelledby="tienda-ubicacion">
         <section className="store-card-box">
           <h2 id="tienda-ubicacion">Ubicación</h2>
           <StoreMap stores={[store]} label={`Mapa: ${store.name}`} />
         </section>
-      </aside>
+      </SidePanel>
       <section className="store-prices" aria-labelledby="tienda-precios">
         <div className="store-prices-head">
           <h2 id="tienda-precios">Precios</h2>
@@ -174,6 +183,7 @@ export function StorePage() {
                     <Link to={`/productos/${price.productId}`}>{price.productName}</Link>
                   </h3>
                   <p className="badges">
+                    {price.source === 'oficial' && <OfficialBadge />}
                     <FreshnessBadge freshness={price.freshness} observedAt={price.observedAt} />
                     {price.reliability && <ReliabilityBadge level={price.reliability} />}
                   </p>
@@ -252,11 +262,13 @@ function StorePageSkeleton() {
           {[0, 1, 2].map((item) => (
             <li key={item} className="offer store-offer">
               <Skeleton variant="block" className="thumb-row" />
-              <span className="skeleton-lines">
+              <span className="skeleton-lines store-offer-body">
                 <Skeleton width="60%" />
                 <Skeleton width="40%" />
               </span>
-              <Skeleton width="4.5rem" height="1.15rem" />
+              <span className="store-offer-price">
+                <Skeleton width="4.5rem" height="1.15rem" />
+              </span>
             </li>
           ))}
         </ul>

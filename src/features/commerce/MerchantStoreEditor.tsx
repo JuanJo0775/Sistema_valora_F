@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { type SyntheticEvent, useEffect, useId, useRef, useState } from 'react';
 import { api, call } from '../../shared/api';
 import type { components, operations, paths } from '../../shared/api/schema';
 import { ErrorState } from '../../shared/ui/ErrorState';
@@ -90,6 +90,8 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
     },
   );
   const [editHours, setEditHours] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const hoursId = useId();
   const [editLocation, setEditLocation] = useState(false);
   const [location, setLocation] = useState<Patch['location']>();
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -98,12 +100,23 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
 
+  function copyMonday() {
+    const monday = hours.lunes;
+    if (!monday) return;
+    const next = { ...hours };
+    for (const key of days) if (key !== 'lunes') next[key] = { ...monday };
+    setHours(next);
+    setReceipt(null);
+    setCopied(true);
+  }
+
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (lock.current) return;
     setProblem('');
     setError(null);
     setReceipt(null);
+    setCopied(false);
     const patch: Patch = {};
     if (name.trim() !== current.name) patch.name = name.trim();
     if (phone.trim() !== (current.phone ?? '')) patch.phone = phone.trim();
@@ -157,7 +170,7 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
 
   return (
     <form
-      className="merchant-price-form"
+      className="merchant-price-form store-editor"
       onSubmit={(event) => {
         void submit(event);
       }}
@@ -199,54 +212,76 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
         Editar horario
       </button>
       {editHours && (
-        <fieldset className="merchant-store-hours" disabled={busy}>
+        <fieldset className="store-hours" disabled={busy}>
           <legend>Horario semanal</legend>
+          <div className="store-hours-tools">
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={busy || hours.lunes === null}
+              onClick={copyMonday}
+            >
+              Copiar el horario del lunes a los demás días
+            </button>
+            {copied && (
+              <p role="status" className="muted">
+                Horario del lunes copiado a los demás días. Revisa cada día y guarda.
+              </p>
+            )}
+          </div>
           {days.map((key) => {
             const day = hours[key];
             const caption = DAYS[key];
+            const lower = caption.toLowerCase();
+            const nameId = `${hoursId}-${key}`;
             return (
-              <fieldset key={key}>
-                <legend>{caption}</legend>
-                <label>
+              <div key={key} role="group" aria-labelledby={nameId} className="store-hours-row">
+                <span id={nameId} className="store-hours-day">
+                  {caption}
+                </span>
+                <label className="store-hours-open">
                   <input
                     type="checkbox"
+                    aria-label={`Abre el ${lower}`}
                     checked={day !== null}
                     onChange={(event) => {
                       const next = event.target.checked
                         ? { opens: '08:00', closes: '18:00' }
                         : null;
+                      setCopied(false);
                       setHours({ ...hours, [key]: next });
                     }}
-                  />{' '}
-                  Abre el {caption.toLowerCase()}
+                  />
+                  <span aria-hidden="true">Abre</span>
                 </label>
-                {day && (
-                  <>
-                    <label className="field">
-                      Apertura del {caption.toLowerCase()}
-                      <input
-                        type="time"
-                        required
-                        value={day.opens}
-                        onChange={(event) => {
-                          setHours({ ...hours, [key]: { ...day, opens: event.target.value } });
-                        }}
-                      />
-                    </label>
-                    <label className="field">
-                      Cierre del {caption.toLowerCase()}
-                      <input
-                        type="time"
-                        required
-                        value={day.closes}
-                        onChange={(event) => {
-                          setHours({ ...hours, [key]: { ...day, closes: event.target.value } });
-                        }}
-                      />
-                    </label>
-                  </>
+                {day ? (
+                  <div className="store-hours-times">
+                    <input
+                      type="time"
+                      required
+                      aria-label={`Apertura del ${lower}`}
+                      value={day.opens}
+                      onChange={(event) => {
+                        setCopied(false);
+                        setHours({ ...hours, [key]: { ...day, opens: event.target.value } });
+                      }}
+                    />
+                    <span aria-hidden="true">a</span>
+                    <input
+                      type="time"
+                      required
+                      aria-label={`Cierre del ${lower}`}
+                      value={day.closes}
+                      onChange={(event) => {
+                        setCopied(false);
+                        setHours({ ...hours, [key]: { ...day, closes: event.target.value } });
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <span className="store-hours-closed muted">Cerrado</span>
                 )}
-              </fieldset>
+              </div>
             );
           })}
         </fieldset>
@@ -279,6 +314,9 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
         </p>
       )}
       {error !== null && <ErrorState error={error} />}
+      <button className="btn" type="submit" disabled={busy}>
+        {busy ? 'Guardando…' : 'Guardar cambios'}
+      </button>
       {receipt && (
         <div role="status">
           {receipt.applied.length > 0 && (
@@ -287,9 +325,6 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
           {receipt.inReview.length > 0 && <p>En revisión: {describeFields(receipt.inReview)}.</p>}
         </div>
       )}
-      <button className="btn" type="submit" disabled={busy}>
-        {busy ? 'Guardando…' : 'Guardar cambios'}
-      </button>
     </form>
   );
 }

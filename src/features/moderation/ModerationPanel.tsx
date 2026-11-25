@@ -6,6 +6,7 @@ import { RoleChange } from './RoleChange';
 import { StoreProposals } from './StoreProposals';
 import './moderation.css';
 import { BackLink } from '../../shared/ui/BackLink';
+import { Tabs } from '../../shared/ui/Tabs';
 
 type View = 'precios' | 'tiendas' | 'productos' | 'roles' | 'comercios';
 
@@ -26,31 +27,28 @@ export function ModerationPanel() {
     <section className="moderation">
       <BackLink fallback="/yo" />
       <h1>Moderación</h1>
-      <div role="tablist" aria-label="Vistas de moderación" className="choices">
-        {VIEWS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            id={`tab-${value}`}
-            aria-selected={view.value === value}
-            aria-controls={`panel-${value}`}
-            className="choice tab-choice"
-            onClick={() => {
-              setParams({ vista: value });
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel" id={`panel-${view.value}`} aria-labelledby={`tab-${view.value}`}>
-        {view.value === 'precios' && <ModerationQueue />}
-        {view.value === 'tiendas' && <StoreProposals />}
-        {view.value === 'productos' && <ProductRequests />}
-        {view.value === 'comercios' && <MerchantCases />}
-        {view.value === 'roles' && <RoleChange />}
-      </div>
+      <Tabs
+        label="Vistas de moderación"
+        className="choices"
+        tabClassName="choice tab-choice"
+        value={view.value}
+        onChange={(value) => {
+          setParams({ vista: value });
+        }}
+        tabs={VIEWS.map(({ value, label }) => ({
+          id: value,
+          label,
+          content: <ViewContent view={value} />,
+        }))}
+      />
     </section>
   );
+}
+
+function ViewContent({ view }: { view: View }) {
+  if (view === 'precios') return <ModerationQueue />;
+  if (view === 'tiendas') return <StoreProposals />;
+  if (view === 'productos') return <ProductRequests />;
+  if (view === 'comercios') return <MerchantCases />;
+  return <RoleChange />;
 }

@@ -177,6 +177,71 @@ describe('registro de comercios (#165)', () => {
     );
   });
 
+  it('un reclamo de supermercado queda preaprobado y el texto habla del reclamo (H11)', async () => {
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+      [`POST ${claims}`]: {
+        status: 201,
+        body: { status: 'pre_aprobado', establishmentId: store.id },
+      },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    submit();
+    expect(
+      await screen.findByRole('heading', { name: 'Tu tienda quedó preaprobada' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Un moderador revisará tu reclamo/)).toBeInTheDocument();
+    expect(screen.queryByText(/antes de que aparezca en el mapa/)).not.toBeInTheDocument();
+  });
+
+  it('una tienda nueva preaprobada conserva el texto de la tienda nueva', async () => {
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      [`POST ${claims}`]: {
+        status: 201,
+        body: { status: 'pre_aprobado', establishmentId: store.id },
+      },
+    });
+    open(registration);
+    fireEvent.click(await screen.findByRole('button', { name: 'Mi tienda no está en el mapa' }));
+    fireEvent.change(screen.getByLabelText('Nombre de la tienda'), {
+      target: { value: 'Mi tienda' },
+    });
+    responsible();
+    submit();
+    expect(await screen.findByText(/antes de que aparezca en el mapa/)).toBeInTheDocument();
+  });
+
+  it('una tienda de cadena no se reclama: explica por qué y deja registrar una tienda nueva (H11)', async () => {
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+      [`POST ${claims}`]: {
+        status: 422,
+        body: { code: 'CHAIN_STORE_NOT_CLAIMABLE', message: 'Cadena.' },
+      },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    submit();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Las tiendas de cadena (como D1, Ara o Éxito) no se pueden reclamar: no tienen un dueño individual. Si tienes un negocio propio, regístralo como tienda nueva.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar una tienda nueva' }));
+    expect(screen.getByLabelText('Nombre de la tienda')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('recupera una solicitud pendiente al volver a entrar', async () => {
     stubApi({
       [`GET ${session}`]: sessionAs('reportante'),
@@ -190,6 +255,36 @@ describe('registro de comercios (#165)', () => {
       await screen.findByRole('heading', { name: 'Tu tienda quedó preaprobada' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Actualizar los datos de la tienda')).toBeInTheDocument();
+  });
+
+  it('a una cuenta revocada le da un mensaje estándar y no la nota interna del moderador', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: {
+        status: 200,
+        body: { status: 'revocado', reason: 'Denunció Clara Pérez por precios falsos' },
+      },
+    });
+    open(registration);
+    expect(
+      await screen.findByText('Moderación revocó el registro de esta cuenta para esa tienda.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Clara/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Registro revocado/)).not.toBeInTheDocument();
+  });
+
+  it('a una cuenta rechazada le sigue mostrando el motivo del moderador', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: {
+        status: 200,
+        body: { status: 'rechazado', reason: 'La dirección no existe' },
+      },
+    });
+    open(registration);
+    expect(
+      await screen.findByText('Tu tienda propuesta fue rechazada: La dirección no existe'),
+    ).toBeInTheDocument();
   });
 
   it('no envía el formulario si el navegador niega la ubicación', async () => {
@@ -223,6 +318,131 @@ describe('registro de comercios (#165)', () => {
     responsible();
     submit();
     expect(await screen.findByRole('alert')).toHaveTextContent(/50 m/);
+  });
+
+  it('retira el aviso de error apenas la persona corrige el campo', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: '12345' } });
+    submit();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/celular de 10 dígitos/);
+
+    fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: '3001234567' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('un teléfono inválido se liga al campo, lo marca y le lleva el foco', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    const phone = screen.getByLabelText('Teléfono');
+    fireEvent.change(phone, { target: { value: '12345' } });
+    submit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/celular de 10 dígitos/);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(phone).toHaveAttribute('aria-invalid', 'true');
+    expect(phone.getAttribute('aria-describedby')).toContain(alert.id);
+    expect(phone).toHaveFocus();
+    expect(screen.getByLabelText('Nombre del responsable')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('con varios errores el foco va al primer campo inválido', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    fireEvent.change(screen.getByLabelText('Nombre del responsable'), { target: { value: ' ' } });
+    fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: '12345' } });
+    submit();
+
+    const name = screen.getByLabelText('Nombre del responsable');
+    await waitFor(() => {
+      expect(name).toHaveFocus();
+    });
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Teléfono')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('sin aceptar las condiciones la casilla queda ligada al aviso y recibe el foco', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    const box = screen.getByRole('checkbox', { name: 'Acepto las condiciones para comercios' });
+    fireEvent.click(box);
+    submit();
+
+    const alert = await screen.findByRole('alert');
+    expect(box).toHaveAttribute('aria-invalid', 'true');
+    expect(box.getAttribute('aria-describedby')).toContain(alert.id);
+    expect(box).toHaveFocus();
+  });
+
+  it('sin tienda elegida el grupo queda inválido y el foco va a su buscador', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+    });
+    open(registration);
+    const search = await screen.findByRole('searchbox', { name: 'Buscar tienda por nombre' });
+    responsible();
+    submit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Elige la tienda que quieres registrar.');
+    const group = screen.getByRole('radiogroup', { name: 'Tienda' });
+    expect(group).toHaveAttribute('aria-invalid', 'true');
+    expect(group.getAttribute('aria-describedby')).toContain(alert.id);
+    expect(search).toHaveFocus();
+  });
+
+  it('anuncia cuántas tiendas encontró la búsqueda', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+
+    const status = screen.getByText('1 resultado');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveClass('sr-only');
+  });
+
+  it('dice que espera la ubicación mientras el navegador la obtiene', async () => {
+    locate.mockReturnValue(new Promise(() => undefined));
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    submit();
+    expect(await screen.findByRole('button', { name: 'Obteniendo tu ubicación…' })).toBeDisabled();
   });
 
   it('pide aceptar las condiciones antes de compartir la ubicación', async () => {

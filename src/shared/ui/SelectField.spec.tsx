@@ -34,6 +34,28 @@ describe('campo de lista (SelectField)', () => {
     expect(container.querySelector('select')).toBeNull();
   });
 
+  it('la lista larga se ofrece en dos columnas (por CSS, en pantallas anchas) y la corta no', () => {
+    const { unmount } = render(<Field options={MANY} />);
+    fireEvent.click(field());
+    const list = screen.getByRole('listbox', { name: 'Número' });
+    expect(list).toHaveClass('option-items-cols');
+    expect(list.style.getPropertyValue('--option-rows')).toBe('5');
+    unmount();
+
+    render(<Field />);
+    fireEvent.click(field());
+    const short = screen.getByRole('listbox', { name: 'Número' });
+    expect(short).not.toHaveClass('option-items-cols');
+    expect(short.style.getPropertyValue('--option-rows')).toBe('');
+  });
+
+  it('al filtrar, las columnas se reparten entre las opciones que quedan', () => {
+    render(<Field options={MANY} />);
+    fireEvent.click(field());
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Opción 1' } });
+    expect(screen.getByRole('listbox').style.getPropertyValue('--option-rows')).toBe('1');
+  });
+
   it('abre una lista con la opción elegida marcada y elegir otra cierra y cambia el valor', () => {
     render(<Field />);
 

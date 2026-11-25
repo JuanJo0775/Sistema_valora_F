@@ -105,6 +105,9 @@ export function Layout() {
           <Outlet />
         </Suspense>
       </main>
+      {/* Lo fijo abajo de una pantalla (la barra de compra del detalle) va aquí, después del contenido:
+          así el foco llega a ella al final, como se ve en pantalla. */}
+      <div id="acciones-fijas" />
       {/* Al cambiar de pantalla se anuncia su título a los lectores de pantalla. Es una región viva sin
           role="status": las pantallas ya usan ese rol para sus propios avisos y las pruebas buscan «el»
           estado de la pantalla (un segundo role="status" las vuelve ambiguas). */}

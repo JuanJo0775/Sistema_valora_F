@@ -14,6 +14,8 @@ export type Session =
       status: 'active';
       role: Role;
       suspendedUntil?: string | undefined;
+      // Por qué se suspendió (campo aditivo del backend: puede no venir). Ver SuspendedNotice.
+      suspensionReason?: string | undefined;
       // B#133: el nombre visible, solo para la propia cuenta (las anteriores no lo tienen).
       displayName?: string | undefined;
       // ADR-029: sin el correo verificado no se pueden registrar precios.
@@ -33,6 +35,8 @@ export interface SessionState {
   endSession: () => void;
   // Se acaba de crear la primera contraseña: la sesión local ya la tiene, sin volver a pedirla.
   passwordCreated: () => void;
+  // El servidor guardó un nombre nuevo: la sesión local lo muestra en toda la app sin recargar.
+  nameChanged: (displayName: string) => void;
   reload: () => void;
   refreshRole: (expectedRole: Role) => void;
 }
@@ -44,6 +48,7 @@ export const SessionContext = createContext<SessionState>({
   signOut: () => Promise.resolve(),
   endSession: () => undefined,
   passwordCreated: () => undefined,
+  nameChanged: () => undefined,
   reload: () => undefined,
   refreshRole: () => undefined,
 });

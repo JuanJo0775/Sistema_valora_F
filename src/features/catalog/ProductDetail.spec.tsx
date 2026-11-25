@@ -69,6 +69,61 @@ const renderWithSession = (productId: string) =>
   );
 
 describe('detalle del producto', () => {
+  it.each([{ status: 200, body: { items: [] } }, { status: 503 }])(
+    'mantiene la ficha visible cuando Olímpica no ofrece un precio (%j)',
+    async (reply) => {
+      const { requested } = stubApi({
+        [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+        [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([]),
+        [`GET /v1/products/${rice.id}/online-offers`]: reply,
+      });
+      renderDetail(rice.id);
+      expect(await screen.findByRole('heading', { name: rice.name })).toBeInTheDocument();
+      await vi.waitFor(() => {
+        expect(requested.some((url) => url.pathname.endsWith('/online-offers'))).toBe(true);
+      });
+      expect(
+        screen.queryByRole('region', { name: 'Olímpica en línea · Armenia centro' }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it('muestra el precio en línea de Olímpica en una sección con su presentación y fecha', async () => {
+    const presentation = rice.presentations[0];
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([]),
+      [`GET /v1/products/${rice.id}/online-offers`]: {
+        status: 200,
+        body: {
+          items: [
+            {
+              source: 'olimpica',
+              zone: 'armenia-centro',
+              presentationId: presentation?.id,
+              priceCop: 3456,
+              observedAt: '2026-11-24T14:00:00Z',
+              expiresAt: '2026-11-26T14:00:00Z',
+              productUrl: 'https://www.olimpica.com/arroz-de-prueba/p',
+            },
+          ],
+        },
+      },
+    });
+    renderDetail(rice.id);
+    const section = await screen.findByRole('region', {
+      name: 'Olímpica en línea · Armenia centro',
+    });
+    expect(within(section).getByText('500 g')).toBeInTheDocument();
+    expect(within(section).getByText(/3[.\s]456/)).toBeInTheDocument();
+    expect(within(section).getByText('24 de noviembre de 2026')).toBeInTheDocument();
+    expect(within(section).getByText('Envío se calcula en Olímpica')).toBeInTheDocument();
+    expect(within(section).getByRole('link', { name: 'Ver en Olímpica' })).toHaveAttribute(
+      'href',
+      'https://www.olimpica.com/arroz-de-prueba/p',
+    );
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -199,6 +254,22 @@ describe('detalle del producto', () => {
       within(side).getByRole('link', { name: 'Registrar un precio de Arroz blanco' }),
     ).toHaveAttribute('href', `/registrar?producto=${rice.id}`);
     expect(within(side).getByRole('button', { name: 'Agregar a la canasta' })).toBeInTheDocument();
+  });
+
+  it('el botón de registrar dice «Registrar un precio» y el producto va en su nombre accesible', async () => {
+    stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      [`GET /v1/products/${rice.id}/comparison`]: comparisonOf([offer('Ara', 2000, true)]),
+    });
+    renderDetail(rice.id);
+
+    const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
+    const link = await within(side).findByRole('link', {
+      name: 'Registrar un precio de Arroz blanco',
+    });
+    // WCAG 2.5.3: el nombre accesible contiene el texto visible.
+    expect(link).toHaveTextContent(/^Registrar un precio$/);
+    expect(link).toHaveAttribute('aria-label', 'Registrar un precio de Arroz blanco');
   });
 
   it('reserva el lugar de la tarjeta «Más barato» mientras llega la comparación', async () => {

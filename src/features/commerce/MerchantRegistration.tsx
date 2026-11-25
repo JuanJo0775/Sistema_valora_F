@@ -15,7 +15,7 @@ import { useSession } from '../auth/session';
 import '../auth/auth.css';
 import { MUNICIPALITY_OPTIONS } from '../comparison/criteria';
 import { readMunicipality } from '../comparison/lastMunicipality';
-import { type Store, StorePicker } from '../reports/StorePicker';
+import { STORE_SEARCH_ID, type Store, StorePicker } from '../reports/StorePicker';
 import { STORE_TYPES } from '../stores/storeTypes';
 import './merchant-registration.css';
 
@@ -24,6 +24,10 @@ type Receipt = paths['/commerce/claims']['post']['responses'][201]['content']['a
 type Profile = components['schemas']['MerchantProfile'];
 type NewStore = NonNullable<Claim['newEstablishment']>;
 type Unlocks = components['schemas']['MerchantUnlocks'];
+
+// Qué se envió: una tienda nueva o el reclamo de una del mapa. Al volver a consultar el estado
+// (GET /commerce/me) el servidor no lo dice, y entonces el texto es neutro.
+type ClaimKind = 'nueva' | 'reclamo' | undefined;
 
 const TERMS_VERSION = '2026-11';
 const STORE_TYPE_OPTIONS = (Object.keys(STORE_TYPES) as NewStore['type'][]).map((value) => ({
@@ -54,7 +58,7 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
   const storeId = query.get('tienda');
   const [attempt, setAttempt] = useState(0);
   const [found, setFound] = useState<{ profile: Profile | null } | { error: unknown } | null>(null);
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [receipt, setReceipt] = useState<(Receipt & { kind: ClaimKind }) | null>(null);
   const refreshedRole = useRef(false);
   const status =
     receipt?.status ?? (found && 'profile' in found ? found.profile?.status : undefined);
@@ -87,7 +91,14 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
   };
 
   if (receipt)
-    return <ClaimStatus status={receipt.status} unlocks={receipt.unlocks} onRefresh={refresh} />;
+    return (
+      <ClaimStatus
+        status={receipt.status}
+        unlocks={receipt.unlocks}
+        kind={receipt.kind}
+        onRefresh={refresh}
+      />
+    );
   if (!found) return <Loading text="Consultando tu registro…" />;
   if ('error' in found) return <ErrorState error={found.error} onRetry={refresh} />;
   const { profile } = found;
@@ -110,22 +121,40 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
     <>
       {profile && (
         <p className="banner warn" role="status">
-          {profile.status === 'revocado' ? 'Registro revocado' : 'Registro rechazado'}.{' '}
-          {profile.reason}
+          {/* La nota de un moderador es interna (puede nombrar a quien denunció): al revocar no se muestra. */}
+          {profile.status === 'revocado'
+            ? 'Moderación revocó el registro de esta cuenta para esa tienda.'
+            : `Tu tienda propuesta fue rechazada: ${profile.reason}`}
         </p>
       )}
-      <ClaimForm key={storeId} storeId={storeId} onRegistered={setReceipt} />
+      <ClaimForm
+        key={storeId}
+        storeId={storeId}
+        onRegistered={(result, kind) => {
+          setReceipt({ ...result, kind });
+        }}
+      />
     </>
   );
 }
 
+const PENDING_TEXT = {
+  nueva:
+    'Un moderador revisará la tienda antes de que aparezca en el mapa. Una vez aprobada, se verificará tu registro.',
+  reclamo:
+    'Un moderador revisará tu reclamo de esta tienda. Cuando lo apruebe, tu cuenta quedará verificada como dueña.',
+  neutro: 'Un moderador revisará tu solicitud. Cuando la apruebe, se verificará tu registro.',
+};
+
 function ClaimStatus({
   status,
   unlocks,
+  kind,
   onRefresh,
 }: {
   status: Receipt['status'];
   unlocks: Unlocks | undefined;
+  kind?: ClaimKind;
   onRefresh: () => void;
 }) {
   const { session } = useSession();
@@ -134,14 +163,12 @@ function ClaimStatus({
   return (
     <section className="form merchant-registration" aria-live="polite">
       <h1>{pending ? 'Tu tienda quedó preaprobada' : 'Tu tienda quedó verificada'}</h1>
-      <p>
-        {pending
-          ? 'Un moderador revisará la tienda antes de que aparezca en el mapa. Una vez aprobada, se verificará tu registro.'
-          : 'Tu cuenta ya está vinculada a la tienda.'}
-      </p>
+      <p>{pending ? PENDING_TEXT[kind ?? 'neutro'] : 'Tu cuenta ya está vinculada a la tienda.'}</p>
       {pending && unlocks && unlocks.length > 0 && (
         <>
-          <h2>Al aprobar tu tienda podrás</h2>
+          <h2>
+            {kind === 'reclamo' ? 'Al aprobar tu reclamo podrás' : 'Al aprobar tu tienda podrás'}
+          </h2>
           <ul>
             {unlocks.map((item) => (
               <li key={item}>{UNLOCK_LABEL[item]}</li>
@@ -189,7 +216,19 @@ const CLAIM_ERROR: Record<string, string> = {
   EMAIL_NOT_VERIFIED: 'Verifica tu correo antes de registrar una tienda.',
   REVOKED_FROM_ESTABLISHMENT:
     'El equipo de moderación revocó el registro de esta cuenta para esa tienda.',
+  CHAIN_STORE_NOT_CLAIMABLE:
+    'Las tiendas de cadena (como D1, Ara o Éxito) no se pueden reclamar: no tienen un dueño individual. Si tienes un negocio propio, regístralo como tienda nueva.',
   NOT_FOUND: 'La tienda ya no está disponible. Busca otra tienda en el mapa.',
+};
+
+// Campo que falla la validación y el elemento al que va el foco.
+type Invalid = { field: 'store' | 'name' | 'responsible' | 'phone' | 'accepted'; message: string };
+const FOCUS_ID: Record<Invalid['field'], string> = {
+  store: STORE_SEARCH_ID,
+  name: 'merchant-name',
+  responsible: 'merchant-responsible',
+  phone: 'merchant-phone',
+  accepted: 'merchant-accepted',
 };
 
 function ClaimForm({
@@ -197,7 +236,7 @@ function ClaimForm({
   onRegistered,
 }: {
   storeId: string | null;
-  onRegistered: (receipt: Receipt) => void;
+  onRegistered: (receipt: Receipt, kind: ClaimKind) => void;
 }) {
   const [picked, setPicked] = useState<Store | null>(null);
   const [prefill, setPrefill] = useState<Store | null>(null);
@@ -212,10 +251,26 @@ function ClaimForm({
   const [nit, setNit] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [problem, setProblem] = useState('');
+  const [invalid, setInvalid] = useState<Invalid | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [locating, setLocating] = useState(false);
   const inFlight = useRef<AbortController | null>(null);
   const store = picked ?? prefill;
+  // Un aviso de error describe el dato anterior: se retira apenas la persona lo corrige.
+  const edit =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      set(value);
+      setProblem('');
+      setInvalid(null);
+      setError(null);
+    };
+
+  // Al fallar la validación el foco va al primer campo inválido, no se queda en el botón de enviar.
+  useEffect(() => {
+    if (invalid) document.getElementById(FOCUS_ID[invalid.field])?.focus();
+  }, [invalid]);
 
   useEffect(
     () => () => {
@@ -258,25 +313,29 @@ function ClaimForm({
       : store && { establishmentId: store.id };
 
     setProblem('');
+    setInvalid(null);
     setError(null);
     if (!target || (isNew && name.trim().length < 2)) {
-      setProblem(
-        isNew ? 'Escribe el nombre de la tienda.' : 'Elige la tienda que quieres registrar.',
+      setInvalid(
+        isNew
+          ? { field: 'name', message: 'Escribe el nombre de la tienda.' }
+          : { field: 'store', message: 'Elige la tienda que quieres registrar.' },
       );
       return;
     }
     if (responsible.trim().length < 2) {
-      setProblem('Escribe el nombre del responsable.');
+      setInvalid({ field: 'responsible', message: 'Escribe el nombre del responsable.' });
       return;
     }
     if (!/^(3\d{9}|60\d{8})$/.test(phone.trim())) {
-      setProblem(
-        'Escribe un celular de 10 dígitos que empiece por 3 o un fijo con 60 y 8 dígitos.',
-      );
+      setInvalid({
+        field: 'phone',
+        message: 'Escribe un celular de 10 dígitos que empiece por 3 o un fijo con 60 y 8 dígitos.',
+      });
       return;
     }
     if (!accepted) {
-      setProblem('Lee y acepta las condiciones para comercios.');
+      setInvalid({ field: 'accepted', message: 'Lee y acepta las condiciones para comercios.' });
       return;
     }
 
@@ -284,7 +343,9 @@ function ClaimForm({
     inFlight.current = controller;
     setBusy(true);
     try {
+      setLocating(true);
       const location = await askLocation({ enableHighAccuracy: true }).catch(() => null);
+      setLocating(false);
       if (controller.signal.aborted) return;
       if (!location) {
         setProblem(
@@ -306,11 +367,12 @@ function ClaimForm({
         }),
       );
       controller.signal.throwIfAborted();
-      onRegistered(result);
+      onRegistered(result, isNew ? 'nueva' : 'reclamo');
     } catch (failure: unknown) {
       if (!controller.signal.aborted) setError(failure);
     } finally {
       inFlight.current = null;
+      setLocating(false);
       if (!controller.signal.aborted) setBusy(false);
     }
   };
@@ -325,25 +387,32 @@ function ClaimForm({
       <fieldset disabled={busy} className="merchant-fields">
         {isNew ? (
           <>
-            <Field label="Nombre de la tienda" value={name} maxLength={120} onValue={setName} />
+            <Field
+              id={FOCUS_ID.name}
+              label="Nombre de la tienda"
+              value={name}
+              maxLength={120}
+              onValue={edit(setName)}
+              error={invalid?.field === 'name' ? invalid.message : undefined}
+            />
             <SelectField
               label="Tipo de tienda"
               value={type}
               options={STORE_TYPE_OPTIONS}
-              onChange={setType}
+              onChange={edit(setType)}
             />
             <SelectField
               label="Municipio"
               value={municipality}
               options={MUNICIPALITY_OPTIONS}
-              onChange={setMunicipality}
+              onChange={edit(setMunicipality)}
             />
             <Field
               label="Dirección (opcional)"
               value={address}
               required={false}
               maxLength={200}
-              onValue={setAddress}
+              onValue={edit(setAddress)}
             />
           </>
         ) : (
@@ -351,7 +420,12 @@ function ClaimForm({
             {prefillFailed && (
               <p role="status">No pudimos cargar la tienda de origen. Búscala por su nombre.</p>
             )}
-            <StorePicker value={store} onChange={setPicked} mode="claim" />
+            <StorePicker
+              value={store}
+              onChange={edit(setPicked)}
+              mode="claim"
+              error={invalid?.field === 'store' ? invalid.message : undefined}
+            />
           </>
         )}
         <button
@@ -360,32 +434,37 @@ function ClaimForm({
           onClick={() => {
             setIsNew((current) => !current);
             setProblem('');
+            setInvalid(null);
             setError(null);
           }}
         >
           {isNew ? 'Buscar una tienda del mapa' : 'Mi tienda no está en el mapa'}
         </button>
         <Field
+          id={FOCUS_ID.responsible}
           label="Nombre del responsable"
           autoComplete="name"
           value={responsible}
           maxLength={80}
-          onValue={setResponsible}
+          onValue={edit(setResponsible)}
+          error={invalid?.field === 'responsible' ? invalid.message : undefined}
         />
         <Field
+          id={FOCUS_ID.phone}
           label="Teléfono"
           type="tel"
           autoComplete="tel-national"
           value={phone}
           maxLength={10}
-          onValue={setPhone}
+          onValue={edit(setPhone)}
+          error={invalid?.field === 'phone' ? invalid.message : undefined}
         />
         <Field
           label="NIT (opcional)"
           value={nit}
           required={false}
           maxLength={20}
-          onValue={setNit}
+          onValue={edit(setNit)}
           aria-describedby="merchant-nit"
         />
         <p id="merchant-nit" className="muted">
@@ -410,10 +489,13 @@ function ClaimForm({
         </details>
         <label className="merchant-accept">
           <input
+            id={FOCUS_ID.accepted}
             type="checkbox"
+            aria-invalid={invalid?.field === 'accepted' ? true : undefined}
+            aria-describedby={invalid?.field === 'accepted' ? 'merchant-accepted-error' : undefined}
             checked={accepted}
             onChange={(event) => {
-              setAccepted(event.target.checked);
+              edit(setAccepted)(event.target.checked);
             }}
           />
           Acepto las condiciones para comercios
@@ -423,6 +505,11 @@ function ClaimForm({
             ? 'Comparte tu ubicación desde la tienda. Ese punto se guarda para ubicar la tienda en el mapa si la aprueban.'
             : 'Comparte tu ubicación desde la tienda. Solo se usa una vez para verificar que estás a 50 m o menos y no se guarda.'}
         </p>
+        {invalid?.field === 'accepted' && (
+          <p id="merchant-accepted-error" role="alert" className="banner warn">
+            {invalid.message}
+          </p>
+        )}
         {problem && (
           <p role="alert" className="banner warn">
             {problem}
@@ -432,11 +519,27 @@ function ClaimForm({
           <div className="banner warn">
             <p role="alert">{errorMessage}</p>
             {code === 'EMAIL_NOT_VERIFIED' && <ResendVerification />}
+            {code === 'CHAIN_STORE_NOT_CLAIMABLE' && !isNew && (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  setIsNew(true);
+                  setError(null);
+                }}
+              >
+                Registrar una tienda nueva
+              </button>
+            )}
           </div>
         )}
         {error !== null && !errorMessage && <ErrorState error={error} />}
         <button type="submit" className="btn" aria-describedby="merchant-location">
-          {busy ? 'Registrando…' : 'Compartir mi ubicación y registrar'}
+          {busy
+            ? locating
+              ? 'Obteniendo tu ubicación…'
+              : 'Registrando…'
+            : 'Compartir mi ubicación y registrar'}
         </button>
       </fieldset>
     </form>

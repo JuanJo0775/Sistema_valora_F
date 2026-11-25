@@ -103,6 +103,8 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
   // Si lo vio antes, la hora que escribe en el campo (en la hora del teléfono).
   const [seenAt, setSeenAt] = useState<string | null>(null);
   const [done, setDone] = useState<'recibido' | 'guardado' | null>(null);
+  // Verdadero si la persona confirmó un precio atípico: queda en revisión antes de mostrarse.
+  const [inReview, setInReview] = useState(false);
   // #79 y #28: solo en el modo prueba de usabilidad, cuánto tardó el registro (EC-01).
   const [testing] = useState(isUsabilityMode);
   const [tookSeconds, setTookSeconds] = useState<number | null>(null);
@@ -215,7 +217,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
       doubtRef.current?.focus();
       return;
     }
-    send(found.priceCop, observedAt, store);
+    send(found.priceCop, observedAt, store, plausibility === 'atipico');
   };
 
   const submit = (event: SyntheticEvent) => {
@@ -223,7 +225,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
     run(false);
   };
 
-  const send = (priceCop: number, observedAt: Date, chosenStore: Store) => {
+  const send = (priceCop: number, observedAt: Date, chosenStore: Store, reviewed: boolean) => {
     setDoubt(null);
     setError(null);
     const report = {
@@ -258,6 +260,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         saveLastStore(chosenStore);
         if (product) saveRecentProduct({ id: productId, name: product.name });
         setTookSeconds(secondsSince(startedAt));
+        setInReview(reviewed);
         setDone(result.kind);
       });
   };
@@ -270,9 +273,12 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         )}
         <EmptyState
           title={done === 'recibido' ? 'Recibido' : 'Guardado en tu teléfono'}
+          focus
           text={
             done === 'recibido'
-              ? 'Gracias: tu precio ayuda a otros a comparar. Ya cuenta en la comparación; el estado de tu aporte lo ves en «Mis aportes».'
+              ? inReview
+                ? 'Gracias: un moderador lo revisará antes de mostrarlo. El estado de tu aporte lo ves en «Mis aportes».'
+                : 'Gracias: tu precio ayuda a otros a comparar. Ya cuenta en la comparación; el estado de tu aporte lo ves en «Mis aportes».'
               : 'Se enviará solo cuando haya conexión; al enviarse cuenta en la comparación.'
           }
           action={
@@ -346,51 +352,56 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
             }}
           />
         </label>
-        <p id="ayuda-precio" className="muted">
+        <p id="ayuda-precio" className="muted price-note">
           {chosenSize
             ? `Es el precio de ${formatPresentation(chosenSize)}.`
-            : 'Es el precio de la presentación que elijas.'}{' '}
-          Puedes escribirlo como 4600, 4.600 o $4.600.
+            : 'Es el precio de la presentación que elijas.'}
         </p>
+        <details className="price-help">
+          <summary>¿Cómo escribirlo?</summary>
+          <p className="muted">Puedes escribirlo como 4600, 4.600 o $4.600.</p>
+        </details>
         <FieldProblem problem={problem} field="price" id="error-precio" />
       </div>
-      {seenAt === null ? (
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            setSeenAt(toLocalInput(startedAt));
-          }}
-        >
-          Lo vi otro día
-        </button>
-      ) : (
-        <label className="field">
-          ¿Cuándo lo viste?
+      <div className="report-extras">
+        {seenAt === null ? (
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              setSeenAt(toLocalInput(startedAt));
+            }}
+          >
+            Lo vi otro día
+          </button>
+        ) : (
+          <label className="field">
+            ¿Cuándo lo viste?
+            <input
+              ref={timeRef}
+              type="datetime-local"
+              value={seenAt}
+              aria-invalid={problem?.field === 'time' ? true : undefined}
+              aria-describedby={problem?.field === 'time' ? 'error-hora' : undefined}
+              onChange={(event) => {
+                setSeenAt(event.target.value);
+                clear('time');
+              }}
+            />
+          </label>
+        )}
+        <label className="check">
           <input
-            ref={timeRef}
-            type="datetime-local"
-            value={seenAt}
-            aria-invalid={problem?.field === 'time' ? true : undefined}
-            aria-describedby={problem?.field === 'time' ? 'error-hora' : undefined}
+            type="checkbox"
+            checked={onSale}
             onChange={(event) => {
-              setSeenAt(event.target.value);
-              clear('time');
+              setOnSale(event.target.checked);
             }}
           />
+          Es oferta
         </label>
-      )}
+      </div>
       <FieldProblem problem={problem} field="time" id="error-hora" />
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={onSale}
-          onChange={(event) => {
-            setOnSale(event.target.checked);
-          }}
-        />
-        Es oferta
-      </label>
       {doubt !== null && reference && (
         <div
           ref={doubtRef}
@@ -439,9 +450,12 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         </div>
       )}
       {error !== null && <ReportProblem error={error} />}
-      <button type="submit" className="btn" disabled={sending}>
-        {sending ? 'Enviando…' : 'Enviar'}
-      </button>
+      {/* En el celular «Enviar» es una barra fija abajo, sobre la barra de navegación. */}
+      <div className="report-bar">
+        <button type="submit" className="btn" disabled={sending}>
+          {sending ? 'Enviando…' : 'Enviar'}
+        </button>
+      </div>
     </form>
   );
 }

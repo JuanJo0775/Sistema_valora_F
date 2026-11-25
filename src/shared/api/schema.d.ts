@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/products/{productId}/online-offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consultar ofertas en línea disponibles para un producto
+         * @description Lectura pública por presentación. El piloto solo admite la zona de prueba armenia-centro. El precio corresponde al producto en COP. El comercio calcula el envío por separado. Solo se devuelven observaciones disponibles y vigentes autorizadas para publicación. Mientras el piloto esté deshabilitado o no tenga ofertas vigentes, items es vacío. No incluye direcciones ni datos de usuarios (EC-08).
+         */
+        get: operations["listProductOnlineOffers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/products/{productId}/comparison": {
         parameters: {
             query?: never;
@@ -348,6 +368,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar la contraseña, o crear la primera si la cuenta entró con Google (ADR-033)
+         * @description Cualquier rol, también una cuenta suspendida. Una cuenta con contraseña manda currentPassword y newPassword (403 INVALID_PASSWORD si la actual no coincide o falta; mismos límites que eliminar la cuenta). Una cuenta sin contraseña (creada con Google) manda solo newPassword, y se permite solo si la sesión se abrió hace 10 minutos o menos; si no, 403 REAUTH_REQUIRED y el frontend pide volver a entrar con Google. newPassword cumple las mismas reglas que el registro. Con éxito cierra las OTRAS sesiones de la cuenta; la actual sigue abierta.
+         */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el propio nombre visible (rectificación, Ley 1581)
+         * @description Cualquier rol, también una cuenta suspendida. Sin contraseña ni reautenticación: es un dato de bajo riesgo. Exige sesión y el token CSRF. displayName cumple las mismas reglas que al registrarse (2 a 40 letras; sin números, correos ni símbolos) y se guarda sin espacios sobrantes; si no, 400 VALIDATION_ERROR con el mismo mensaje. Un nombre igual al actual responde 200 igual, y una cuenta anterior al nombre puede ponerse uno por primera vez. La respuesta es solo para su dueña: ninguna respuesta pública incluye el nombre (EC-08). Tope de 10 cambios por cuenta por hora.
+         */
+        patch: operations["changeOwnProfile"];
+        trace?: never;
+    };
     "/me/reports": {
         parameters: {
             query?: never;
@@ -408,64 +468,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    // TODO(regenerar): rutas de contraseña escritas a mano según el contrato del servidor; regenerar con el OpenAPI real.
-    "/auth/forgot-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Pedir el enlace para crear una contraseña nueva (TODO(regenerar))
-         */
-        post: operations["forgotPassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/reset-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Crear una contraseña nueva con el token del enlace (TODO(regenerar))
-         */
-        post: operations["resetPassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cambiar o crear la contraseña de la propia cuenta (TODO(regenerar))
-         */
-        post: operations["changePassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -497,7 +499,7 @@ export interface paths {
         put?: never;
         /**
          * Restaurar una cuenta con la eliminación pendiente e iniciar sesión (ADR-032)
-         * @description Pública, sin sesión (como el login, no lleva token CSRF). Si la cuenta tiene la eliminación pendiente y la contraseña es correcta, cancela la eliminación y deja la sesión iniciada con la misma respuesta y cookie que POST /auth/login. Si el correo no existe, la contraseña es mala o la cuenta no estaba pendiente, responde el mismo 401 genérico del login. Comparte con el login el límite de intentos.
+         * @description Pública, sin sesión (como el login, no lleva token CSRF). Si la cuenta tiene la eliminación pendiente y la contraseña es correcta, cancela la eliminación y deja la sesión iniciada con la misma respuesta y cookie que POST /auth/login. Si el correo no existe, la contraseña es mala o la cuenta no estaba pendiente, responde el mismo 401 genérico del login. Comparte con el login el límite de intentos. Una cuenta creada con Google no tiene contraseña: se restaura entrando de nuevo con Google (GET /auth/google/start; el callback cancela la eliminación y abre la sesión, ADR-033).
          */
         post: operations["restoreAccount"];
         delete?: never;
@@ -560,6 +562,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pedir el enlace para restablecer la contraseña (ADR-033)
+         * @description Pública, sin sesión. Responde SIEMPRE 202 sin cuerpo y con la misma respuesta y el mismo tiempo exista o no la cuenta, así que no revela qué correos están registrados (EC-08). Si existe una cuenta con ese correo y no está pendiente de eliminación (ADR-032), se guarda el hash de un token aleatorio de 32 bytes (vigente 1 hora, un solo uso; pedir otro invalida el anterior) y se envía un correo con el enlace ${APP_URL}/restablecer-contrasena?token=<token>. Sirve también a las cuentas creadas con Google: es su primera contraseña. Si el envío falla, igual responde 202. Los límites cuentan existan o no las cuentas: 5 por IP cada 15 minutos y 3 por correo por hora (429 con Retry-After). Sin CSRF, como el registro.
+         */
+        post: operations["forgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear la contraseña nueva con el token del correo (ADR-033)
+         * @description Pública: el token del enlace es la credencial, así que no pide sesión ni CSRF. La contraseña cumple las mismas reglas que el registro (de 10 a 128 caracteres; si no, 400 VALIDATION_ERROR sin gastar el token). Un token desconocido, vencido o ya usado responde igual (422 INVALID_TOKEN). Con éxito guarda la contraseña con el mismo algoritmo que el registro, gasta el token, revoca TODAS las sesiones de la cuenta y, si el correo no estaba verificado, lo marca verificado (el enlace probó que es suyo). No abre sesión: el cliente lleva a iniciar sesión. Máximo 20 intentos por IP cada 15 minutos.
+         */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/resend-verification": {
         parameters: {
             query?: never;
@@ -609,7 +651,7 @@ export interface paths {
         };
         /**
          * Vuelta desde Google; abre la sesión o pide aceptar la política (ADR-029, fase 2)
-         * @description Siempre responde 302 hacia la PWA (la persona llega por el navegador) y borra valora_google. Con una cuenta vinculada o cuyo correo coincide, abre la misma sesión que POST /auth/login y lleva a /. Con un correo sin cuenta no crea nada: guarda en la cookie firmada valora_google_signup (10 minutos) el sub, el correo y el nombre que da Google, y lleva a /bienvenida para aceptar la política (RF-001). Si algo falla lleva a /entrar?error=, con uno de google (state distinto o ausente, código o id_token inválido), google-correo-sin-verificar, eliminacion-pendiente; si la persona canceló en Google, a /entrar sin error. Nunca pone el correo, el sub ni tokens en la URL (EC-08).
+         * @description Siempre responde 302 hacia la PWA (la persona llega por el navegador) y borra valora_google. Con una cuenta vinculada o cuyo correo coincide, abre la misma sesión que POST /auth/login y lleva a /. Una cuenta vinculada a ese sub de Google con la eliminación pendiente (ADR-032) queda restaurada: se cancela la eliminación y se abre la sesión (ADR-033). Una cuenta con contraseña que solo coincide por el correo y está pendiente no se vincula ni abre sesión: lleva a eliminacion-pendiente. Con un correo sin cuenta no crea nada: guarda en la cookie firmada valora_google_signup (10 minutos) el sub, el correo y el nombre que da Google, y lleva a /bienvenida para aceptar la política (RF-001). Si algo falla lleva a /entrar?error=, con uno de google (state distinto o ausente, código o id_token inválido), google-correo-sin-verificar, eliminacion-pendiente; si la persona canceló en Google, a /entrar sin error. Nunca pone el correo, el sub ni tokens en la URL (EC-08).
          */
         get: operations["googleSignInCallback"];
         put?: never;
@@ -649,7 +691,7 @@ export interface paths {
         };
         /**
          * Cola de reportes en revisión (RF-012, RF-013)
-         * @description Solo el rol moderador. Reportes sin decisión que la detección marcó sospechosos (desviacion) o que alguna cuenta marcó como dudosos (marcado). Orden por gravedad (RN2): primero desviacion, de mayor a menor desviación; luego marcado, de más a menos marcas; en empate, el más antiguo. Hoy solo aparecen desviacion y marcado; las demás llegan con el corte 3.
+         * @description Solo el rol moderador. Reportes sin decisión que la detección marcó sospechosos (desviacion) o que alguna cuenta marcó como dudosos (marcado). Orden por gravedad (RN2): primero desviacion, de mayor a menor desviación; luego marcado, de más a menos marcas; en empate, el más antiguo. ADR-037: sin_referencia es un precio oficial de un comercio que no se pudo comparar con nada (menos de 3 tiendas y sin SIPSA) y espera su aprobación; va después de desviacion y antes de rafaga, del más antiguo al más nuevo, sin mediana ni desviación y con reportersCount 0. Su id es el que usa POST /moderation/{itemId}/decision. Las demás razones llegan con el corte 3.
          */
         get: operations["getModerationQueue"];
         put?: never;
@@ -671,7 +713,7 @@ export interface paths {
         put?: never;
         /**
          * Registrar la decisión del moderador; queda auditada (RF-013)
-         * @description Solo el rol moderador. itemId es el id del reporte. Toda decisión exige motivo (RN3) y queda en una bitácora que no se puede modificar. aprobar vuelve a mostrar el precio como normal; descartar deja de mostrarlo (pasa al precio confiable más reciente de la tienda) y baja la reputación de su autor; si es el tercer descarte seguido de ese autor, su cuenta se suspende 7 días (RN6). observar_cuentas suspende 7 días al autor del reporte, que sigue en la cola. El moderador nunca ve quién es el autor; la suspensión revoca sus sesiones (#33).
+         * @description Solo el rol moderador. itemId es el id del reporte (o, en sin_referencia, el del precio oficial en revisión: aprobar lo publica como oficial vigente y descartar lo retira, sin tocar la reputación de nadie; observar_cuentas no aplica, ADR-037). Toda decisión exige motivo (RN3) y queda en una bitácora que no se puede modificar. aprobar vuelve a mostrar el precio como normal; descartar deja de mostrarlo (pasa al precio confiable más reciente de la tienda) y baja la reputación de su autor; si es el tercer descarte seguido de ese autor, su cuenta se suspende 7 días (RN6). observar_cuentas retira el reporte como un descarte (sale de la cola y de la tienda, GET /me/reports lo muestra descartado, sin plazo de apelación, y no baja la reputación) y suspende 7 días al autor; la causa la explica GET /auth/session en suspension.reason (ADR-039). El moderador nunca ve quién es el autor; la suspensión revoca sus sesiones (#33). Todo reporte que sale de la cola queda en un estado final: aprobar, normal; descartar y observar_cuentas, descartado.
          */
         post: operations["decideModerationItem"];
         delete?: never;
@@ -811,7 +853,8 @@ export interface paths {
         put?: never;
         /**
          * Registrar como suya una tienda, del mapa o nueva (RF-015)
-         * @description D2 y D3 del grill comercial (#201). Solo un reportante con el correo verificado. La persona debe estar a 50 m o menos de la tienda: location es la ubicación del celular en ese momento, solo sirve para comprobarlo y no se guarda (EC-08). Si todo está bien, la cuenta queda verificada como dueña de la tienda y su rol pasa a comercio. Una tienda por cuenta y un dueño por tienda. El NIT es opcional; sin NIT, el comercio es informal. Su dígito de verificación solo detecta errores al escribir: no se consulta a la DIAN.
+         * @description D2 y D3 del grill comercial (#201). Solo un reportante con el correo verificado. La persona debe estar a 50 m o menos de la tienda: location es la ubicación del celular en ese momento, solo sirve para comprobarlo y no se guarda (EC-08). Si todo está bien, la cuenta queda verificada como dueña de la tienda y su rol pasa a comercio. Una tienda por cuenta y un dueño por tienda.
+         *     Tiendas de cadena (ADR-038, H11): una tienda de tipo descuento o cuyo nombre es el de una cadena conocida (D1, Ara, Éxito, Olímpica, Carulla, Jumbo, Metro, Alkosto, Makro, Justo & Bueno, PriceSmart, Surtimax, Super Inter, Oxxo) no se puede reclamar: responde 422 CHAIN_STORE_NOT_CLAIMABLE, antes de comprobar la cercanía. Un supermercado que no es de cadena no se verifica al instante: la solicitud queda pre_aprobado y abre un caso de tipo reclamo en GET /moderation/merchant-cases; el rol pasa a comercio solo cuando un moderador lo aprueba. Barrio y minimercado se verifican al instante por cercanía, como antes. Orden de las comprobaciones: sesión, correo verificado, datos y NIT, tienda existente (404), cadena (422), cercanía (422), cuenta revocada de esa tienda (422), una tienda por cuenta (409) y dueño existente (409, con disputa). El NIT es opcional; sin NIT, el comercio es informal. Su dígito de verificación solo detecta errores al escribir: no se consulta a la DIAN.
          *     Si la tienda no está en el mapa (#202), se envía newEstablishment en lugar de establishmentId: se crea una propuesta de tienda en el punto de location (RF-005 RN7, la revisa el moderador) y la solicitud queda pre_aprobado. Al aprobarse la tienda, el comercio queda verificado solo; si el moderador la fusiona con una tienda sin dueño, queda verificado en esa tienda; si la rechaza o la tienda ya tenía dueño, la solicitud se cierra y GET /commerce/me muestra el motivo. El rol pasa a comercio cuando se verifica, por un evento interno: el frontend vuelve a pedir GET /auth/session.
          */
         post: operations["claimEstablishment"];
@@ -830,7 +873,7 @@ export interface paths {
         };
         /**
          * Perfil del comercio de la sesión (RF-015)
-         * @description D3 del grill comercial (#201): la tienda de la cuenta y su estado. Nunca una ubicación (EC-08). Si la última solicitud se cerró y no hay otra, responde rechazado con el motivo (#202).
+         * @description D3 del grill comercial (#201): la tienda de la cuenta y su estado. Nunca una ubicación (EC-08). Si la última solicitud se cerró y no hay otra, responde rechazado con el motivo (#202). Si un moderador la revocó (#208), reason es siempre un mensaje estándar: la nota del moderador queda en la bitácora interna y no se devuelve (H15).
          */
         get: operations["getMerchantProfile"];
         put?: never;
@@ -848,6 +891,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Consultar si la cuenta puede denunciar el comercio de una tienda
+         * @description Solo reportantes y comercios con sesión. No devuelve información del propietario. H31, aditivo: si la cuenta ya tiene una denuncia abierta sobre esa tienda, canReport es false y alreadyReported es true (el POST la rechazaría con 409 MERCHANT_REPORT_OPEN); el campo se omite en los demás casos.
+         */
         get: operations["getMerchantReportEligibility"];
         put?: never;
         /**
@@ -869,8 +916,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Denuncias y disputas de comercios pendientes (RF-015, D2)
-         * @description Solo el rol moderador (#208). La más antigua primero. Una disputa se abre sola cuando otra cuenta, estando en la tienda (presencia, D2), intenta registrar una tienda que ya tiene dueño. Trae los datos del comercio para verificarlo; nunca quién abrió el caso ni la cuenta del dueño (EC-08). Sin caché.
+         * Denuncias, disputas y reclamos de comercios pendientes (RF-015, D2)
+         * @description Solo el rol moderador (#208). La más antigua primero. Una disputa se abre sola cuando otra cuenta, estando en la tienda (presencia, D2), intenta registrar una tienda que ya tiene dueño. Un reclamo se abre solo cuando una cuenta, estando en la tienda, reclama un supermercado que no es de cadena (ADR-038): su owner es el comercio pre_aprobado que espera la decisión. Trae los datos del comercio para verificarlo; nunca quién abrió el caso ni la cuenta del dueño (EC-08). Sin caché.
          */
         get: operations["listMerchantCases"];
         put?: never;
@@ -891,8 +938,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Revocar el comercio o descartar el caso (RF-015, D3)
-         * @description Solo el rol moderador (#208). revocar retira al instante los precios oficiales y las promociones de la tienda, devuelve la cuenta a reportante, cierra los casos abiertos de esa tienda y deja anotado quién, cuándo y por qué; esa cuenta no puede volver a registrar esa tienda. descartar cierra el caso sin tocar el comercio. Siempre con motivo.
+         * Decidir un caso de comercio (RF-015, D3)
+         * @description Solo el rol moderador (#208). Siempre con motivo. En una denuncia o una disputa: revocar retira al instante los precios oficiales y las promociones de la tienda, devuelve la cuenta a reportante, cierra los casos abiertos de esa tienda y deja anotado quién, cuándo y por qué; esa cuenta no puede volver a registrar esa tienda. descartar cierra el caso sin tocar el comercio. En un reclamo (ADR-038): aprobar deja el comercio verificado y concede el rol comercio por el evento MerchantVerified; rechazar cierra la solicitud con el motivo (la cuenta sigue reportante y GET /commerce/me responde rechazado). Una decisión que no corresponde al tipo de caso responde 422 DECISION_NOT_APPLICABLE y no cambia nada.
          */
         post: operations["decideMerchantCase"];
         delete?: never;
@@ -950,12 +997,16 @@ export interface paths {
         };
         /**
          * Los precios oficiales del comercio con su vigencia (RF-016)
-         * @description D4 del grill comercial (#203). La vigencia cuenta desde la última confirmación, con el TTL de la categoría (ADR-005).
+         * @description H3: items e inReview traen productName y presentationLabel, calculados en el servidor desde el catálogo canónico (no de la lista pública, que se actualiza con retraso); así «Mis precios» no muestra identificadores justo después de publicar.
+         *
+         *     D4 del grill comercial (#203). La vigencia cuenta desde la última confirmación, con el TTL de la categoría (ADR-005). ADR-037: inReview trae los precios enviados que esperan a moderación; todavía no son oficiales y no están en items.
          */
         get: operations["listOfficialPrices"];
         /**
          * Publicar o actualizar un precio oficial (RF-016, EC-02)
          * @description D4 del grill comercial (#203). Solo un comercio verificado, en su propia tienda. Publicar otra vez la misma presentación reemplaza el precio y lo deja reconfirmado. El precio cumple el mismo piso y techo absolutos que un reporte (ADR-030). Vale lo mismo que un reporte (ADR-005), contando desde la última confirmación.
+         *
+         *     ADR-037 (H19): el precio se compara con la misma referencia que un reporte de la comunidad (mediana de al menos 3 tiendas del mismo municipio o, si no alcanzan, el mayorista SIPSA), con los mismos parámetros de ADR-030. Tres resultados. (1) Dentro de rango: 200 con status vigente, como siempre. (2) Claramente fuera de rango (menos del 40 % o más del 250 % de la mediana, o menos del 50 % del mayorista): 422 IMPLAUSIBLE_OFFICIAL_PRICE, con el rango de referencia en el mensaje; no se guarda ni se publica nada. (3) Sin referencia (menos de 3 tiendas y sin SIPSA): 200 con status en_revision; el precio no es oficial vigente ni titular «Más barato», no sale en la comparación, no reemplaza al oficial anterior de esa presentación y entra a la cola de moderación (GET /moderation/queue, reason sin_referencia). Si moderación lo aprueba pasa a vigente (confirmado en ese momento); si lo descarta, se retira. Enviar otro precio de la misma presentación reemplaza al que esperaba. El cuerpo de la respuesta es el mismo en los dos casos: se distingue por status.
          */
         put: operations["upsertOfficialPrice"];
         post?: never;
@@ -997,6 +1048,8 @@ export interface paths {
         /**
          * Cargar precios oficiales por archivo CSV (RF-016, D7)
          * @description D7 del grill comercial (#205, ADR-027). Se procesa al momento. El archivo es «CSV UTF-8» con el encabezado codigo_barras;precio y una fila por producto, separada por punto y coma; máximo 1.000 filas y 1 MB. Las filas buenas se publican juntas y quedan reconfirmadas (D4); las malas se informan con su número de fila de Excel. Subir el mismo archivo otra vez actualiza sin duplicar. Nunca crea un producto: un código que no está en Valora falla con UNKNOWN_BARCODE.
+         *
+         *     ADR-037: cada fila pasa por la misma evaluación que PUT /commerce/prices. Las claramente fuera de rango no se guardan y salen en errors con code IMPLAUSIBLE_OFFICIAL_PRICE y el mismo mensaje; las que no tienen referencia se aceptan «en revisión» y se informan aparte en inReview (no cuentan en published; esperan a moderación).
          */
         post: operations["bulkOfficialPrices"];
         delete?: never;
@@ -1012,12 +1065,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Las promociones del comercio con su estado de hoy (RF-017) */
+        /**
+         * Las promociones del comercio con su estado de hoy (RF-017)
+         * @description H3: cada promoción trae productName y presentationLabel, calculados en el servidor desde el catálogo canónico, para que el portal no tenga que completarlos con la lista pública.
+         */
         get: operations["listMerchantPromotions"];
         put?: never;
         /**
          * Publicar una promoción con reglas y vigencia (RF-017, EC-06)
-         * @description D6 del grill comercial (#206). Solo un comercio verificado, sobre el precio oficial VIGENTE de una presentación de su tienda (si no, 422 OFFICIAL_PRICE_REQUIRED). Condiciones fijas, sin texto libre. Dura como mucho 30 días; puede empezar en el futuro (queda programada). Si el oficial deja de estar vigente se pausa sola y reconfirmarlo la reactiva. Va siempre aparte de los resultados de la comparación y nunca cambia el orden (ADR-009).
+         * @description H20: no se aceptan dos promociones de la misma presentación en la misma tienda con al menos un día en común (422 PROMOTION_OVERLAP); retirar la primera libera sus fechas. H3: la respuesta trae productName y presentationLabel.
+         *
+         *     D6 del grill comercial (#206). Solo un comercio verificado, sobre el precio oficial VIGENTE de una presentación de su tienda (si no, 422 OFFICIAL_PRICE_REQUIRED). Condiciones fijas, sin texto libre. Dura como mucho 30 días; puede empezar en el futuro (queda programada). Si el oficial deja de estar vigente se pausa sola y reconfirmarlo la reactiva. Va siempre aparte de los resultados de la comparación y nunca cambia el orden (ADR-009). ADR-037: el precio que deja la promoción («Precio especial», «Descuento porcentual» o «Pague X lleve Y») no puede quedar por debajo del 40 % de la mediana de otras tiendas del municipio (50 % del mayorista SIPSA si no hay mediana); si queda por debajo, 422 IMPLAUSIBLE_OFFICIAL_PRICE. Sin referencia no se frena.
          */
         post: operations["createPromotion"];
         delete?: never;
@@ -1080,12 +1138,47 @@ export interface components {
              * @description Última confirmación.
              */
             confirmedAt: string;
+            /**
+             * @description vigente: ya es el oficial de la tienda. en_revision (ADR-037): no había con qué compararlo y espera a moderación; no es oficial ni sale en la comparación.
+             * @enum {string}
+             */
+            status: "vigente" | "en_revision";
+        };
+        /** @description Un precio enviado por el comercio que espera la decisión de moderación (ADR-037). */
+        OfficialPriceInReview: {
+            /** Format: uuid */
+            presentationId: string;
+            /**
+             * @description H3. El nombre del producto con su marca, del catálogo canónico (no de la lista pública, que se actualiza con retraso). «Producto sin nombre» si la presentación ya no está en el catálogo.
+             * @example Arroz blanco Diana
+             */
+            productName: string;
+            /**
+             * @description H3. La cantidad y la unidad de la presentación, con el mismo formato que el frontend: «1 kg», «500 g», «6 × 400 ml». Cadena vacía si la presentación ya no está en el catálogo.
+             * @example 1 kg
+             */
+            presentationLabel: string;
+            priceCop: number;
+            /** Format: date-time */
+            submittedAt: string;
+            /** @enum {string} */
+            status: "en_revision";
         };
         OfficialPriceWithFreshness: {
             /** Format: uuid */
             establishmentId: string;
             /** Format: uuid */
             presentationId: string;
+            /**
+             * @description H3. El nombre del producto con su marca, del catálogo canónico (no de la lista pública, que se actualiza con retraso). «Producto sin nombre» si la presentación ya no está en el catálogo.
+             * @example Arroz blanco Diana
+             */
+            productName: string;
+            /**
+             * @description H3. La cantidad y la unidad de la presentación, con el mismo formato que el frontend: «1 kg», «500 g», «6 × 400 ml». Cadena vacía si la presentación ya no está en el catálogo.
+             * @example 1 kg
+             */
+            presentationLabel: string;
             priceCop: number;
             /** Format: date-time */
             confirmedAt: string;
@@ -1154,12 +1247,12 @@ export interface components {
             name: string;
             distanceM: number;
         }[];
-        /** @description Una denuncia o una disputa sobre un comercio (D2, D3); sin quién la abrió (EC-08). */
+        /** @description Una denuncia, una disputa o un reclamo sobre un comercio (D2, D3, ADR-038); sin quién la abrió (EC-08). */
         MerchantCase: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "denuncia" | "disputa";
+            kind: "denuncia" | "disputa" | "reclamo";
             establishment: {
                 /** Format: uuid */
                 id: string;
@@ -1209,7 +1302,7 @@ export interface components {
              * @enum {string}
              */
             status: "rechazado" | "revocado";
-            /** @description Motivo del moderador o de la fusión. */
+            /** @description rechazado: el motivo del moderador o de la fusión. revocado: siempre el mensaje estándar «Moderación revocó el registro de esta cuenta para esa tienda.»; la nota del moderador no se devuelve (H15). */
             reason: string;
             /** Format: date-time */
             rejectedAt: string;
@@ -1232,7 +1325,25 @@ export interface components {
             verifiedAt: string | null;
             unlocks?: components["schemas"]["MerchantUnlocks"];
         };
-        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84) y scheduledFor en el 403 ACCOUNT_PENDING_DELETION (PendingDeletionError, ADR-032). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), MERCHANT_NOT_VERIFIED (403), INVALID_PASSWORD (403), LAST_MODERATOR_CANNOT_DELETE (403), ACCOUNT_PENDING_DELETION (403), NOT_FOUND (404), CONFLICT (409), ESTABLISHMENT_HAS_OWNER (409), ACCOUNT_HAS_ESTABLISHMENT (409), MERCHANT_REPORT_OPEN (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, IMPLAUSIBLE_PRICE, INVALID_TTL, INVALID_VERIFICATION_TOKEN, NOT_AT_ESTABLISHMENT, UNKNOWN_PRESENTATION, OFFICIAL_PRICE_REQUIRED, INVALID_PROMOTION, INVALID_OPENING_HOURS, OWN_ESTABLISHMENT, REVOKED_FROM_ESTABLISHMENT y los que agreguen las reglas futuras. */
+        OnlineOffer: {
+            /** Format: uuid */
+            presentationId: string;
+            /** @enum {string} */
+            source: "olimpica";
+            /** @enum {string} */
+            zone: "armenia-centro";
+            priceCop: number;
+            /** Format: date-time */
+            observedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /**
+             * Format: uri
+             * @description Enlace de Olímpica cuando el origen haya sido verificado.
+             */
+            productUrl?: string;
+        };
+        /** @description Única forma de error de la API (issue #41). Solo tiene code y message; la única excepción es availableFrom en el 409 DUPLICATE_REPORT (ConflictError, #84) y scheduledFor en el 403 ACCOUNT_PENDING_DELETION (PendingDeletionError, ADR-032). Valores de code: VALIDATION_ERROR (400), UNAUTHORIZED (401), FORBIDDEN (403), EMAIL_NOT_VERIFIED (403), MERCHANT_NOT_VERIFIED (403), INVALID_PASSWORD (403), LAST_MODERATOR_CANNOT_DELETE (403), ACCOUNT_PENDING_DELETION (403), NOT_FOUND (404), CONFLICT (409), ESTABLISHMENT_HAS_OWNER (409), ACCOUNT_HAS_ESTABLISHMENT (409), MERCHANT_REPORT_OPEN (409), PAYLOAD_TOO_LARGE (413), TOO_MANY_REQUESTS (429), REQUEST_ERROR (otro 4xx), INTERNAL_ERROR (500) y, con 422, el de cada regla de negocio: INVALID_PRICE, INVALID_QUANTITY, INCOMPATIBLE_UNITS, INVALID_OBSERVATION_DATE, IMPLAUSIBLE_PRICE, IMPLAUSIBLE_OFFICIAL_PRICE, INVALID_TTL, INVALID_VERIFICATION_TOKEN, NOT_AT_ESTABLISHMENT, UNKNOWN_PRESENTATION, OFFICIAL_PRICE_REQUIRED, INVALID_PROMOTION, PROMOTION_OVERLAP, INVALID_OPENING_HOURS, OWN_ESTABLISHMENT, REVOKED_FROM_ESTABLISHMENT, CHAIN_STORE_NOT_CLAIMABLE, DECISION_NOT_APPLICABLE y los que agreguen las reglas futuras. */
         Error: {
             /** @example INVALID_QUANTITY */
             code: string;
@@ -1418,6 +1529,16 @@ export interface components {
             establishmentId: string;
             /** Format: uuid */
             presentationId: string;
+            /**
+             * @description H3. El nombre del producto con su marca, del catálogo canónico (no de la lista pública, que se actualiza con retraso). «Producto sin nombre» si la presentación ya no está en el catálogo.
+             * @example Arroz blanco Diana
+             */
+            productName: string;
+            /**
+             * @description H3. La cantidad y la unidad de la presentación, con el mismo formato que el frontend: «1 kg», «500 g», «6 × 400 ml». Cadena vacía si la presentación ya no está en el catálogo.
+             * @example 1 kg
+             */
+            presentationLabel: string;
             /** @enum {string} */
             type: "descuento_porcentual" | "precio_especial" | "pague_x_lleve_y";
             percent?: number;
@@ -1564,11 +1685,11 @@ export interface components {
         ModerationItem: {
             /**
              * Format: uuid
-             * @description Id del reporte.
+             * @description Id del reporte o
              */
             id: string;
             /** @enum {string} */
-            reason: "apelacion" | "desviacion" | "rafaga" | "marcado" | "discrepancia_oficial" | "verificacion_comercio";
+            reason: "apelacion" | "desviacion" | "sin_referencia" | "rafaga" | "marcado" | "discrepancia_oficial" | "verificacion_comercio";
             /** @description Producto y presentación, por ejemplo «Arroz Diana · 500 g». */
             productName: string;
             establishmentName: string;
@@ -1605,7 +1726,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description code FORBIDDEN: el rol no tiene permiso. code CSRF_TOKEN_INVALID: falta la cabecera X-CSRF-Token o no coincide con la sesión. code ACCOUNT_SUSPENDED: la cuenta está suspendida y su sesión solo sirve para ver el estado de sus reportes, apelar y cerrar sesión (#71). code EMAIL_NOT_VERIFIED: solo en POST /reports y POST /commerce/claims, la cuenta aún no verificó su correo (ADR-029). INVALID_PASSWORD y LAST_MODERATOR_CANNOT_DELETE: solo en POST /me/account-deletion (ADR-032). */
+        /** @description code FORBIDDEN: el rol no tiene permiso. code CSRF_TOKEN_INVALID: falta la cabecera X-CSRF-Token o no coincide con la sesión. code ACCOUNT_SUSPENDED: la cuenta está suspendida y su sesión solo sirve para ver el estado de sus reportes, apelar y cerrar sesión (#71). code EMAIL_NOT_VERIFIED: solo en POST /reports y POST /commerce/claims, la cuenta aún no verificó su correo (ADR-029). INVALID_PASSWORD y LAST_MODERATOR_CANNOT_DELETE: solo en POST /me/account-deletion (ADR-032). INVALID_PASSWORD y REAUTH_REQUIRED también en POST /me/password (ADR-033; REAUTH_REQUIRED solo al crear la primera contraseña de una cuenta sin contraseña). */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1783,6 +1904,36 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listProductOnlineOffers: {
+        parameters: {
+            query: {
+                zone: "armenia-centro";
+            };
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ofertas vigentes o lista vacía */
+            200: {
+                headers: {
+                    /** @description Sin caché compartida durante el piloto para respetar el retiro y vencimiento. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["OnlineOffer"][];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     compareProduct: {
         parameters: {
             query?: {
@@ -1911,9 +2062,9 @@ export interface operations {
                 radiusKm?: number;
                 /** @description Código de la lista cerrada de categorías (GET /v1/categories). Solo los productos de esa categoría; un código que no existe responde la lista vacía. */
                 category?: string;
-                /** @description Los mismos valores del parámetro común Limit, con 5 por defecto. */
+                /** @description Tamaño de la página. Los mismos valores del parámetro común Limit, con 5 por defecto. */
                 limit?: number;
-                /** @description TODO(regenerar): paginación (≥ 0, 0 por defecto). Lo declara el servidor en desarrollo; se escribió a mano. Orden estable entre páginas. */
+                /** @description Cuántos productos del orden se saltan (paginación por desplazamiento). Con 0 por defecto, la respuesta es la de siempre. Más allá del final responde 200 con items vacío. Un valor negativo o que no es entero responde 400 VALIDATION_ERROR. */
                 offset?: number;
             };
             header?: never;
@@ -1932,6 +2083,10 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description Productos destacables con los mismos filtros (municipio o ubicación, radio y categoría), sumando todas las páginas. */
+                        total: number;
+                        /** @description Si quedan productos después de esta página (offset + items.length < total). */
+                        hasMore: boolean;
                         /** @description Criterio y área declarados al usuario (EC-06). municipality sale si se filtró por municipio; radiusKm, si se envió la ubicación; category, si se filtró por categoría. */
                         criteria: {
                             municipality?: components["schemas"]["Municipality"];
@@ -1945,10 +2100,6 @@ export interface operations {
                         };
                         /** @description Tiendas del área (municipio o radio) con al menos un precio vigente, de cualquier categoría. Para «Precios de 7 tiendas a menos de 1,5 km». */
                         storesWithPrices: number;
-                        /** @description TODO(regenerar): cuántos productos destacables hay con los mismos filtros (sin contar offset ni limit). Aún puede faltar. */
-                        total?: number;
-                        /** @description TODO(regenerar): hay más productos después de esta página. Aún puede faltar. */
-                        hasMore?: boolean;
                         /** @description Vacío si ninguna tienda del área tiene precios vigentes. */
                         items: {
                             /** Format: uuid */
@@ -2465,67 +2616,101 @@ export interface operations {
             };
         };
     };
-    // TODO(regenerar): operaciones de contraseña escritas a mano según el contrato del servidor.
-    forgotPassword: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: email */
-                    email: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Siempre 202 sin cuerpo: no revela si el correo tiene cuenta. */
-            202: { headers: { [name: string]: unknown }; content?: never };
-            400: components["responses"]["BadRequest"];
-            429: {
-                headers: { "Retry-After": components["headers"]["RetryAfter"]; [name: string]: unknown };
-                content: { "application/json": components["schemas"]["Error"] };
-            };
-        };
-    };
-    resetPassword: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never };
-        requestBody: {
-            content: {
-                "application/json": {
-                    token: string;
-                    password: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Contraseña creada; no abre sesión. */
-            204: { headers: { [name: string]: unknown }; content?: never };
-            400: components["responses"]["BadRequest"];
-            /** @description code INVALID_TOKEN: inexistente, vencido o ya usado. */
-            422: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["Error"] } };
-            429: {
-                headers: { "Retry-After": components["headers"]["RetryAfter"]; [name: string]: unknown };
-                content: { "application/json": components["schemas"]["Error"] };
-            };
-        };
-    };
     changePassword: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody: {
             content: {
-                "application/json":
-                    | { currentPassword: string; newPassword: string }
-                    | { newPassword: string };
+                "application/json": {
+                    currentPassword?: string;
+                    newPassword: string;
+                };
             };
         };
         responses: {
-            204: { headers: { [name: string]: unknown }; content?: never };
+            /** @description Contraseña cambiada o creada; las otras sesiones quedaron cerradas */
+            204: {
+                headers: {
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            /** @description code INVALID_PASSWORD (la actual no coincide) o REAUTH_REQUIRED (cuenta sin contraseña con sesión de más de 10 minutos). */
-            403: { headers: { [name: string]: unknown }; content: { "application/json": components["schemas"]["Error"] } };
+            /** @description code INVALID_PASSWORD (la contraseña actual no coincide o falta), code REAUTH_REQUIRED (cuenta sin contraseña cuya sesión tiene más de 10 minutos) o code CSRF_TOKEN_INVALID. No se cambia nada. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Más de 5 contraseñas actuales incorrectas por cuenta o 20 intentos por IP en 15 minutos. */
             429: {
-                headers: { "Retry-After": components["headers"]["RetryAfter"]; [name: string]: unknown };
-                content: { "application/json": components["schemas"]["Error"] };
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    changeOwnProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @example Ana María */
+                    displayName: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Nombre guardado, ya normalizado */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        displayName: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            /** @description code CSRF_TOKEN_INVALID. No se cambia nada. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Más de 10 cambios de nombre en una hora para esta cuenta. */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
         };
     };
@@ -2839,7 +3024,7 @@ export interface operations {
                         emailVerified: boolean;
                         /** @description ADR-029: si el servidor exige el correo verificado para registrar precios (REQUIRE_VERIFIED_EMAIL). Con false la app no muestra el aviso de verificación. */
                         emailVerificationRequired: boolean;
-                        /** @description TODO(regenerar): false en las cuentas creadas con Google que aún no tienen contraseña. */
+                        /** @description ADR-033: si la cuenta tiene contraseña. Las creadas con Google nacen sin ella (false): pueden crearla con POST /me/password (sesión de 10 minutos o menos) o con el enlace de POST /auth/forgot-password. */
                         hasPassword: boolean;
                         /** @description El nombre visible de la propia cuenta (#133). No viene en las cuentas creadas antes de que se pidiera. Es la única respuesta que lo incluye (EC-08). */
                         displayName?: string;
@@ -2847,9 +3032,22 @@ export interface operations {
                         csrfToken: string;
                         /**
                          * Format: date-time
-                         * @description Solo si la cuenta está suspendida: la sesión está limitada a ver el estado de sus reportes y apelar (#71).
+                         * @description Solo si la cuenta está suspendida: la sesión está limitada a ver el estado de sus reportes y apelar (#71). Se conserva por compatibilidad; suspension trae lo mismo con la causa.
                          */
                         suspendedUntil?: string;
+                        /** @description H33 (ADR-039), aditivo. Solo si la cuenta está suspendida: hasta cuándo y por qué, para que la app lo explique. Nunca trae la nota del moderador ni quién denunció. */
+                        suspension?: {
+                            /**
+                             * Format: date-time
+                             * @description Igual que suspendedUntil.
+                             */
+                            until: string;
+                            /**
+                             * @description observada_por_moderacion, un moderador eligió «Observar cuentas» sobre un reporte de la cuenta; descartes_seguidos, el tercer descarte seguido (RN6); no_registrada, suspensión anterior al registro de la causa. Conjunto estable: el frontend puede mapear cada valor a un texto propio.
+                             * @enum {string}
+                             */
+                            reason: "observada_por_moderacion" | "descartes_seguidos" | "no_registrada";
+                        };
                     };
                 };
             };
@@ -2890,6 +3088,88 @@ export interface operations {
                 };
             };
             /** @description Más de 20 intentos por IP en 15 minutos (valores provisionales). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    forgotPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Solicitud recibida (sin cuerpo; no dice si la cuenta existe) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Más de 5 solicitudes por IP en 15 minutos o 3 por correo en una hora. */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description El valor de ?token= del enlace (43 caracteres en base64url). */
+                    token: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Contraseña creada; todas las sesiones de la cuenta quedaron cerradas */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description code INVALID_TOKEN: el enlace no es válido, venció o ya se usó. Hay que pedir uno nuevo con POST /auth/forgot-password. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Más de 20 intentos por IP en 15 minutos. */
             429: {
                 headers: {
                     "Retry-After": components["headers"]["RetryAfter"];
@@ -3034,7 +3314,7 @@ export interface operations {
     getModerationQueue: {
         parameters: {
             query?: {
-                reason?: "apelacion" | "desviacion" | "rafaga" | "marcado" | "discrepancia_oficial" | "verificacion_comercio";
+                reason?: "apelacion" | "desviacion" | "sin_referencia" | "rafaga" | "marcado" | "discrepancia_oficial" | "verificacion_comercio";
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -3106,7 +3386,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description code DECISION_NOT_ALLOWED, observar_cuentas sobre una apelación (#71). */
+            /** @description code DECISION_NOT_ALLOWED, observar_cuentas sobre una apelación (#71) o sobre un precio oficial en revisión (ADR-037). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3461,7 +3741,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description verificado: la cuenta quedó como dueña de la tienda del mapa y su rol pasa a comercio. pre_aprobado: la tienda nueva espera la aprobación de su propuesta; unlocks dice lo que se desbloquea al aprobarse. */
+            /** @description verificado: la cuenta quedó como dueña de la tienda del mapa (barrio o minimercado) y su rol pasa a comercio. pre_aprobado: la tienda nueva espera la aprobación de su propuesta, o el supermercado del mapa que no es de cadena espera el caso reclamo del moderador (ADR-038); unlocks dice lo que se desbloquea al aprobarse. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -3508,7 +3788,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description code NOT_AT_ESTABLISHMENT: la ubicación está a más de 50 m de la tienda. code REVOKED_FROM_ESTABLISHMENT: un moderador revocó a esta cuenta de esta tienda (#208). */
+            /** @description code CHAIN_STORE_NOT_CLAIMABLE: es una tienda de cadena (D1, Ara, Éxito…) y no se puede reclamar; se comprueba antes de la cercanía (ADR-038). code NOT_AT_ESTABLISHMENT: la ubicación está a más de 50 m de la tienda. code REVOKED_FROM_ESTABLISHMENT: un moderador revocó a esta cuenta de esta tienda (#208). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3579,6 +3859,11 @@ export interface operations {
                 content: {
                     "application/json": {
                         canReport: boolean;
+                        /**
+                         * @description Solo aparece, y vale true, cuando la cuenta ya denunció esa tienda y la denuncia sigue abierta.
+                         * @enum {boolean}
+                         */
+                        alreadyReported?: true;
                     };
                 };
             };
@@ -3686,8 +3971,11 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    decision: "revocar" | "descartar";
+                    /**
+                     * @description revocar y descartar, de la denuncia y la disputa; aprobar y rechazar, del reclamo.
+                     * @enum {string}
+                     */
+                    decision: "revocar" | "descartar" | "aprobar" | "rechazar";
                     note: string;
                 };
             };
@@ -3705,6 +3993,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             /** @description El caso no existe o ya se decidió. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code DECISION_NOT_APPLICABLE, la decisión no corresponde al tipo de caso. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3823,6 +4120,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         items: components["schemas"]["OfficialPriceWithFreshness"][];
+                        inReview: components["schemas"]["OfficialPriceInReview"][];
                     };
                 };
             };
@@ -3855,7 +4153,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Precio oficial publicado y confirmado ahora. */
+            /** @description Precio oficial publicado y confirmado ahora (status vigente) o recibido y a la espera de moderación (status en_revision, ADR-037). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3875,7 +4173,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description code UNKNOWN_PRESENTATION: la presentación no está en el catálogo. code IMPLAUSIBLE_PRICE: menos de $100 o más de $5.000.000. */
+            /** @description code UNKNOWN_PRESENTATION: la presentación no está en el catálogo. code IMPLAUSIBLE_PRICE: menos de $100 o más de $5.000.000. code IMPLAUSIBLE_OFFICIAL_PRICE (ADR-037): el precio está claramente fuera del rango de referencia de esa presentación; el mensaje dice el rango («Lo más barato que vemos es $X y lo más caro $Y»). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3931,7 +4229,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Cuántas filas se publicaron y cuáles fallaron. */
+            /** @description Cuántas filas se publicaron, cuáles quedaron en revisión y cuáles fallaron. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3939,12 +4237,19 @@ export interface operations {
                 content: {
                     "application/json": {
                         published: number;
+                        /** @description Filas aceptadas que esperan a moderación (ADR-037); todavía no son oficiales. */
+                        inReview: {
+                            /** @description Número de la fila en Excel. */
+                            row: number;
+                            barcode: string;
+                            priceCop: number;
+                        }[];
                         errors: {
                             /** @description Número de la fila en Excel. */
                             row: number;
                             barcode: string;
                             /** @enum {string} */
-                            code: "INVALID_PRICE" | "DUPLICATE_ROW" | "UNKNOWN_BARCODE";
+                            code: "INVALID_PRICE" | "DUPLICATE_ROW" | "UNKNOWN_BARCODE" | "IMPLAUSIBLE_OFFICIAL_PRICE";
                             message: string;
                         }[];
                     };
@@ -4047,7 +4352,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description code OFFICIAL_PRICE_REQUIRED: no hay precio oficial vigente de esa presentación. code INVALID_PROMOTION: la oferta no baja el oficial, está fuera de sus límites o las fechas no sirven (final antes del inicio o ya pasado, o más de 30 días). */
+            /** @description code OFFICIAL_PRICE_REQUIRED: no hay precio oficial vigente de esa presentación. code INVALID_PROMOTION: la oferta no baja el oficial, está fuera de sus límites o las fechas no sirven (final antes del inicio o ya pasado, o más de 30 días). code IMPLAUSIBLE_OFFICIAL_PRICE (ADR-037): el precio resultante queda muy por debajo de lo normal para esa presentación; el mensaje dice el rango y cómo corregirla. code PROMOTION_OVERLAP (H20): ya hay otra promoción de esa presentación en la tienda, vigente, pausada o programada, que comparte al menos un día con las fechas pedidas; el mensaje dice las fechas de la otra y que debe retirarla o cambiar las fechas. Las retiradas y las vencidas no cuentan. */
             422: {
                 headers: {
                     [name: string]: unknown;

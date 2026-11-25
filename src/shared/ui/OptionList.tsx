@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 
 // Desde cuántas opciones conviene poder escribir para filtrar.
 export const SEARCH_FROM = 8;
@@ -10,6 +10,8 @@ export interface Option<T extends string> {
   label: string;
 }
 
+// En pantallas anchas la lista larga va en dos columnas (CSS: `option-items-cols`), llenas de arriba
+// abajo, y se desplaza solo la hoja que la contiene: no tiene scroll propio.
 // Una lista propia (rol listbox) para elegir una opción: la elegida lleva su check, las flechas
 // recorren, Inicio y Fin saltan, Enter o Espacio eligen y escribir una letra va a la opción que
 // empieza así. Con 8 o más opciones trae un campo para filtrar.
@@ -98,7 +100,14 @@ export function OptionList<T extends string>({
       )}
       {/* El teclado lo maneja la lista (aria-activedescendant); el toque, cada opción. */}
       <ul
-        className="option-items"
+        className={
+          options.length >= SEARCH_FROM ? 'option-items option-items-cols' : 'option-items'
+        }
+        style={
+          options.length >= SEARCH_FROM
+            ? ({ '--option-rows': Math.ceil(shown.length / 2) } as CSSProperties)
+            : undefined
+        }
         role="listbox"
         aria-label={label}
         tabIndex={0}

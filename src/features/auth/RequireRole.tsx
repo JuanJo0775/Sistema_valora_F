@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router';
+import { Link, Navigate, useLocation } from 'react-router';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
@@ -42,10 +42,23 @@ export function RequireRole({
     return <Navigate to={withReturn('/entrar', pathname + search)} replace />;
   }
   if (session.role !== role) {
-    return <EmptyState title={`Esta sección es para cuentas de ${role}`} />;
+    // Quien llega aquí con otro rol no debe quedarse sin salida: se le lleva a donde sí puede ir.
+    const canRegister = role === 'comercio' && session.role === 'reportante';
+    return (
+      <EmptyState
+        title={`Esta sección es para cuentas de ${role}`}
+        action={
+          canRegister ? (
+            <Link to="/comercios/registro">Registrar mi tienda</Link>
+          ) : (
+            <Link to="/yo">Volver a Yo</Link>
+          )
+        }
+      />
+    );
   }
   if (session.suspendedUntil && !allowSuspended) {
-    return <SuspendedNotice until={session.suspendedUntil} />;
+    return <SuspendedNotice until={session.suspendedUntil} reason={session.suspensionReason} />;
   }
   return children;
 }

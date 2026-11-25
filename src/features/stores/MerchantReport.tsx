@@ -1,4 +1,5 @@
-import { type SyntheticEvent, useEffect, useState } from 'react';
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { restoreFocus } from '../../shared/focus';
 import { api, call } from '../../shared/api';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { useSession } from '../auth/session';
@@ -10,11 +11,25 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
     !session.suspendedUntil &&
     (session.role === 'reportante' || session.role === 'comercio');
   const [available, setAvailable] = useState(false);
+  const [already, setAlready] = useState(false);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const sentRef = useRef<HTMLParagraphElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+
+  // El botón que abre el formulario desaparece: al cancelar el foco vuelve a él, y al enviar pasa
+  // al mensaje de resultado (WCAG 2.4.3).
+  useEffect(() => {
+    if (sent) restoreFocus(sentRef.current);
+  }, [sent]);
+  useEffect(() => {
+    if (!open && wasOpen.current) triggerRef.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -25,8 +40,11 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
         signal: controller.signal,
       }),
     )
-      .then(({ canReport }) => {
-        if (!controller.signal.aborted) setAvailable(canReport);
+      .then(({ canReport, alreadyReported }) => {
+        if (controller.signal.aborted) return;
+        setAvailable(canReport);
+        // H31: el campo falta en los demás casos (y en un backend sin desplegar).
+        setAlready(alreadyReported === true);
       })
       .catch(() => {
         // Una ficha pública sigue disponible aunque falle esta consulta privada.
@@ -56,13 +74,22 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
     }
   }
 
+  if (enabled && already && !available) {
+    return <p role="status">Ya denunciaste este comercio; moderación lo está revisando.</p>;
+  }
   if (!enabled || !available) return null;
-  if (sent) return <p role="status">Denuncia recibida. Un moderador revisará el caso.</p>;
+  if (sent)
+    return (
+      <p role="status" ref={sentRef} tabIndex={-1}>
+        Denuncia recibida. Un moderador revisará el caso.
+      </p>
+    );
   if (!open)
     return (
       <button
         type="button"
         className="link-button"
+        ref={triggerRef}
         onClick={() => {
           setOpen(true);
         }}
@@ -88,9 +115,16 @@ export function MerchantReport({ establishmentId }: { establishmentId: string })
           maxLength={500}
           rows={3}
           required
+          autoFocus
           disabled={busy}
+          aria-describedby="merchant-report-hint"
         />
       </label>
+      <p id="merchant-report-hint" className="muted">
+        {reason.trim().length < 10
+          ? 'Cuenta qué pasa, con al menos 10 letras, para poder enviar la denuncia.'
+          : 'Un moderador revisará lo que escribas.'}
+      </p>
       {error !== null && <ErrorState error={error} />}
       <div className="actions">
         <button type="submit" className="btn" disabled={busy || reason.trim().length < 10}>

@@ -2,38 +2,40 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// La columna fija de la derecha (.side) se queda quieta al desplazar la página, pero si es más alta que
-// la pantalla debe tener su propio scroll: antes la parte de abajo quedaba cortada y sin forma de verla.
 const css = readFileSync(resolve(process.cwd(), 'src/shared/ui/base.css'), 'utf-8');
-const desktop = /@media \(width >= 960px\) \{[\s\S]*?\.side \{([^}]*)\}/.exec(css)?.[1] ?? '';
 
-describe('columna lateral fija', () => {
-  it('se queda fija solo desde 960 px', () => {
+// La columna lateral (.side) solo se queda fija si cabe entera en la ventana (SidePanel le pone `fit` tras
+// medirla). Nunca tiene altura máxima ni scroll propio: un scroll dentro del scroll de la página (scroll
+// anidado) deja partes cortadas y es difícil con teclado, lector de pantalla y dedo.
+const code = css.replace(/\/\*[\s\S]*?\*\//g, '');
+const rule = (selector: string) =>
+  new RegExp(String.raw`(?:^|\n)\s*${selector.replace('.', String.raw`\.`)}\s*\{([^}]*)\}`).exec(
+    code,
+  )?.[1] ?? '';
+
+describe('columna lateral', () => {
+  it('por defecto fluye con la página: sin posición fija, altura máxima ni overflow', () => {
+    const side = rule('.side');
+    expect(side).not.toMatch(/position|max-height|overflow/);
+  });
+
+  it('se queda fija solo desde 960 px y solo si cabe (.fit)', () => {
+    const desktop =
+      /@media \(width >= 960px\) \{[\s\S]*?\.side\.fit \{([^}]*)\}/.exec(code)?.[1] ?? '';
     expect(desktop).toMatch(/position:\s*sticky/);
+    expect(desktop).toMatch(/top:\s*88px/);
+    expect(desktop).not.toMatch(/max-height|overflow/);
+    expect(code).not.toMatch(/\.side\s*\{[^}]*position:\s*sticky/);
   });
 
-  it('nunca es más alta que la pantalla y se desplaza por dentro', () => {
-    expect(css).toMatch(/--side-h:\s*calc\(100dvh\s*-\s*88px\s*-\s*16px\)/);
-    expect(desktop).toMatch(/max-height:\s*var\(--side-h\)/);
-    expect(desktop).toMatch(/overflow-y:\s*auto/);
-  });
-
-  it('tiene una sola barra, sin flechas de botones y sin mezclar los dos estilos', () => {
-    expect(css).toMatch(/\.side::-webkit-scrollbar-button\s*\{[^}]*display:\s*none/);
-    expect(css).toMatch(/\.side::-webkit-scrollbar\s*\{[^}]*width:\s*8px/);
-    // scrollbar-width solo para quien no tiene la barra de WebKit; si no, Chrome pinta las flechas.
-    expect(css).toMatch(
-      /@supports not selector\(::-webkit-scrollbar\)[\s\S]*?scrollbar-width:\s*thin/,
-    );
-    const outside = css
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/@supports not selector[\s\S]*?\n {2}\}\n/, '');
-    expect(outside).not.toMatch(/scrollbar-width/);
+  it('no deja ningún scroll ni barra de desplazamiento propios', () => {
+    expect(code).not.toMatch(/--side-h|scrollbar|overscroll/);
+    expect(code.match(/\.side[^{]*\{[^}]*overflow/g)).toBeNull();
   });
 });
 
-// La lista de tiendas del mapa: ya una vez la pisó otra regla ".store-list" (el selector de tienda de
-// los reportes, 16 rem de alto máximo) y quedó cortada. Su alto y su desplazamiento son los de ".side".
+// La lista de tiendas del mapa es una columna de la página: sin alto fijo ni overflow, y «Sugerir una
+// tienda» es el primer elemento de la lista, no uno que se queda pegado debajo de la barra de arriba.
 describe('lista de tiendas del mapa', () => {
   const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf-8');
   const stores = read('src/features/stores/stores.css');
@@ -42,12 +44,12 @@ describe('lista de tiendas del mapa', () => {
 
   it('no usa el nombre .store-list, que es de los reportes', () => {
     expect(page).not.toMatch(/store-list/);
-    expect(page).toMatch(/className="side map-side"/);
+    expect(page).toMatch(/className="map-side"/);
   });
 
-  it('llena la columna con el mismo alto útil, sin otra regla de overflow ni de max-height', () => {
-    expect(stores).toMatch(/\.map-side\s*\{\s*height:\s*var\(--side-h\)/);
-    expect(stores).not.toMatch(/overflow-y|max-heights*:/);
+  it('no tiene alto propio ni otra regla de overflow o de max-height', () => {
+    expect(stores).not.toMatch(/\.map-side\s*\{[^}]*height/);
+    expect(stores).not.toMatch(/overflow-y|max-heights*:|--side-h/);
     expect(web).not.toMatch(/scrollbar/);
   });
 
@@ -56,8 +58,8 @@ describe('lista de tiendas del mapa', () => {
     expect(web.match(/\.stores \.store-map/g)).toHaveLength(1);
   });
 
-  it('«Sugerir una tienda» queda fijo arriba de la lista', () => {
-    expect(stores).toMatch(/\.suggest-store\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/);
+  it('«Sugerir una tienda» no se queda pegado (sticky) a la ventana', () => {
+    expect(stores).not.toMatch(/\.suggest-store\s*\{[^}]*position:\s*sticky/);
   });
 });
 

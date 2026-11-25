@@ -125,6 +125,45 @@ describe('mis aportes', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Tu cuenta está suspendida hasta el 20 de noviembre de 2026. Mientras tanto puedes ver el estado de tus aportes y apelar.',
     );
+    // Ya está en Mis aportes: no se enlaza a sí misma y dice cómo apelar.
+    expect(screen.queryByRole('link', { name: 'Ver mis aportes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('pulsa «Apelar»');
+  });
+
+  it('un aporte descartado por «observar cuentas» no tiene plazo ni botón «Apelar» (H34)', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/me/reports': page([report('Banano', 'descartado')]),
+    });
+    renderMine();
+
+    expect(await screen.findByText('Descartado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Apelar' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Puedes apelar hasta/)).not.toBeInTheDocument();
+  });
+
+  it('suspendida por moderación, el aviso dice que esa decisión no se apela (H34)', async () => {
+    stubApi({
+      'GET /v1/auth/session': {
+        status: 200,
+        body: {
+          ...(sessionAs('reportante', '2026-11-20T17:00:00Z').body as object),
+          suspension: { until: '2026-11-20T17:00:00Z', reason: 'observada_por_moderacion' },
+        },
+      },
+      'GET /v1/me/reports': page([report('Banano', 'descartado')]),
+    });
+
+    render(
+      <SessionProvider>
+        <MemoryRouter>
+          <MyReports />
+        </MemoryRouter>
+      </SessionProvider>,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('esa decisión no se apela');
+    expect(screen.queryByRole('button', { name: 'Apelar' })).not.toBeInTheDocument();
   });
 
   // RF-013 RN4: apelar un descarte una sola vez y dentro del plazo.
@@ -171,6 +210,20 @@ describe('mis aportes', () => {
       'Cuéntanos un poco más: al menos 10 letras.',
     );
     expect(api.calls.some(({ method }) => method === 'POST')).toBe(false);
+  });
+
+  it('el aviso de la apelación se liga a la caja del motivo y esta recibe el foco', async () => {
+    stubApi({ 'GET /v1/me/reports': page([discarded]) });
+    renderMine();
+    await screen.findByText('Arroz blanco');
+
+    appeal('Era así');
+
+    const row = rowOf('Arroz blanco');
+    const note = row.getByRole('textbox');
+    expect(note).toHaveAttribute('aria-invalid', 'true');
+    expect(note).toHaveAttribute('aria-describedby', row.getByRole('alert').id);
+    expect(note).toHaveFocus();
   });
 
   it('si el servidor no acepta la apelación muestra por qué', async () => {
