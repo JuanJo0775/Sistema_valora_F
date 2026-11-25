@@ -106,6 +106,7 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
     const next = { ...hours };
     for (const key of days) if (key !== 'lunes') next[key] = { ...monday };
     setHours(next);
+    setReceipt(null);
     setCopied(true);
   }
 
@@ -115,6 +116,7 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
     setProblem('');
     setError(null);
     setReceipt(null);
+    setCopied(false);
     const patch: Patch = {};
     if (name.trim() !== current.name) patch.name = name.trim();
     if (phone.trim() !== (current.phone ?? '')) patch.phone = phone.trim();
@@ -312,6 +314,9 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
         </p>
       )}
       {error !== null && <ErrorState error={error} />}
+      <button className="btn" type="submit" disabled={busy}>
+        {busy ? 'Guardando…' : 'Guardar cambios'}
+      </button>
       {receipt && (
         <div role="status">
           {receipt.applied.length > 0 && (
@@ -320,9 +325,6 @@ function StoreEditor({ store, onChanged }: { store: Store; onChanged: () => void
           {receipt.inReview.length > 0 && <p>En revisión: {describeFields(receipt.inReview)}.</p>}
         </div>
       )}
-      <button className="btn" type="submit" disabled={busy}>
-        {busy ? 'Guardando…' : 'Guardar cambios'}
-      </button>
     </form>
   );
 }
