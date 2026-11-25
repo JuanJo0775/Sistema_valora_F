@@ -5,6 +5,7 @@ import type { components } from '../../shared/api/schema';
 import { shortDay } from '../../shared/days';
 import { formatCop } from '../../shared/money';
 import { ErrorState } from '../../shared/ui/ErrorState';
+import { ResultNotice } from '../../shared/ui/ResultNotice';
 
 type Promotion = components['schemas']['MerchantPromotion'];
 type Draft = components['schemas']['Promotion'];
@@ -173,13 +174,9 @@ export function MerchantPromotions({
       : '';
 
   // H21, H27: un único aviso a la vez, junto a la acción que lo dio.
-  const result = (at: 'publish' | 'retire') =>
-    notice &&
-    where === at && (
-      <p role="status" ref={statusRef} tabIndex={-1} className="banner">
-        {notice}
-      </p>
-    );
+  const result = (at: 'publish' | 'retire') => (
+    <ResultNotice ref={where === at ? statusRef : undefined} text={where === at ? notice : ''} />
+  );
   const failure = error !== null && !rejected && <ErrorState error={error} />;
 
   return (

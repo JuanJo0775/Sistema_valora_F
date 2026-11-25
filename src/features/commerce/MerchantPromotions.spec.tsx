@@ -253,12 +253,17 @@ describe('promociones del comercio (#167)', () => {
     fill('Desde', '2026-11-22');
     fill('Hasta', '2026-11-25');
     const publish = screen.getByRole('button', { name: 'Publicar promoción' });
+    // La región viva ya está antes de publicar: así el lector de pantalla anuncia el resultado.
+    const region = publish.nextElementSibling;
+    expect(region).toHaveAttribute('aria-live', 'polite');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
     fireEvent.click(publish);
 
     const notice = await screen.findByText('Promoción publicada.');
+    expect(notice).toBe(region);
     expect(screen.getAllByRole('status')).toEqual([notice]);
     expect(publish.closest('form')).toContainElement(notice);
-    expect(publish.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notice).toBe(region);
   });
 
   it('el aviso de retirar sale bajo la lista, antes del formulario, y reemplaza al anterior (H21, H27)', async () => {

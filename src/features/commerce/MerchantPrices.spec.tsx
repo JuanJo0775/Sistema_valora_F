@@ -446,7 +446,9 @@ describe('panel de precios oficiales (#166)', () => {
       notice,
     );
     // El botón desapareció: el foco pasa al aviso, que es lo único que cambió.
-    expect(notice).toHaveFocus();
+    await waitFor(() => {
+      expect(notice).toHaveFocus();
+    });
   });
 
   it('el aviso de publicar un precio sale junto al formulario y reemplaza al anterior (H21, H27)', async () => {

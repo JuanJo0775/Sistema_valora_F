@@ -8,6 +8,7 @@ import { formatCop } from '../../shared/money';
 import { BackLink } from '../../shared/ui/BackLink';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
+import { ResultNotice } from '../../shared/ui/ResultNotice';
 import { Tabs } from '../../shared/ui/Tabs';
 import { RequireRole } from '../auth/RequireRole';
 import { MerchantPriceEditor, type PriceSelection } from './MerchantPriceEditor';
@@ -242,17 +243,14 @@ function PricePanel() {
   // que se edita en su fila sale en esa fila; el resto, bajo su acción. Cambiar de pestaña lo limpia.
   const editingListed =
     selection !== null && listed.some((item) => item.presentationId === selection.presentationId);
-  const notices = (at: Where) =>
-    where === at && (
-      <>
-        {notice && (
-          <p role="status" ref={noticeRef} tabIndex={-1} className="banner">
-            {notice}
-          </p>
-        )}
-        {error !== null && !(at === 'editor' && editingListed) && <ErrorState error={error} />}
-      </>
-    );
+  const notices = (at: Where) => (
+    <>
+      <ResultNotice ref={where === at ? noticeRef : undefined} text={where === at ? notice : ''} />
+      {where === at && error !== null && !(at === 'editor' && editingListed) && (
+        <ErrorState error={error} />
+      )}
+    </>
+  );
   const priceEditor = (current: PriceSelection | null) => (
     <MerchantPriceEditor
       key={current?.presentationId ?? 'new'}
