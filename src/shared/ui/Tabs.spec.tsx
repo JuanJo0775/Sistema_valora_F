@@ -35,7 +35,9 @@ describe('pestañas accesibles', () => {
     const { container } = render(<Harness />);
 
     for (const element of screen.getAllByRole('tab')) {
-      const panel = container.querySelector(`[id="${element.getAttribute('aria-controls') ?? ''}"]`);
+      const panel = container.querySelector(
+        `[id="${element.getAttribute('aria-controls') ?? ''}"]`,
+      );
       expect(panel).toHaveAttribute('role', 'tabpanel');
       expect(panel).toHaveAttribute('aria-labelledby', element.id);
     }
