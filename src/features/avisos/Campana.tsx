@@ -1,5 +1,7 @@
+import { useId, useState } from 'react';
+import { Link } from 'react-router';
 import { Icon } from '../../app/Icon';
-import { type Avisos, useAvisos } from './avisosContext';
+import { type Avisos, type PendingCounts, useAvisos } from './avisosContext';
 import './avisos.css';
 
 // Cuántos avisos hay. `undefined` es «todavía no hay respuesta»: la campana no muestra un número que
@@ -20,15 +22,56 @@ function nameOf(total: number | undefined): string {
   return `Avisos: ${String(total)} ${total === 1 ? 'pendiente' : 'pendientes'}`;
 }
 
+// Las pestañas del panel de moderación, en el mismo orden que el panel.
+const QUEUES: { key: keyof PendingCounts; label: string }[] = [
+  { key: 'precios', label: 'Precios' },
+  { key: 'tiendas', label: 'Tiendas' },
+  { key: 'productos', label: 'Productos' },
+  { key: 'comercios', label: 'Comercios' },
+];
+
+function ModerationRows({ counts }: { counts: PendingCounts | undefined }) {
+  return (
+    <ul>
+      {QUEUES.map(({ key, label }) => (
+        <li key={key}>
+          <Link to={`/moderacion?vista=${key}`} className="campana-fila">
+            {label}
+            {counts !== undefined && <span className="campana-numero">{counts[key]}</span>}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // ADR-043: la campana del encabezado, solo para moderador y comercio.
 export function Campana() {
   const avisos = useAvisos();
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   if (avisos.kind === 'ninguno') return null;
   const total = totalOf(avisos);
   return (
-    <button type="button" className="campana" aria-label={nameOf(total)}>
-      <Icon name="bell" />
-      {total !== undefined && total > 0 && <span className="campana-total">{total}</span>}
-    </button>
+    <div className="campana-caja">
+      <button
+        type="button"
+        className="campana"
+        aria-label={nameOf(total)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => {
+          setOpen((current) => !current);
+        }}
+      >
+        <Icon name="bell" />
+        {total !== undefined && total > 0 && <span className="campana-total">{total}</span>}
+      </button>
+      {open && avisos.kind === 'moderador' && (
+        <section id={panelId} className="campana-panel" aria-label="Pendientes de moderación">
+          <ModerationRows counts={avisos.counts} />
+        </section>
+      )}
+    </div>
   );
 }
