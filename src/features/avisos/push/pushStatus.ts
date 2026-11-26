@@ -29,5 +29,7 @@ export type PushStatus =
 export function pushStatusOf(env: PushEnvironment): PushStatus {
   if (env.keyAvailable === undefined) return 'cargando';
   if (!env.keyAvailable) return 'sin_clave';
+  if (env.permission === 'denied') return 'denegado';
+  if (env.permission === 'granted' && env.subscribed) return 'activo';
   return 'listo';
 }
