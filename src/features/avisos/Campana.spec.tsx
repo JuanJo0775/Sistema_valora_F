@@ -23,4 +23,37 @@ describe('campana de avisos del moderador (ADR-043)', () => {
     const bell = screen.getByRole('button', { name: 'Avisos: 3 pendientes' });
     expect(bell).toHaveTextContent('3');
   });
+
+  // Un cero que no es verdad engaña: mientras no hay respuesta, la campana no dice cuántos hay.
+  it('sin respuesta todavía no muestra ningún número', () => {
+    renderBell({ kind: 'moderador', counts: undefined });
+
+    const bell = screen.getByRole('button', { name: 'Avisos' });
+    expect(bell).not.toHaveTextContent(/\d/);
+  });
+
+  it('con todo al día no muestra número y lo dice', () => {
+    renderBell({
+      kind: 'moderador',
+      counts: { precios: 0, tiendas: 0, productos: 0, comercios: 0 },
+    });
+
+    const bell = screen.getByRole('button', { name: 'Avisos: nada pendiente' });
+    expect(bell).not.toHaveTextContent(/\d/);
+  });
+
+  it('con un solo aviso habla en singular', () => {
+    renderBell({
+      kind: 'moderador',
+      counts: { precios: 1, tiendas: 0, productos: 0, comercios: 0 },
+    });
+
+    expect(screen.getByRole('button', { name: 'Avisos: 1 pendiente' })).toBeInTheDocument();
+  });
+
+  it('quien no es moderador ni comercio no ve la campana', () => {
+    renderBell({ kind: 'ninguno' });
+
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
 });
