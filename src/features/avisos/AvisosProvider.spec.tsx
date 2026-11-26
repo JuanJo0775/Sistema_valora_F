@@ -37,7 +37,7 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
     renderProvider();
 
     await waitFor(() => {
-      expect(JSON.parse(screen.getByTestId('avisos').textContent ?? '')).toEqual({
+      expect(JSON.parse(screen.getByTestId('avisos').textContent)).toEqual({
         kind: 'moderador',
         counts: SUMMARY,
       });
@@ -59,7 +59,7 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
     renderProvider();
 
     await waitFor(() => {
-      expect(JSON.parse(screen.getByTestId('avisos').textContent ?? '')).toEqual({
+      expect(JSON.parse(screen.getByTestId('avisos').textContent)).toEqual({
         kind: 'comercio',
         alerts: [alert],
       });
@@ -76,7 +76,7 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
     renderProvider();
 
     await waitFor(() => {
-      expect(JSON.parse(screen.getByTestId('avisos').textContent ?? '')).toEqual({
+      expect(JSON.parse(screen.getByTestId('avisos').textContent)).toEqual({
         kind: 'ninguno',
       });
     });
@@ -102,7 +102,7 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('avisos')).toHaveTextContent('"kind":"comercio"');
     });
-    expect(JSON.parse(screen.getByTestId('avisos').textContent ?? '')).toEqual({
+    expect(JSON.parse(screen.getByTestId('avisos').textContent)).toEqual({
       kind: 'comercio',
     });
   });

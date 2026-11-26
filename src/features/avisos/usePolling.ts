@@ -8,7 +8,10 @@ export function usePolling<T>(
 ): T | undefined {
   const [value, setValue] = useState<T>();
   const loadRef = useRef(load);
-  loadRef.current = load;
+  // La referencia se actualiza después de dibujar, no durante el render.
+  useEffect(() => {
+    loadRef.current = load;
+  });
 
   useEffect(() => {
     if (!enabled) return undefined;
