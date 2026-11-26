@@ -19,10 +19,18 @@ export function AvisosProvider({ children }: { children: ReactNode }) {
   );
   const counts = usePolling(loadSummary, AVISOS_INTERVAL_MS, role === 'moderador');
 
+  const loadAlerts = useCallback(
+    (signal: AbortSignal) =>
+      call(api.GET('/commerce/alerts', { signal })).then(({ items }) => items),
+    [],
+  );
+  const alerts = usePolling(loadAlerts, AVISOS_INTERVAL_MS, role === 'comercio');
+
   const value = useMemo<Avisos>(() => {
     if (role === 'moderador') return { kind: 'moderador', counts };
+    if (role === 'comercio') return { kind: 'comercio', alerts };
     return { kind: 'ninguno' };
-  }, [role, counts]);
+  }, [role, counts, alerts]);
 
   return <AvisosContext.Provider value={value}>{children}</AvisosContext.Provider>;
 }
