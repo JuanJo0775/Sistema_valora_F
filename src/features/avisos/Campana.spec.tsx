@@ -77,6 +77,39 @@ describe('campana de avisos del moderador (ADR-043)', () => {
       ['Comercios1', '/moderacion?vista=comercios'],
     ]);
   });
+
+  // Un panel que no se puede cerrar con el teclado atrapa a quien no usa el mouse (WCAG 2.2).
+  it('Escape cierra el panel y devuelve el foco a la campana', () => {
+    renderBell({ kind: 'moderador', counts: COUNTS });
+    const bell = screen.getByRole('button', { name: 'Avisos: 3 pendientes' });
+    fireEvent.click(bell);
+    const row = screen.getAllByRole('link')[0] as HTMLElement;
+    row.focus();
+
+    fireEvent.keyDown(row, { key: 'Escape' });
+
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(bell).toHaveFocus();
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('tocar fuera del panel lo cierra', () => {
+    renderBell({ kind: 'moderador', counts: COUNTS });
+    fireEvent.click(screen.getByRole('button', { name: 'Avisos: 3 pendientes' }));
+
+    fireEvent.pointerDown(document.body);
+
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
+
+  it('elegir una cola cierra el panel y lleva a esa pestaña', () => {
+    renderBell({ kind: 'moderador', counts: COUNTS });
+    fireEvent.click(screen.getByRole('button', { name: 'Avisos: 3 pendientes' }));
+
+    fireEvent.click(screen.getByRole('link', { name: /^Precios/ }));
+
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
 });
 
 // ADR-043: el comercio ve en la campana los mismos avisos que en su pantalla (vencimiento y discrepancia).
