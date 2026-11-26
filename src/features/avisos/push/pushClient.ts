@@ -45,9 +45,15 @@ export async function activatePush(deps: PushDeps): Promise<'activo' | 'denegado
     applicationServerKey: keyToBytes(key),
   });
   const { endpoint, keys } = subscription.toJSON();
-  await deps.save({
-    endpoint: endpoint ?? subscription.endpoint,
-    keys: { p256dh: keys?.p256dh ?? '', auth: keys?.auth ?? '' },
-  });
+  try {
+    await deps.save({
+      endpoint: endpoint ?? subscription.endpoint,
+      keys: { p256dh: keys?.p256dh ?? '', auth: keys?.auth ?? '' },
+    });
+  } catch (error) {
+    // Sin la suscripción en el servidor, el navegador no debe quedar suscrito.
+    await subscription.unsubscribe();
+    throw error;
+  }
   return 'activo';
 }
