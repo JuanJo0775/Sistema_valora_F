@@ -78,3 +78,37 @@ describe('campana de avisos del moderador (ADR-043)', () => {
     ]);
   });
 });
+
+// ADR-043: el comercio ve en la campana los mismos avisos que en su pantalla (vencimiento y discrepancia).
+describe('campana de avisos del comercio (ADR-043)', () => {
+  const ALERTS = [
+    {
+      kind: 'vence_pronto' as const,
+      presentationId: 'a1b2c3d4-0000-4000-8000-000000000001',
+      productName: 'Arroz Diana · 500 g',
+      message: 'Tu precio oficial de Arroz Diana · 500 g vence mañana: reconfírmalo.',
+    },
+    {
+      kind: 'discrepancia' as const,
+      presentationId: 'a1b2c3d4-0000-4000-8000-000000000002',
+      productName: 'Pasta Doria · 500 g',
+      message: 'Dos reportes dicen $4.200 y tu precio oficial es $4.500.',
+    },
+  ];
+
+  it('cuenta sus avisos y los muestra con su mensaje, llevando a su pantalla', () => {
+    renderBell({ kind: 'comercio', alerts: ALERTS });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Avisos: 2 pendientes' }));
+
+    const panel = screen.getByRole('region', { name: 'Tus avisos' });
+    expect(
+      within(panel)
+        .getAllByRole('link')
+        .map((link) => [link.textContent, link.getAttribute('href')]),
+    ).toEqual([
+      [ALERTS[0]?.message, '/comercios'],
+      [ALERTS[1]?.message, '/comercios'],
+    ]);
+  });
+});
