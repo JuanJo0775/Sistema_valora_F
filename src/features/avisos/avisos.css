@@ -68,3 +68,26 @@
 .campana-numero {
   font-weight: 600;
 }
+
+/* En el celular el logo va centrado y la campana a la derecha de la barra superior; en escritorio,
+   al final de la barra (layout.css, desde 960 px). */
+.top {
+  position: relative;
+}
+
+.top .campana-caja {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+}
+
+@media (width >= 960px) {
+  .top .campana-caja {
+    position: relative;
+    top: auto;
+    right: auto;
+    margin-left: auto;
+    transform: none;
+  }
+}
