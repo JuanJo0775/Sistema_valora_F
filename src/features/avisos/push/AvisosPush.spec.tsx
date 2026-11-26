@@ -27,7 +27,7 @@ function fakeBrowser(options: { subscribed?: boolean; permission?: NotificationP
     value: { ready: Promise.resolve(registration) },
     configurable: true,
   });
-  vi.stubGlobal('PushManager', class {});
+  vi.stubGlobal('PushManager', {});
   const requestPermission = vi.fn(() => Promise.resolve<NotificationPermission>('granted'));
   vi.stubGlobal('Notification', {
     permission: options.permission ?? 'default',

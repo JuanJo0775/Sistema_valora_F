@@ -3,6 +3,7 @@ import { type PushDeps, activatePush, deactivatePush } from './pushClient';
 
 // Un navegador falso: guarda lo que pasó para revisarlo.
 function setup(overrides: Partial<PushDeps> = {}) {
+  const removeMock = vi.fn(() => Promise.resolve());
   const subscribed: { userVisibleOnly: boolean; applicationServerKey: Uint8Array }[] = [];
   const saved: unknown[] = [];
   const unsubscribed: string[] = [];
@@ -34,10 +35,10 @@ function setup(overrides: Partial<PushDeps> = {}) {
       saved.push(sub);
       return Promise.resolve();
     },
-    remove: vi.fn(() => Promise.resolve()),
+    remove: removeMock,
     ...overrides,
   };
-  return { deps, subscribed, saved, unsubscribed };
+  return { deps, subscribed, saved, unsubscribed, removeMock };
 }
 
 // ADR-044, ADR-045: activar los avisos pide el permiso al tocar el botón, se suscribe con la clave
@@ -177,10 +178,10 @@ describe('desactivar los avisos push, casos límite', () => {
   });
 
   it('sin suscripción en el navegador no llama al servidor', async () => {
-    const { deps } = setup();
+    const { deps, removeMock } = setup();
 
     await deactivatePush(deps);
 
-    expect(deps.remove).not.toHaveBeenCalled();
+    expect(removeMock).not.toHaveBeenCalled();
   });
 });

@@ -15,7 +15,7 @@ export interface PushDeps {
       getSubscription(): Promise<PushSubscriptionLike | null>;
       subscribe(options: {
         userVisibleOnly: boolean;
-        applicationServerKey: Uint8Array;
+        applicationServerKey: Uint8Array<ArrayBuffer>;
       }): Promise<PushSubscriptionLike>;
     };
   }>;
@@ -25,7 +25,7 @@ export interface PushDeps {
 }
 
 // La clave VAPID viaja en base64url; el navegador la pide en bytes.
-function keyToBytes(key: string): Uint8Array {
+function keyToBytes(key: string): Uint8Array<ArrayBuffer> {
   const base64 = key
     .replace(/-/g, '+')
     .replace(/_/g, '/')
