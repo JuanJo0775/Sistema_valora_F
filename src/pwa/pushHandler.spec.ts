@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 
 type Listener = (event: Record<string, unknown>) => void;
@@ -23,7 +24,7 @@ function load(
       openWindow: vi.fn(() => Promise.resolve()),
     },
   };
-  new Function('self', readFileSync('public/push-handler.js', 'utf8'))(self);
+  runInNewContext(readFileSync('public/push-handler.js', 'utf8'), { self });
   const push = async (data: unknown) => {
     const waits: Promise<unknown>[] = [];
     listeners.get('push')?.({
