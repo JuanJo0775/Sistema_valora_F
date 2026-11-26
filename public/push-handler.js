@@ -12,6 +12,11 @@ function readPayload(event) {
   }
 }
 
+// Solo se abren direcciones de la propia app (`/…`): un aviso nunca saca a la persona del sitio.
+function safeUrl(url) {
+  return typeof url === 'string' && url.startsWith('/') && !url.startsWith('//') ? url : '/';
+}
+
 self.addEventListener('push', (event) => {
   const data = readPayload(event);
   event.waitUntil(
@@ -19,7 +24,7 @@ self.addEventListener('push', (event) => {
       body: typeof data.body === 'string' ? data.body : 'Tienes avisos nuevos',
       tag: typeof data.tag === 'string' ? data.tag : undefined,
       icon: '/icon-192.png',
-      data: { url: typeof data.url === 'string' ? data.url : '/' },
+      data: { url: safeUrl(data.url) },
     }),
   );
 });
