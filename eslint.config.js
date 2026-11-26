@@ -12,6 +12,8 @@ export default tseslint.config(
       'coverage/**',
       'node_modules/**',
       'eslint.config.js',
+      // JavaScript simple que carga el service worker con importScripts; lo prueba pushHandler.spec.ts.
+      'public/push-handler.js',
       'src/shared/api/schema.d.ts',
     ],
   },

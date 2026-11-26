@@ -36,6 +36,8 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon-64.png', 'apple-touch-icon.png'],
         manifest: MANIFEST,
         workbox: {
+          // ADR-044: los avisos push los muestra public/push-handler.js, que el service worker carga aquí.
+          importScripts: ['push-handler.js'],
           // Las fuentes y los íconos también, para que la app abra igual sin internet.
           globPatterns: ['**/*.{js,css,html,png,woff2}'],
           navigateFallbackDenylist: [/^\/v1\//],
