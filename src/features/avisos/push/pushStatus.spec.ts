@@ -41,4 +41,29 @@ describe('estado de los avisos push en este dispositivo (RN7)', () => {
   it('con el permiso concedido pero sin suscripción, se puede activar de nuevo', () => {
     expect(pushStatusOf({ ...READY, permission: 'granted', subscribed: false })).toBe('listo');
   });
+
+  // iOS solo permite avisos a una app instalada en la pantalla de inicio: en Safari normal el
+  // navegador ni siquiera tiene Push, así que decir «sin soporte» sería engañoso.
+  it('en iPhone con la página abierta en Safari dice que hay que instalar la app primero', () => {
+    const iphone = { ...READY, platform: 'ios-safari' as const, supported: false };
+
+    expect(pushStatusOf(iphone)).toBe('ios_sin_instalar');
+  });
+
+  it('en iPhone con la app instalada y abierta desde su ícono, se puede activar', () => {
+    const installed = { ...READY, platform: 'ios-safari' as const, installed: true };
+
+    expect(pushStatusOf(installed)).toBe('listo');
+  });
+
+  it('en iPhone con otro navegador o dentro de otra app, dice que la abra en Safari', () => {
+    const other = { ...READY, platform: 'ios-other' as const, supported: false };
+
+    expect(pushStatusOf(other)).toBe('ios_otro_navegador');
+  });
+
+  it('un navegador que no puede recibir avisos lo dice', () => {
+    expect(pushStatusOf({ ...READY, supported: false })).toBe('sin_soporte');
+    expect(pushStatusOf({ ...READY, platform: 'android', supported: false })).toBe('sin_soporte');
+  });
 });
