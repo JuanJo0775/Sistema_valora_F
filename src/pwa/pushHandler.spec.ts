@@ -5,7 +5,9 @@ type Listener = (event: Record<string, unknown>) => void;
 
 // El manejador es JavaScript simple (public/push-handler.js): el service worker lo carga con
 // importScripts. Aquí se ejecuta con un `self` falso para ver qué hace.
-function load() {
+function load(
+  windows: { focus: () => Promise<unknown>; navigate?: (url: string) => Promise<unknown> }[] = [],
+) {
   const listeners = new Map<string, Listener>();
   const shown: { title: string; options: Record<string, unknown> }[] = [];
   const self = {
@@ -30,7 +32,17 @@ function load() {
     });
     await Promise.all(waits);
   };
-  return { self, shown, push, listeners };
+  const click = async (url: unknown) => {
+    const waits: Promise<unknown>[] = [];
+    const close = vi.fn();
+    listeners.get('notificationclick')?.({
+      notification: { close, data: { url } },
+      waitUntil: (promise: Promise<unknown>) => waits.push(promise),
+    });
+    await Promise.all(waits);
+    return { close };
+  };
+  return { self, shown, push, click, listeners };
 }
 
 // ADR-044: el aviso es genérico y lleva a la pantalla que se abre al tocarlo.
@@ -90,5 +102,27 @@ describe('manejador de avisos push del service worker (ADR-044)', () => {
     await push({ title: 'Valora', body: 'Aviso', url });
 
     expect(shown[0]?.options['data']).toEqual({ url: '/' });
+  });
+
+  // Tocar el aviso lleva a la pantalla correspondiente (EC-09), sin dejar la notificación abierta.
+  it('al tocar el aviso lo cierra y abre la pantalla en una ventana nueva si la app no estaba abierta', async () => {
+    const { self, click } = load([]);
+
+    const { close } = await click('/moderacion?vista=precios');
+
+    expect(close).toHaveBeenCalled();
+    expect(self.clients.openWindow).toHaveBeenCalledWith('/moderacion?vista=precios');
+  });
+
+  it('si la app ya estaba abierta, la enfoca y la lleva a esa pantalla', async () => {
+    const focus = vi.fn(() => Promise.resolve());
+    const navigate = vi.fn(() => Promise.resolve());
+    const { self, click } = load([{ focus, navigate }]);
+
+    await click('/comercios');
+
+    expect(navigate).toHaveBeenCalledWith('/comercios');
+    expect(focus).toHaveBeenCalled();
+    expect(self.clients.openWindow).not.toHaveBeenCalled();
   });
 });
