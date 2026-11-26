@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router';
 import { Icon } from '../../app/Icon';
-import { type Avisos, type PendingCounts, useAvisos } from './avisosContext';
+import { type Avisos, type MerchantAlert, type PendingCounts, useAvisos } from './avisosContext';
 import './avisos.css';
 
 // Cuántos avisos hay. `undefined` es «todavía no hay respuesta»: la campana no muestra un número que
@@ -45,6 +45,22 @@ function ModerationRows({ counts }: { counts: PendingCounts | undefined }) {
   );
 }
 
+// Los avisos del comercio llevan a su pantalla, donde reconfirma o corrige sus precios.
+function MerchantRows({ alerts }: { alerts: MerchantAlert[] | undefined }) {
+  if (alerts?.length === 0) return <p className="campana-vacio muted">Nada pendiente por ahora.</p>;
+  return (
+    <ul>
+      {(alerts ?? []).map(({ kind, presentationId, message }) => (
+        <li key={`${kind}:${presentationId}`}>
+          <Link to="/comercios" className="campana-fila">
+            {message}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // ADR-043: la campana del encabezado, solo para moderador y comercio.
 export function Campana() {
   const avisos = useAvisos();
@@ -67,9 +83,17 @@ export function Campana() {
         <Icon name="bell" />
         {total !== undefined && total > 0 && <span className="campana-total">{total}</span>}
       </button>
-      {open && avisos.kind === 'moderador' && (
-        <section id={panelId} className="campana-panel" aria-label="Pendientes de moderación">
-          <ModerationRows counts={avisos.counts} />
+      {open && (
+        <section
+          id={panelId}
+          className="campana-panel"
+          aria-label={avisos.kind === 'moderador' ? 'Pendientes de moderación' : 'Tus avisos'}
+        >
+          {avisos.kind === 'moderador' ? (
+            <ModerationRows counts={avisos.counts} />
+          ) : (
+            <MerchantRows alerts={avisos.alerts} />
+          )}
         </section>
       )}
     </div>
