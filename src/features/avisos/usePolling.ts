@@ -22,8 +22,10 @@ export function usePolling<T>(
         .catch(() => undefined);
     };
     run();
+    const timer = setInterval(run, intervalMs);
     return () => {
       controller.abort();
+      clearInterval(timer);
     };
   }, [enabled, intervalMs]);
 
