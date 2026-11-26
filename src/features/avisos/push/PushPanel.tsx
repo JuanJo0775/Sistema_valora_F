@@ -13,7 +13,9 @@ export interface PushPanelProps {
 }
 
 // RN7 de RF-020: le dice a la persona el paso que le falta según su dispositivo y su estado.
-export function PushPanel({ status, busy, platform, onEnable, onDisable }: PushPanelProps) {
+export function PushPanel({ status, busy, error, platform, onEnable, onDisable }: PushPanelProps) {
+  // Sin saber si el servidor tiene los avisos, o sin clave configurada, la opción no existe.
+  if (status === 'cargando' || status === 'sin_clave') return null;
   return (
     <section className="push-panel" aria-labelledby="push-titulo">
       <h2 id="push-titulo">Avisos en este dispositivo</h2>
@@ -78,6 +80,11 @@ export function PushPanel({ status, busy, platform, onEnable, onDisable }: PushP
           )}
           <p>Después vuelve aquí.</p>
         </>
+      )}
+      {error !== null && (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
       )}
       {status === 'sin_soporte' && (
         <p>
