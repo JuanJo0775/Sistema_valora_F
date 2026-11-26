@@ -34,4 +34,18 @@ describe('consulta periódica de los avisos (ADR-043)', () => {
     expect(load).toHaveBeenCalledTimes(1);
     expect(result.current).toBe(3);
   });
+
+  it('vuelve a consultar cada 60 s y muestra el número nuevo', async () => {
+    const load = vi.fn().mockResolvedValueOnce(3).mockResolvedValueOnce(2);
+
+    const { result } = renderHook(() => usePolling(load, MINUTE));
+    await advance(0);
+    await advance(MINUTE - 1);
+    expect(load).toHaveBeenCalledTimes(1);
+
+    await advance(1);
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(result.current).toBe(2);
+  });
 });
