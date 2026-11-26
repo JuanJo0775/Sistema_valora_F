@@ -133,7 +133,7 @@ export interface paths {
         };
         /**
          * Historial de precios de los últimos 30 días (RF-008)
-         * @description Pública, sin cuenta (RN3). Una serie por presentación con el precio mínimo, el promedio (redondeado al peso) y la cantidad de reportes de cada día, en hora de Colombia. Los días sin precios no salen. No cuentan los precios descartados por moderación ni los sospechosos que nadie ha aprobado. Sin datos de quién reportó (EC-08). Caché pública de 5 minutos con ETag (EC-04) (#83).
+         * @description Pública, sin cuenta (RN3). Una serie por presentación con el precio mínimo, el promedio (redondeado al peso) y la cantidad de reportes de cada día, en hora de Colombia. Los días sin precios no salen. No cuentan los precios descartados por moderación ni los sospechosos que nadie ha aprobado. Tampoco los de tiendas retiradas (ADR-040). Sin datos de quién reportó (EC-08). Caché pública de 5 minutos con ETag (EC-04) (#83).
          */
         get: operations["getPriceHistory"];
         put?: never;
@@ -682,6 +682,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications/vapid-public-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clave pública con la que el navegador se suscribe a los avisos (ADR-044)
+         * @description Pública y sin cuenta: es la clave pública VAPID, que el navegador necesita para pedir una suscripción push. Responde 404 mientras el servidor no tenga una clave configurada (PUSH_PROVIDER sin VAPID_PUBLIC_KEY); la PWA lo usa para no mostrar «Activar avisos». Cambiar la clave invalida todas las suscripciones (ADR-045) (#259).
+         */
+        get: operations["getVapidPublicKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activar los avisos en este dispositivo (ADR-044, ADR-045)
+         * @description Solo los roles moderador y comercio. Guarda la suscripción push del dispositivo: la dirección del servicio de push y las dos claves que entrega el navegador. Es idempotente: repetir el mismo dispositivo no duplica, solo renueva las claves. Una dirección pertenece a una sola cuenta: si otra cuenta la activa desde el mismo navegador, pasa a esa cuenta y la anterior deja de recibir avisos ahí. Cada cuenta guarda como máximo 5 dispositivos; al pasar el máximo se reemplaza el más antiguo. La respuesta nunca devuelve la dirección ni las claves (EC-08) (#259).
+         */
+        post: operations["subscribeToNotifications"];
+        /**
+         * Desactivar los avisos en este dispositivo (ADR-045)
+         * @description Solo los roles moderador y comercio. Borra la suscripción push de este dispositivo; se identifica con la misma dirección que se envió al activarlos. Es idempotente: si la dirección no existe, o es de otra cuenta, responde 204 igual y no borra nada (no revela qué direcciones existen). Solo borra las suscripciones de la propia cuenta (#259).
+         */
+        delete: operations["unsubscribeFromNotifications"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/moderation/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cuántos casos esperan decisión en cada cola (RF-012, RF-013)
+         * @description Solo el rol moderador. Un entero por pestaña del panel de moderación, para el contador de la campana y de las pestañas (#257). precios suma la cola de reportes (desviación, marcas, ráfaga, apelación) y los precios oficiales sin referencia (ADR-037); tiendas suma las propuestas de tienda y las correcciones; productos son las propuestas de producto; comercios son las denuncias, disputas y reclamos de comercio (ADR-038). Cada número es el total pendiente, sin el límite de 20 elementos que aplica a la lista de precios. Son solo números: nunca ids ni claves de quien reportó o pidió (EC-08). Sin caché.
+         */
+        get: operations["getModerationSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/moderation/queue": {
         parameters: {
             query?: never;
@@ -731,7 +795,7 @@ export interface paths {
         };
         /**
          * Tiendas propuestas pendientes de decisión (RF-005)
-         * @description Solo el rol moderador. La más antigua primero. Cada una dice si está fuera de la zona de servicio (rectángulo aproximado del Quindío, RN1) y trae sus posibles duplicados: tiendas a menos de 50 m con un nombre equivalente (RN3; valores provisionales). No dice quién la propuso (EC-08). Sin caché (#27). Desde la #207 trae también las correcciones de nombre o ubicación que pidió un comercio (kind correccion), con el valor actual y el propuesto (D5).
+         * @description Solo el rol moderador. La más antigua primero. Cada una dice si está fuera de la zona de servicio (rectángulo aproximado del Quindío, RN1) y trae sus posibles duplicados: tiendas a menos de 50 m con un nombre equivalente (RN3; valores provisionales). No dice quién la propuso (EC-08). Sin caché (#27). Desde la #207 trae también las correcciones de nombre o ubicación que pidió un comercio (kind correccion), con el valor actual y el propuesto (D5). Cuando la propuesta nace de un reclamo de comercio trae claim con los datos del responsable: aprobarla verifica a esa cuenta como comerciante. Sin reclamo, el campo no está (H5).
          */
         get: operations["listStoreProposals"];
         put?: never;
@@ -854,7 +918,7 @@ export interface paths {
         /**
          * Registrar como suya una tienda, del mapa o nueva (RF-015)
          * @description D2 y D3 del grill comercial (#201). Solo un reportante con el correo verificado. La persona debe estar a 50 m o menos de la tienda: location es la ubicación del celular en ese momento, solo sirve para comprobarlo y no se guarda (EC-08). Si todo está bien, la cuenta queda verificada como dueña de la tienda y su rol pasa a comercio. Una tienda por cuenta y un dueño por tienda.
-         *     Tiendas de cadena (ADR-038, H11): una tienda de tipo descuento o cuyo nombre es el de una cadena conocida (D1, Ara, Éxito, Olímpica, Carulla, Jumbo, Metro, Alkosto, Makro, Justo & Bueno, PriceSmart, Surtimax, Super Inter, Oxxo) no se puede reclamar: responde 422 CHAIN_STORE_NOT_CLAIMABLE, antes de comprobar la cercanía. Un supermercado que no es de cadena no se verifica al instante: la solicitud queda pre_aprobado y abre un caso de tipo reclamo en GET /moderation/merchant-cases; el rol pasa a comercio solo cuando un moderador lo aprueba. Barrio y minimercado se verifican al instante por cercanía, como antes. Orden de las comprobaciones: sesión, correo verificado, datos y NIT, tienda existente (404), cadena (422), cercanía (422), cuenta revocada de esa tienda (422), una tienda por cuenta (409) y dueño existente (409, con disputa). El NIT es opcional; sin NIT, el comercio es informal. Su dígito de verificación solo detecta errores al escribir: no se consulta a la DIAN.
+         *     Tiendas de cadena (ADR-038, H11): una tienda de tipo descuento o cuyo nombre es el de una cadena conocida (D1, Ara, Éxito, Olímpica, Carulla, Jumbo, Metro, Alkosto, Makro, Justo & Bueno, PriceSmart, Surtimax, Super Inter, Oxxo) no se puede reclamar: responde 422 CHAIN_STORE_NOT_CLAIMABLE, antes de comprobar la cercanía. Un supermercado que no es de cadena no se verifica al instante: la solicitud queda pre_aprobado y abre un caso de tipo reclamo en GET /moderation/merchant-cases; el rol pasa a comercio solo cuando un moderador lo aprueba. La regla también vale para newEstablishment: una tienda nueva con nombre de cadena o de tipo descuento responde el mismo 422 CHAIN_STORE_NOT_CLAIMABLE y no deja propuesta ni solicitud. Barrio y minimercado se verifican al instante por cercanía, como antes. Orden de las comprobaciones: sesión, correo verificado, datos y NIT, tienda existente (404), cadena (422), cercanía (422), cuenta revocada de esa tienda (422), una tienda por cuenta (409) y dueño existente (409, con disputa). El NIT es opcional; sin NIT, el comercio es informal. Su dígito de verificación solo detecta errores al escribir: no se consulta a la DIAN.
          *     Si la tienda no está en el mapa (#202), se envía newEstablishment en lugar de establishmentId: se crea una propuesta de tienda en el punto de location (RF-005 RN7, la revisa el moderador) y la solicitud queda pre_aprobado. Al aprobarse la tienda, el comercio queda verificado solo; si el moderador la fusiona con una tienda sin dueño, queda verificado en esa tienda; si la rechaza o la tienda ya tenía dueño, la solicitud se cierra y GET /commerce/me muestra el motivo. El rol pasa a comercio cuando se verifica, por un evento interno: el frontend vuelve a pedir GET /auth/session.
          */
         post: operations["claimEstablishment"];
@@ -878,6 +942,26 @@ export interface paths {
         get: operations["getMerchantProfile"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/me/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dejar de administrar la tienda (RF-015, ADR-040)
+         * @description H36. La propia cuenta deja su tienda; el cliente pide la confirmación antes de llamar. Sin cuerpo. Se retiran sus precios oficiales (también los que estaban en revisión) y sus promociones, se cierran los casos de moderación abiertos de la tienda y la cuenta vuelve a reportante desde la siguiente acción, con la misma sesión. La tienda sigue en el mapa como tienda de la comunidad, sin dueño. No impide volver a reclamarla (con las reglas de POST /commerce/claims). Una solicitud pre-aprobada también se puede dejar. Idempotente: sin tienda responde sin_tienda.
+         */
+        post: operations["leaveMerchantEstablishment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -917,7 +1001,7 @@ export interface paths {
         };
         /**
          * Denuncias, disputas y reclamos de comercios pendientes (RF-015, D2)
-         * @description Solo el rol moderador (#208). La más antigua primero. Una disputa se abre sola cuando otra cuenta, estando en la tienda (presencia, D2), intenta registrar una tienda que ya tiene dueño. Un reclamo se abre solo cuando una cuenta, estando en la tienda, reclama un supermercado que no es de cadena (ADR-038): su owner es el comercio pre_aprobado que espera la decisión. Trae los datos del comercio para verificarlo; nunca quién abrió el caso ni la cuenta del dueño (EC-08). Sin caché.
+         * @description Solo el rol moderador (#208). La más antigua primero. Una disputa se abre sola cuando otra cuenta, estando en la tienda (presencia, D2), intenta registrar una tienda que ya tiene dueño. Un reclamo se abre solo cuando una cuenta, estando en la tienda, reclama un supermercado que no es de cadena (ADR-038): su owner es el comercio pre_aprobado que espera la decisión. Trae los datos del comercio para verificarlo. Una disputa trae además challenger, los datos del responsable que escribió quien disputa; una denuncia, cuántas denuncias abiertas lleva la tienda y de cuántas cuentas distintas (H18). Nunca la cuenta, el correo ni la clave seudónima de nadie, ni quién denunció (EC-08). Sin caché.
          */
         get: operations["listMerchantCases"];
         put?: never;
@@ -978,7 +1062,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Eliminar la tienda que la cuenta creó (RF-015, ADR-040)
+         * @description H36. Solo un comercio verificado cuya tienda nació de su propio reclamo de tienda nueva (newEstablishment) desde este cambio; el cliente pide la confirmación antes de llamar. Hace lo mismo que POST /commerce/me/leave y además retira la tienda (borrado lógico): deja de salir en cercanas, búsqueda, detalle, comparación, destacados e historial público, y ya no admite reportes ni reclamos. Los reportes de la comunidad se conservan ocultos con ella. Las tiendas del catálogo, las fusionadas por moderación, las reclamadas ya existentes y las anteriores a este cambio solo se pueden dejar. El retiro llega unos instantes después de la respuesta.
+         */
+        delete: operations["deleteMerchantEstablishment"];
         options?: never;
         head?: never;
         /**
@@ -1216,6 +1304,19 @@ export interface components {
             possibleDuplicates: components["schemas"]["PossibleDuplicates"];
             /** Format: date-time */
             createdAt: string;
+            claim?: components["schemas"]["StoreProposalClaim"];
+        };
+        /** @description Solo si la tienda propuesta nace de un reclamo de comercio (H5). Datos del responsable que escribió el solicitante; nunca su cuenta, correo ni clave seudónima (EC-08). */
+        StoreProposalClaim: {
+            responsibleName: string;
+            phone: string;
+            /** @description No está si el comercio es informal. */
+            nit?: string;
+            /**
+             * @description Aprobar la propuesta (o fusionarla con una tienda sin dueño) verifica al solicitante y le da el rol comercio.
+             * @enum {boolean}
+             */
+            grantsMerchantRole: true;
         };
         /** @description Una corrección de nombre o ubicación que pidió un comercio (D5, #207). No dice quién la pidió (EC-08). */
         StoreCorrectionQueueItem: {
@@ -1271,6 +1372,27 @@ export interface components {
             reason: string;
             /** Format: date-time */
             createdAt: string;
+            /** @description Solo en disputa (H18): quien disputa, con los datos del responsable que escribió. null si la disputa es anterior a que se guardaran o si esa cuenta se eliminó. Nunca su cuenta, correo ni clave seudónima (EC-08). */
+            challenger?: {
+                responsibleName: string;
+                phone: string;
+                /** @description No está si no lo escribió. */
+                nit?: string;
+                /**
+                 * Format: date-time
+                 * @description Cuándo se abrió la disputa.
+                 */
+                requestedAt: string;
+            } | null;
+            /** @description Solo en denuncia (H18). Denuncias abiertas sobre esa tienda, contando esta. */
+            reportCount?: number;
+            /** @description Solo en denuncia. De cuántas cuentas distintas vienen; es un número, sin identificarlas. */
+            distinctReporters?: number;
+            /**
+             * Format: date-time
+             * @description Solo en denuncia. La denuncia abierta más antigua de esa tienda.
+             */
+            firstReportedAt?: string;
         };
         /** @description Un aviso del comercio (#209). Los campos de precio solo vienen en discrepancia. */
         MerchantAlert: {
@@ -1295,6 +1417,18 @@ export interface components {
         };
         /** @description Lo que el comercio pre-aprobado podrá hacer al aprobarse su tienda (D2). */
         MerchantUnlocks: ("precios_oficiales" | "carga_por_archivo" | "promociones" | "avisos_de_precio" | "datos_de_la_tienda")[];
+        LeaveEstablishmentResult: {
+            /**
+             * @description dejada si la cuenta dejó una tienda ahora; sin_tienda si no tenía ninguna.
+             * @enum {string}
+             */
+            status: "dejada" | "sin_tienda";
+            /**
+             * Format: uuid
+             * @description Solo con dejada.
+             */
+            establishmentId?: string;
+        };
         MerchantProfile: components["schemas"]["ActiveMerchantProfile"] | components["schemas"]["RejectedMerchantProfile"];
         RejectedMerchantProfile: {
             /**
@@ -1324,6 +1458,8 @@ export interface components {
              */
             verifiedAt: string | null;
             unlocks?: components["schemas"]["MerchantUnlocks"];
+            /** @description true si la cuenta puede usar DELETE /commerce/establishment (verificada y creó la tienda, ADR-040). */
+            canDeleteEstablishment: boolean;
         };
         OnlineOffer: {
             /** Format: uuid */
@@ -1697,8 +1833,13 @@ export interface components {
             /** @description Mediana de referencia; no está si no había con qué comparar. */
             medianPriceCop?: number;
             officialPriceCop?: number;
-            /** @description Desviación frente a la mediana */
+            /** @description Desviación frente a la mediana, en porcentaje entero y sin signo. */
             deviationPercent?: number;
+            /**
+             * @description Si el precio reportado es menor o mayor que la mediana (H25). No está sin mediana o si son iguales.
+             * @enum {string}
+             */
+            deviationDirection?: "menor" | "mayor";
             /** @description Cuántas cuentas lo marcaron como dudoso. */
             reportersCount: number;
             /** Format: date-time */
@@ -3311,6 +3452,120 @@ export interface operations {
             };
         };
     };
+    getVapidPublicKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La clave pública VAPID, en base64url */
+            200: {
+                headers: {
+                    /** @description Caché del navegador y de la caché compartida (CDN) de 5 minutos (ADR-031). */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        publicKey: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    subscribeToNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uri */
+                    endpoint: string;
+                    keys: {
+                        p256dh: string;
+                        auth: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Avisos activados en este dispositivo */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    unsubscribeFromNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uri */
+                    endpoint: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Avisos desactivados en este dispositivo */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getModerationSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pendientes por cola */
+            200: {
+                headers: {
+                    /** @description private, no-store */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        precios: number;
+                        tiendas: number;
+                        productos: number;
+                        comercios: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getModerationQueue: {
         parameters: {
             query?: {
@@ -3788,7 +4043,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description code CHAIN_STORE_NOT_CLAIMABLE: es una tienda de cadena (D1, Ara, Éxito…) y no se puede reclamar; se comprueba antes de la cercanía (ADR-038). code NOT_AT_ESTABLISHMENT: la ubicación está a más de 50 m de la tienda. code REVOKED_FROM_ESTABLISHMENT: un moderador revocó a esta cuenta de esta tienda (#208). */
+            /** @description code CHAIN_STORE_NOT_CLAIMABLE: es una tienda de cadena (D1, Ara, Éxito…), existente o nueva (newEstablishment), y no se puede reclamar; se comprueba antes de la cercanía (ADR-038). code NOT_AT_ESTABLISHMENT: la ubicación está a más de 50 m de la tienda. code REVOKED_FROM_ESTABLISHMENT: un moderador revocó a esta cuenta de esta tienda (#208). */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3831,6 +4086,36 @@ export interface operations {
             };
             /** @description La cuenta no tiene una tienda registrada. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    leaveMerchantEstablishment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La cuenta ya no administra ninguna tienda. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveEstablishmentResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN (moderador) o CSRF_TOKEN_INVALID. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3991,7 +4276,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description El caso no existe o ya se decidió. */
+            /** @description El caso no existe o ya se decidió (también si otra decisión se adelantó, o si el reclamo ya no estaba pre-aprobado). */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4036,6 +4321,43 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             /** @description code FORBIDDEN o MERCHANT_NOT_VERIFIED. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteMerchantEstablishment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tienda eliminada y cuenta sin tienda. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code ESTABLISHMENT_NOT_CREATED_BY_ACCOUNT (la tienda no la creó esta cuenta), MERCHANT_NOT_VERIFIED (solicitud pre-aprobada: se puede dejar), FORBIDDEN (moderador) o CSRF_TOKEN_INVALID. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description code NOT_FOUND, la cuenta no tiene tienda (también al repetir la eliminación). */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
