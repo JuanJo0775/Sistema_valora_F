@@ -65,4 +65,45 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
       });
     });
   });
+
+  // Pruebas de resguardo: ya pasan con el proveedor hecho.
+  it.each([
+    ['un reportante', sessionAs('reportante')],
+    ['alguien sin sesión', NO_SESSION],
+  ])('%s no consulta ningún aviso', async (_name, session) => {
+    const { calls } = stubApi({ 'GET /v1/auth/session': session });
+
+    renderProvider();
+
+    await waitFor(() => {
+      expect(JSON.parse(screen.getByTestId('avisos').textContent ?? '')).toEqual({
+        kind: 'ninguno',
+      });
+    });
+    expect(
+      calls.filter(
+        ({ path }) => path === '/v1/moderation/summary' || path === '/v1/commerce/alerts',
+      ),
+    ).toEqual([]);
+  });
+
+  // Un comercio pre-aprobado recibe 403 en sus avisos: no es un error que se le deba mostrar.
+  it('si el servidor no entrega los avisos, no hay número ni error', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('comercio'),
+      'GET /v1/commerce/alerts': {
+        status: 403,
+        body: { code: 'MERCHANT_NOT_VERIFIED', message: 'Falta la aprobación.' },
+      },
+    });
+
+    renderProvider();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('avisos')).toHaveTextContent('"kind":"comercio"');
+    });
+    expect(JSON.parse(screen.getByTestId('avisos').textContent ?? '')).toEqual({
+      kind: 'comercio',
+    });
+  });
 });
