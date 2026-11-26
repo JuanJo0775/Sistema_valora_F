@@ -33,3 +33,25 @@ describe('pantalla de avisos push: activar y desactivar (RN7)', () => {
     expect(screen.queryByRole('button', { name: 'Activar avisos' })).not.toBeInTheDocument();
   });
 });
+
+// iOS solo permite avisos a una app instalada: sin esta guía el botón no funcionaría y la persona no
+// sabría por qué.
+describe('pantalla de avisos push: guía para iPhone (RN7)', () => {
+  it('en Safari sin instalar explica por qué y da los pasos para instalar la app', () => {
+    render(<PushPanel {...props} status="ios_sin_instalar" platform="ios-safari" />);
+
+    expect(screen.getByText(/solo funcionan con Valora instalada/)).toBeInTheDocument();
+    expect(screen.getByText('Compartir')).toBeInTheDocument();
+    expect(screen.getByText('Añadir a pantalla de inicio')).toBeInTheDocument();
+    expect(screen.getByText(/abre Valora desde su ícono/i)).toBeInTheDocument();
+    // Con la app sin instalar el botón no serviría: no se ofrece.
+    expect(screen.queryByRole('button', { name: 'Activar avisos' })).not.toBeInTheDocument();
+  });
+
+  it('en otro navegador del iPhone pide abrir la página en Safari', () => {
+    render(<PushPanel {...props} status="ios_otro_navegador" platform="ios-other" />);
+
+    expect(screen.getByText(/Ábrela en Safari/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Activar avisos' })).not.toBeInTheDocument();
+  });
+});
