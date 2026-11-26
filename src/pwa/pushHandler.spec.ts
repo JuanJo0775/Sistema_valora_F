@@ -57,4 +57,25 @@ describe('manejador de avisos push del service worker (ADR-044)', () => {
       },
     ]);
   });
+
+  // Los navegadores exigen mostrar algo con cada push; si no, muestran un aviso propio y confuso.
+  it.each([
+    ['sin contenido', undefined],
+    ['con un contenido que no es un objeto', 'texto suelto'],
+    ['con un objeto vacío', {}],
+  ])('un push %s muestra igual un aviso genérico que lleva al inicio', async (_name, data) => {
+    const { shown, push } = load();
+
+    await push(data);
+
+    expect(shown).toEqual([
+      {
+        title: 'Valora',
+        options: expect.objectContaining({
+          body: 'Tienes avisos nuevos',
+          data: { url: '/' },
+        }) as unknown,
+      },
+    ]);
+  });
 });
