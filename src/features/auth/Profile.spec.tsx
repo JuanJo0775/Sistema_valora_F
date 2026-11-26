@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { planDraft } from '../../test/planFixtures';
+import { type Avisos, AvisosContext } from '../avisos/avisosContext';
 import { savePlan, toSavedPlan } from '../plan/savedPlan';
 import { Profile } from './Profile';
 import { SessionProvider } from './SessionProvider';
@@ -216,5 +217,110 @@ describe('pestaña Yo', () => {
       '/privacidad',
     );
     expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument();
+  });
+});
+
+// ADR-043: «Yo» dice cuántos casos o avisos tiene quien modera o tiene una tienda.
+describe('pestaña Yo con avisos pendientes (ADR-043)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const renderWith = (role: string, avisos: Avisos) => {
+    stubApi({ 'GET /v1/auth/session': sessionAs(role) });
+    render(
+      <SessionProvider>
+        <MemoryRouter>
+          <AvisosContext.Provider value={avisos}>
+            <Profile />
+          </AvisosContext.Provider>
+        </MemoryRouter>
+      </SessionProvider>,
+    );
+  };
+
+  it('la fila Moderación dice cuántos casos esperan decisión', async () => {
+    renderWith('moderador', {
+      kind: 'moderador',
+      counts: { precios: 2, tiendas: 0, productos: 1, comercios: 0 },
+    });
+
+    expect(await screen.findByRole('link', { name: /Moderación/ })).toHaveTextContent(
+      'Tienes 3 casos por revisar',
+    );
+  });
+
+  it('sin casos, la fila Moderación conserva su texto de siempre', async () => {
+    renderWith('moderador', {
+      kind: 'moderador',
+      counts: { precios: 0, tiendas: 0, productos: 0, comercios: 0 },
+    });
+
+    expect(await screen.findByRole('link', { name: /Moderación/ })).toHaveTextContent(
+      'Revisa los reportes pendientes',
+    );
+  });
+
+  it('la fila Mi tienda dice cuántos avisos tiene el comercio', async () => {
+    renderWith('comercio', {
+      kind: 'comercio',
+      alerts: [
+        {
+          kind: 'vence_pronto',
+          presentationId: 'a1b2c3d4-0000-4000-8000-000000000001',
+          productName: 'Arroz Diana · 500 g',
+          message: 'Tu precio oficial de Arroz Diana · 500 g vence mañana: reconfírmalo.',
+        },
+      ],
+    });
+
+    expect(await screen.findByRole('link', { name: /Mi tienda/ })).toHaveTextContent(
+      'Tienes 1 aviso nuevo',
+    );
+  });
+});
+
+// RF-020, RN3 y RN7: los avisos push se activan desde «Yo», solo para moderación y comercio.
+describe('pestaña Yo y los avisos push (RF-020)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, 'serviceWorker');
+  });
+
+  const withPushBrowser = () => {
+    const registration = {
+      pushManager: { getSubscription: () => Promise.resolve(null), subscribe: vi.fn() },
+    };
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { ready: Promise.resolve(registration) },
+      configurable: true,
+    });
+    vi.stubGlobal('PushManager', {});
+    vi.stubGlobal('Notification', { permission: 'default', requestPermission: vi.fn() });
+  };
+
+  it.each(['moderador', 'comercio'] as const)('el rol %s ve «Activar avisos»', async (role) => {
+    withPushBrowser();
+    stubApi({
+      'GET /v1/auth/session': sessionAs(role),
+      'GET /v1/notifications/vapid-public-key': { status: 200, body: { publicKey: 'AQID' } },
+    });
+
+    renderProfile();
+
+    expect(await screen.findByRole('button', { name: 'Activar avisos' })).toBeInTheDocument();
+  });
+
+  it('el reportante no ve la sección de avisos', async () => {
+    withPushBrowser();
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/notifications/vapid-public-key': { status: 200, body: { publicKey: 'AQID' } },
+    });
+
+    renderProfile();
+
+    expect(await screen.findByRole('heading', { name: /Hola/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Avisos en este dispositivo' })).toBeNull();
   });
 });

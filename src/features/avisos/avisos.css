@@ -1,0 +1,105 @@
+/* ADR-043: la campana y sus números. Los tokens de color vienen de las variables de la app. */
+.campana {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.campana-total {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.campana-caja {
+  position: relative;
+}
+
+.campana-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  min-width: 240px;
+  max-width: min(92vw, 360px);
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.campana-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.campana-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.campana-numero {
+  font-weight: 600;
+}
+
+/* En el celular el logo va centrado y la campana a la derecha de la barra superior; en escritorio,
+   al final de la barra (layout.css, desde 960 px). */
+.top {
+  position: relative;
+}
+
+.top .campana-caja {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+}
+
+@media (width >= 960px) {
+  .top .campana-caja {
+    position: relative;
+    top: auto;
+    right: auto;
+    margin-left: auto;
+    transform: none;
+  }
+}
+
+/* El número de pendientes junto al nombre de una pestaña del panel de moderación. */
+.tab-count {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
