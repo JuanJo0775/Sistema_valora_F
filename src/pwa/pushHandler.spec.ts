@@ -78,4 +78,17 @@ describe('manejador de avisos push del service worker (ADR-044)', () => {
       },
     ]);
   });
+
+  // Un aviso nunca debe sacar a la persona del sitio: solo se abren direcciones de la propia app.
+  it.each([
+    ['otro sitio', 'https://sitio-ajeno.example/pagina'],
+    ['una dirección sin origen propio', '//sitio-ajeno.example/pagina'],
+    ['un esquema peligroso', 'javascript:alert(1)'],
+  ])('si la dirección apunta a %s, abre el inicio', async (_name, url) => {
+    const { shown, push } = load();
+
+    await push({ title: 'Valora', body: 'Aviso', url });
+
+    expect(shown[0]?.options['data']).toEqual({ url: '/' });
+  });
 });
