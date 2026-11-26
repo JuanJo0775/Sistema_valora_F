@@ -29,6 +29,11 @@ export type PushStatus =
 export function pushStatusOf(env: PushEnvironment): PushStatus {
   if (env.keyAvailable === undefined) return 'cargando';
   if (!env.keyAvailable) return 'sin_clave';
+  // iOS solo permite avisos a una app instalada: en Safari normal el navegador ni tiene Push, así que
+  // «sin soporte» sería engañoso. Otro navegador o la ventana de otra app no se pueden instalar.
+  if (env.platform === 'ios-other') return 'ios_otro_navegador';
+  if (env.platform === 'ios-safari' && !env.installed) return 'ios_sin_instalar';
+  if (!env.supported) return 'sin_soporte';
   if (env.permission === 'denied') return 'denegado';
   if (env.permission === 'granted' && env.subscribed) return 'activo';
   return 'listo';
