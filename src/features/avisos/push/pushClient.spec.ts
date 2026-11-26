@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type PushDeps, activatePush } from './pushClient';
+import { type PushDeps, activatePush, deactivatePush } from './pushClient';
 
 // Un navegador falso: guarda lo que pasó para revisarlo.
 function setup(overrides: Partial<PushDeps> = {}) {
@@ -94,5 +94,53 @@ describe('activar los avisos push en este dispositivo (ADR-045)', () => {
     await expect(activatePush(deps)).rejects.toThrow('sin red');
 
     expect(unsubscribed).toEqual(['https://push.example.net/dispositivo']);
+  });
+});
+
+// ADR-045: desactivar los avisos borra la suscripción en el servidor y en el navegador.
+describe('desactivar los avisos push en este dispositivo (ADR-045)', () => {
+  const active = () => {
+    const unsubscribed: string[] = [];
+    const subscription = {
+      endpoint: 'https://push.example.net/dispositivo',
+      toJSON: () => ({}),
+      unsubscribe: () => {
+        unsubscribed.push('navegador');
+        return Promise.resolve(true);
+      },
+    };
+    const removed: string[] = [];
+    const calls: string[] = [];
+    const deps: PushDeps = {
+      requestPermission: () => Promise.resolve('granted'),
+      fetchKey: () => Promise.resolve('AQID'),
+      registration: () =>
+        Promise.resolve({
+          pushManager: {
+            getSubscription: () => Promise.resolve(subscription),
+            subscribe: () => Promise.resolve(subscription),
+          },
+        }),
+      save: () => Promise.resolve(),
+      remove: (endpoint) => {
+        removed.push(endpoint);
+        calls.push('servidor');
+        return Promise.resolve();
+      },
+    };
+    subscription.unsubscribe = () => {
+      calls.push('navegador');
+      return Promise.resolve(true);
+    };
+    return { deps, removed, calls, unsubscribed };
+  };
+
+  it('borra la suscripción en el servidor y luego deja de recibir en el navegador', async () => {
+    const { deps, removed, calls } = active();
+
+    await deactivatePush(deps);
+
+    expect(removed).toEqual(['https://push.example.net/dispositivo']);
+    expect(calls).toEqual(['servidor', 'navegador']);
   });
 });
