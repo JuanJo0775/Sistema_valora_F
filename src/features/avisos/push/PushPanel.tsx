@@ -1,3 +1,4 @@
+import { InstallGuide } from '../../../pwa/InstallGuide';
 import type { Platform } from '../../../pwa/install';
 import type { PushStatus } from './pushStatus';
 
@@ -12,7 +13,7 @@ export interface PushPanelProps {
 }
 
 // RN7 de RF-020: le dice a la persona el paso que le falta según su dispositivo y su estado.
-export function PushPanel({ status, busy, onEnable, onDisable }: PushPanelProps) {
+export function PushPanel({ status, busy, platform, onEnable, onDisable }: PushPanelProps) {
   return (
     <section className="push-panel" aria-labelledby="push-titulo">
       <h2 id="push-titulo">Avisos en este dispositivo</h2>
@@ -33,6 +34,22 @@ export function PushPanel({ status, busy, onEnable, onDisable }: PushPanelProps)
           <button type="button" className="btn" disabled={busy} onClick={onDisable}>
             Desactivar avisos
           </button>
+        </>
+      )}
+      {status === 'ios_sin_instalar' && (
+        <>
+          <p>
+            En iPhone, los avisos solo funcionan con Valora instalada en la pantalla de inicio.
+            Sigue estos pasos:
+          </p>
+          <InstallGuide platform={platform} />
+          <p>Después abre Valora desde su ícono y vuelve aquí para activar los avisos.</p>
+        </>
+      )}
+      {status === 'ios_otro_navegador' && (
+        <>
+          <p>En iPhone, los avisos solo funcionan con la app instalada desde Safari.</p>
+          <InstallGuide platform={platform} />
         </>
       )}
     </section>
