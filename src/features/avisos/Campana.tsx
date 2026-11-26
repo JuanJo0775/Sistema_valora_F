@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Icon } from '../../app/Icon';
 import { type Avisos, type MerchantAlert, type PendingCounts, useAvisos } from './avisosContext';
@@ -66,11 +66,34 @@ export function Campana() {
   const avisos = useAvisos();
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const boxRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
+
+  // WCAG 2.2: el panel se cierra con Escape (el foco vuelve a la campana) y al tocar fuera.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      bellRef.current?.focus();
+    };
+    const onPointer = (event: PointerEvent) => {
+      if (!boxRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [open]);
+
   if (avisos.kind === 'ninguno') return null;
   const total = totalOf(avisos);
   return (
-    <div className="campana-caja">
+    <div className="campana-caja" ref={boxRef}>
       <button
+        ref={bellRef}
         type="button"
         className="campana"
         aria-label={nameOf(total)}
@@ -88,6 +111,10 @@ export function Campana() {
           id={panelId}
           className="campana-panel"
           aria-label={avisos.kind === 'moderador' ? 'Pendientes de moderación' : 'Tus avisos'}
+          onClick={(event) => {
+            // Elegir una fila lleva a su pantalla: el panel ya cumplió.
+            if ((event.target as HTMLElement).closest('a')) setOpen(false);
+          }}
         >
           {avisos.kind === 'moderador' ? (
             <ModerationRows counts={avisos.counts} />
