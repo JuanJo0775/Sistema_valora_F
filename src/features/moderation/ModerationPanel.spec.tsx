@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sessionAs, stubApi } from '../../test/fakeApi';
+import { AvisosContext } from '../avisos/avisosContext';
 import { ModerationPanel } from './ModerationPanel';
 
 const renderPanel = () => {
@@ -102,5 +103,52 @@ describe('panel del moderador', () => {
       'id',
       roles.getAttribute('aria-controls'),
     );
+  });
+});
+
+// ADR-043: cada pestaña dice cuántos casos esperan; son los mismos números de la campana.
+describe('números en las pestañas del panel (ADR-043)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const renderWithCounts = () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('moderador'),
+      'GET /v1/moderation/queue': { status: 200, body: { items: [] } },
+    });
+    render(
+      <MemoryRouter initialEntries={['/moderacion']}>
+        <AvisosContext.Provider
+          value={{
+            kind: 'moderador',
+            counts: { precios: 2, tiendas: 0, productos: 1, comercios: 0 },
+          }}
+        >
+          <ModerationPanel />
+        </AvisosContext.Provider>
+      </MemoryRouter>,
+    );
+  };
+
+  it('muestra el número de cada pestaña con casos y lo dice con palabras', async () => {
+    renderWithCounts();
+
+    expect(screen.getByRole('tab', { name: 'Precios, 2 pendientes' })).toHaveTextContent('2');
+    expect(screen.getByRole('tab', { name: 'Productos, 1 pendiente' })).toHaveTextContent('1');
+    expect(
+      await screen.findByRole('heading', { name: 'No hay precios en revisión' }),
+    ).toBeInTheDocument();
+  });
+
+  it('las pestañas sin casos y la de Roles no llevan número', async () => {
+    renderWithCounts();
+
+    expect(screen.getByRole('tab', { name: 'Tiendas' })).toHaveTextContent(/^Tiendas$/);
+    expect(screen.getByRole('tab', { name: 'Comercios' })).toHaveTextContent(/^Comercios$/);
+    expect(screen.getByRole('tab', { name: 'Roles' })).toHaveTextContent(/^Roles$/);
+    expect(
+      await screen.findByRole('heading', { name: 'No hay precios en revisión' }),
+    ).toBeInTheDocument();
   });
 });
