@@ -6,6 +6,8 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 import { Loading } from '../../shared/ui/Loading';
 import { type Role, useSession } from './session';
 import { SuspendedNotice } from './SuspendedNotice';
+import { useAvisos } from '../avisos/avisosContext';
+import { totalOf } from '../avisos/Campana';
 import { usePlans } from '../plan/usePlans';
 import './auth.css';
 
@@ -89,9 +91,20 @@ const ROLE_LABEL: Record<Role, string> = {
   comercio: 'Comercio',
 };
 
+// ADR-043: lo que dice la fila de la sección del rol cuando hay algo esperando; sin nada, su texto de siempre.
+function sectionText(role: Role, total: number | undefined, fallback: string): string {
+  if (total === undefined || total === 0) return fallback;
+  if (role === 'moderador')
+    return `Tienes ${String(total)} ${total === 1 ? 'caso' : 'casos'} por revisar`;
+  if (role === 'comercio')
+    return `Tienes ${String(total)} ${total === 1 ? 'aviso nuevo' : 'avisos nuevos'}`;
+  return fallback;
+}
+
 export function Profile() {
   const { session, signOut, reload } = useSession();
   const [error, setError] = useState<unknown>(null);
+  const avisos = useAvisos();
   if (session.status === 'loading') return <Loading />;
   if (session.status === 'unknown') return <ErrorState error={session.error} onRetry={reload} />;
   if (session.status === 'active') {
@@ -113,7 +126,11 @@ export function Profile() {
         {error !== null && <ErrorState error={error} />}
         {section && (
           <Group id="actividad" title="Mi actividad">
-            <NavRow to={section.to} label={section.label} text={section.text} />
+            <NavRow
+              to={section.to}
+              label={section.label}
+              text={sectionText(session.role, totalOf(avisos), section.text)}
+            />
             {session.role === 'reportante' && !session.suspendedUntil && (
               <NavRow
                 to="/comercios/registro"
