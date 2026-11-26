@@ -1,8 +1,14 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePolling } from './usePolling';
 
 const MINUTE = 60_000;
+
+// Avanza el reloj falso y deja que React aplique lo que respondió cada consulta.
+const advance = (ms: number) =>
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
 
 function setVisibility(state: 'visible' | 'hidden') {
   Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
@@ -23,7 +29,7 @@ describe('consulta periódica de los avisos (ADR-043)', () => {
     const load = vi.fn(() => Promise.resolve(3));
 
     const { result } = renderHook(() => usePolling(load, MINUTE));
-    await vi.advanceTimersByTimeAsync(0);
+    await advance(0);
 
     expect(load).toHaveBeenCalledTimes(1);
     expect(result.current).toBe(3);
