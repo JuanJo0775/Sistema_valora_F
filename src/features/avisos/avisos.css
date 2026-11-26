@@ -91,3 +91,15 @@
     transform: none;
   }
 }
+
+/* El número de pendientes junto al nombre de una pestaña del panel de moderación. */
+.tab-count {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
