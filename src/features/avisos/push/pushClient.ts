@@ -34,8 +34,11 @@ function keyToBytes(key: string): Uint8Array {
 }
 
 // ADR-044 y ADR-045: activa los avisos en este dispositivo.
-export async function activatePush(deps: PushDeps): Promise<'activo'> {
-  await deps.requestPermission();
+export async function activatePush(deps: PushDeps): Promise<'activo' | 'denegado' | 'cancelado'> {
+  const permission = await deps.requestPermission();
+  if (permission === 'denied') return 'denegado';
+  // Cerrar el cuadro sin elegir deja el permiso en «default»: puede volver a intentarlo.
+  if (permission !== 'granted') return 'cancelado';
   const [key, registration] = await Promise.all([deps.fetchKey(), deps.registration()]);
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
