@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { type Avisos, AvisosContext } from './avisosContext';
@@ -55,5 +55,26 @@ describe('campana de avisos del moderador (ADR-043)', () => {
     renderBell({ kind: 'ninguno' });
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('al tocarla lista las cuatro colas con su número y lleva a cada pestaña del panel', () => {
+    renderBell({ kind: 'moderador', counts: COUNTS });
+    const bell = screen.getByRole('button', { name: 'Avisos: 3 pendientes' });
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(bell);
+
+    expect(bell).toHaveAttribute('aria-expanded', 'true');
+    const panel = screen.getByRole('region', { name: 'Pendientes de moderación' });
+    expect(
+      within(panel)
+        .getAllByRole('link')
+        .map((link) => [link.textContent, link.getAttribute('href')]),
+    ).toEqual([
+      ['Precios2', '/moderacion?vista=precios'],
+      ['Tiendas0', '/moderacion?vista=tiendas'],
+      ['Productos0', '/moderacion?vista=productos'],
+      ['Comercios1', '/moderacion?vista=comercios'],
+    ]);
   });
 });
