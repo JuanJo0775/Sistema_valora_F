@@ -87,6 +87,22 @@ export function PrivacyPolicy() {
                 comercio.
               </td>
             </tr>
+            <tr>
+              <th scope="row">Datos de comercio: responsable, teléfono y NIT</th>
+              <td>
+                Solo si registras o reclamas una tienda: verificarla y que moderación pueda revisar
+                el caso. El teléfono de la tienda se muestra en su ficha; el nombre del responsable
+                y el NIT, no.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Si disputas una tienda: tu responsable, teléfono y NIT</th>
+              <td>
+                Que moderación compare las dos partes antes de decidir; solo los ve moderación y
+                nunca se publican ni se le muestran al dueño de la tienda. Se borran cuando el dueño
+                deja o elimina la tienda o cuando eliminas tu cuenta.
+              </td>
+            </tr>
           </tbody>
         </table>
         <p>
