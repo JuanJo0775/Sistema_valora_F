@@ -83,4 +83,16 @@ describe('activar los avisos push en este dispositivo (ADR-045)', () => {
     expect(subscribed).toEqual([]);
     expect(saved).toEqual([]);
   });
+
+  // Si el servidor no guarda la suscripción, el navegador no debe quedar suscrito: la pantalla diría
+  // «activado» sin que el servidor sepa a quién avisar.
+  it('si el servidor no guarda la suscripción, la deshace en el navegador y avisa del error', async () => {
+    const { deps, unsubscribed } = setup({
+      save: () => Promise.reject(new Error('sin red')),
+    });
+
+    await expect(activatePush(deps)).rejects.toThrow('sin red');
+
+    expect(unsubscribed).toEqual(['https://push.example.net/dispositivo']);
+  });
 });
