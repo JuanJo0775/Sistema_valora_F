@@ -20,7 +20,7 @@ describe('dejar y eliminar la tienda (H36, ADR-040)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('no llama al servidor hasta que se confirma, y dice qué se retira', async () => {
+  it('no llama al servidor hasta que se confirma, y dice qué se retira', () => {
     const { calls } = stubApi({ ...session });
     open(false);
     fireEvent.click(screen.getByRole('button', { name: 'Dejar de administrar esta tienda' }));
@@ -33,11 +33,10 @@ describe('dejar y eliminar la tienda (H36, ADR-040)', () => {
   it('cancelar devuelve el foco al botón que abrió la confirmación', () => {
     stubApi({ ...session });
     open(false);
-    const trigger = screen.getByRole('button', { name: 'Dejar de administrar esta tienda' });
-    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('button', { name: 'Dejar de administrar esta tienda' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    expect(trigger).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Dejar de administrar esta tienda' })).toHaveFocus();
   });
 
   it('al confirmar deja la tienda, lo anuncia y ofrece volver a «Yo»', async () => {
@@ -50,9 +49,7 @@ describe('dejar y eliminar la tienda (H36, ADR-040)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sí, dejar la tienda' }));
     const title = await screen.findByRole('heading', { name: 'Dejaste de administrar La Rosa' });
     expect(title).toHaveFocus();
-    expect(calls.find(({ method }) => method === 'POST')?.headers.get('X-CSRF-Token')).toBe(
-      'csrf',
-    );
+    expect(calls.find(({ method }) => method === 'POST')?.headers.get('X-CSRF-Token')).toBe('csrf');
     fireEvent.click(screen.getByRole('link', { name: 'Ir a Yo' }));
     expect(finished).toHaveBeenCalledOnce();
   });
@@ -72,9 +69,7 @@ describe('dejar y eliminar la tienda (H36, ADR-040)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar mi tienda' }));
     expect(screen.getByRole('alertdialog')).toHaveTextContent(/deja de salir en el mapa/i);
     fireEvent.click(screen.getByRole('button', { name: 'Sí, eliminar la tienda' }));
-    expect(
-      await screen.findByRole('heading', { name: 'Eliminaste La Rosa' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Eliminaste La Rosa' })).toBeInTheDocument();
     expect(calls.filter(({ method }) => method === 'DELETE')).toHaveLength(1);
   });
 

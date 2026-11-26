@@ -11,7 +11,9 @@ import { Loading } from '../../shared/ui/Loading';
 import { ResultNotice } from '../../shared/ui/ResultNotice';
 import { Tabs } from '../../shared/ui/Tabs';
 import { RequireRole } from '../auth/RequireRole';
+import { useSession } from '../auth/session';
 import { MerchantPriceEditor, type PriceSelection } from './MerchantPriceEditor';
+import { MerchantLeaveStore } from './MerchantLeaveStore';
 import { MerchantStoreEditor } from './MerchantStoreEditor';
 import { MerchantPromotions } from './MerchantPromotions';
 import { MerchantPriceUpload } from './MerchantPriceUpload';
@@ -43,6 +45,7 @@ export function MerchantPrices() {
 }
 
 function PricePanel() {
+  const { reload } = useSession();
   const [tab, setTab] = useState<Tab>('prices');
   const [profile, setProfile] = useState<Outcome<Profile> | null>(null);
   const [promotions, setPromotions] = useState<Outcome<Promotion[]> | null>(null);
@@ -542,6 +545,12 @@ function PricePanel() {
                           onChanged={refresh}
                         />
                       )}
+                      <MerchantLeaveStore
+                        key={`leave-${merchant.establishment.id}`}
+                        storeName={merchant.establishment.name}
+                        canDelete={merchant.canDeleteEstablishment}
+                        onFinished={reload}
+                      />
                     </>
                   )}
                   {profile && 'data' in profile && !merchant && (
