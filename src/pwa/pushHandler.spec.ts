@@ -19,7 +19,7 @@ function load(
       },
     },
     clients: {
-      matchAll: vi.fn(() => Promise.resolve([])),
+      matchAll: vi.fn(() => Promise.resolve(windows)),
       openWindow: vi.fn(() => Promise.resolve()),
     },
   };

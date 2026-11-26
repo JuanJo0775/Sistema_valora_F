@@ -28,3 +28,17 @@ self.addEventListener('push', (event) => {
     }),
   );
 });
+
+// Tocar el aviso: si la app ya está abierta se enfoca y se lleva a esa pantalla; si no, se abre.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = safeUrl(event.notification.data && event.notification.data.url);
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const open = windows[0];
+      if (!open) return self.clients.openWindow(url);
+      const go = typeof open.navigate === 'function' ? open.navigate(url) : Promise.resolve();
+      return go.then(() => open.focus());
+    }),
+  );
+});
