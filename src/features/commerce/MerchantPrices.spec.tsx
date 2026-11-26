@@ -183,10 +183,14 @@ describe('panel de precios oficiales (#166)', () => {
     });
     fireEvent.click(await screen.findByRole('button', { name: 'Todos mis precios siguen igual' }));
     expect(calls.some(({ method }) => method === 'POST')).toBe(false);
+    // ADR-043: la campana del encabezado también consulta los avisos del comercio al abrir la app.
+    const alertCalls = () => calls.filter(({ path }) => path === '/v1/commerce/alerts').length;
+    const before = alertCalls();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Precios reconfirmados: 1.')).toBeInTheDocument();
+    // Reconfirmar vuelve a consultar los avisos, una sola vez.
     await waitFor(() => {
-      expect(calls.filter(({ path }) => path === '/v1/commerce/alerts')).toHaveLength(2);
+      expect(alertCalls()).toBe(before + 1);
     });
   });
 

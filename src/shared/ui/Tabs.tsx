@@ -2,7 +2,8 @@ import { type KeyboardEvent, type ReactNode, useId, useRef } from 'react';
 
 export type TabItem = {
   id: string;
-  label: string;
+  // Puede llevar más que texto, por ejemplo el número de pendientes (ADR-043).
+  label: ReactNode;
   content: ReactNode;
   // Conserva el contenido montado (oculto) al salir de la pestaña, para no perder lo que se escribió.
   keepMounted?: boolean;

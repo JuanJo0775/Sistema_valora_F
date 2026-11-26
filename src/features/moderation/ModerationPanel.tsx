@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router';
+import { useAvisos } from '../avisos/avisosContext';
 import { MerchantCases } from './MerchantCases';
 import { ModerationQueue } from './ModerationQueue';
 import { ProductRequests } from './ProductRequests';
@@ -18,9 +19,27 @@ const VIEWS: { value: View; label: string }[] = [
   { value: 'roles', label: 'Roles' },
 ];
 
+// El nombre de la pestaña y, si hay casos esperando, su número; el lector de pantalla lo oye en palabras.
+function TabLabel({ label, count }: { label: string; count: number }) {
+  if (count === 0) return label;
+  return (
+    <>
+      {label}
+      <span className="tab-count" aria-hidden="true">
+        {count}
+      </span>
+      <span className="sr-only">{`, ${String(count)} ${count === 1 ? 'pendiente' : 'pendientes'}`}</span>
+    </>
+  );
+}
+
 // #14: el panel del moderador. La vista elegida vive en la dirección (?vista=), para volver a ella.
 export function ModerationPanel() {
   const [params, setParams] = useSearchParams();
+  const avisos = useAvisos();
+  // ADR-043: los mismos números de la campana; Roles no tiene cola.
+  const pending = (value: View): number =>
+    avisos.kind === 'moderador' && value !== 'roles' ? (avisos.counts?.[value] ?? 0) : 0;
   const view = VIEWS.find(({ value }) => value === params.get('vista')) ?? VIEWS[0];
   if (!view) return null;
   return (
@@ -37,7 +56,7 @@ export function ModerationPanel() {
         }}
         tabs={VIEWS.map(({ value, label }) => ({
           id: value,
-          label,
+          label: <TabLabel label={label} count={pending(value)} />,
           content: <ViewContent view={value} />,
         }))}
       />

@@ -83,4 +83,50 @@ describe('encabezado', () => {
       expect(focus).toHaveBeenCalledWith({ preventScroll: true });
     });
   });
+
+  // ADR-043: la campana de avisos vive en el encabezado de moderadores y comercios.
+  it('el moderador ve en el encabezado cuántos casos esperan su decisión', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('moderador'),
+      'GET /v1/moderation/summary': {
+        status: 200,
+        body: { precios: 2, tiendas: 0, productos: 1, comercios: 0 },
+      },
+    });
+    render(<App />);
+
+    expect(await screen.findByRole('button', { name: 'Avisos: 3 pendientes' })).toBeInTheDocument();
+  });
+
+  it('el comercio ve en el encabezado cuántos avisos tiene', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('comercio'),
+      'GET /v1/commerce/alerts': {
+        status: 200,
+        body: {
+          items: [
+            {
+              kind: 'vence_pronto',
+              presentationId: 'a1b2c3d4-0000-4000-8000-000000000001',
+              productName: 'Arroz Diana · 500 g',
+              message: 'Tu precio oficial de Arroz Diana · 500 g vence mañana: reconfírmalo.',
+            },
+          ],
+        },
+      },
+    });
+    render(<App />);
+
+    expect(await screen.findByRole('button', { name: 'Avisos: 1 pendiente' })).toBeInTheDocument();
+  });
+
+  it('un reportante o quien no inició sesión no ve la campana', async () => {
+    stubApi({ 'GET /v1/auth/session': sessionAs('reportante') });
+    render(<App />);
+
+    expect(
+      (await screen.findAllByRole('link', { name: 'Registrar precio' })).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /^Avisos/ })).not.toBeInTheDocument();
+  });
 });
