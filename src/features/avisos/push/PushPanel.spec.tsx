@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { seriousViolations } from '../../../test/axe';
 import { PushPanel } from './PushPanel';
 
 const props = {
@@ -82,5 +83,49 @@ describe('pantalla de avisos push: permiso bloqueado y navegador sin soporte (RN
     expect(screen.getByText(/no puede mostrar avisos/)).toBeInTheDocument();
     expect(screen.getByText(/Chrome, Edge o Firefox/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Activar avisos' })).not.toBeInTheDocument();
+  });
+});
+
+// Pruebas de resguardo: ya pasan con la pantalla hecha.
+describe('pantalla de avisos push: casos límite', () => {
+  it.each(['cargando', 'sin_clave'] as const)(
+    'mientras está %s no muestra nada: la opción no existe todavía o en este servidor',
+    (status) => {
+      const { container } = render(<PushPanel {...props} status={status} />);
+
+      expect(container).toBeEmptyDOMElement();
+    },
+  );
+
+  it('mientras activa o desactiva, el botón se bloquea para no pedirlo dos veces', () => {
+    render(<PushPanel {...props} status="listo" busy />);
+
+    expect(screen.getByRole('button', { name: 'Activar avisos' })).toBeDisabled();
+  });
+
+  it('si falla, lo dice con palabras sencillas y conserva el botón para reintentar', () => {
+    render(
+      <PushPanel
+        {...props}
+        status="listo"
+        error="No pudimos activar los avisos. Revisa tu conexión e inténtalo de nuevo."
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('No pudimos activar los avisos');
+    expect(screen.getByRole('button', { name: 'Activar avisos' })).toBeEnabled();
+  });
+
+  it.each([
+    ['listo', 'other'],
+    ['activo', 'other'],
+    ['ios_sin_instalar', 'ios-safari'],
+    ['ios_otro_navegador', 'ios-other'],
+    ['denegado', 'android'],
+    ['sin_soporte', 'other'],
+  ] as const)('el estado %s no tiene fallas graves de accesibilidad', async (status, platform) => {
+    const { container } = render(<PushPanel {...props} status={status} platform={platform} />);
+
+    expect(await seriousViolations(container)).toEqual([]);
   });
 });
