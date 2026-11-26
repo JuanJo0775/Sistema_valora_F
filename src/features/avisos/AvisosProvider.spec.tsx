@@ -43,4 +43,26 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
       });
     });
   });
+
+  it('el comercio recibe sus avisos de vencimiento y de discrepancia', async () => {
+    const alert = {
+      kind: 'vence_pronto',
+      presentationId: 'a1b2c3d4-0000-4000-8000-000000000001',
+      productName: 'Arroz Diana · 500 g',
+      message: 'Tu precio oficial de Arroz Diana · 500 g vence mañana: reconfírmalo.',
+    };
+    stubApi({
+      'GET /v1/auth/session': sessionAs('comercio'),
+      'GET /v1/commerce/alerts': { status: 200, body: { items: [alert] } },
+    });
+
+    renderProvider();
+
+    await waitFor(() => {
+      expect(JSON.parse(screen.getByTestId('avisos').textContent ?? '')).toEqual({
+        kind: 'comercio',
+        alerts: [alert],
+      });
+    });
+  });
 });
