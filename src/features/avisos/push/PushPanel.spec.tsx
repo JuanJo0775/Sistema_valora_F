@@ -64,7 +64,8 @@ describe('pantalla de avisos push: permiso bloqueado y navegador sin soporte (RN
 
     expect(screen.getByText(/Bloqueaste los avisos/)).toBeInTheDocument();
     expect(screen.getByText(/candado/)).toBeInTheDocument();
-    expect(screen.getByText(/activa Notificaciones/i)).toBeInTheDocument();
+    expect(screen.getByText('Permisos')).toBeInTheDocument();
+    expect(screen.getByText('Notificaciones')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Activar avisos' })).not.toBeInTheDocument();
   });
 

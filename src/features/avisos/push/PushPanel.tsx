@@ -52,6 +52,39 @@ export function PushPanel({ status, busy, platform, onEnable, onDisable }: PushP
           <InstallGuide platform={platform} />
         </>
       )}
+      {status === 'denegado' && (
+        <>
+          <p>Bloqueaste los avisos de Valora en este dispositivo. Para volver a permitirlos:</p>
+          {platform === 'ios-safari' ? (
+            <ol className="install-steps">
+              <li>
+                Abre los <strong>Ajustes del iPhone</strong> y entra a{' '}
+                <strong>Notificaciones</strong>.
+              </li>
+              <li>
+                Elige <strong>Valora</strong> y activa <strong>Permitir notificaciones</strong>.
+              </li>
+            </ol>
+          ) : (
+            <ol className="install-steps">
+              <li>
+                Toca el <strong>candado</strong> (o los ajustes del sitio) junto a la dirección de
+                Valora.
+              </li>
+              <li>
+                Entra a <strong>Permisos</strong> y activa <strong>Notificaciones</strong>.
+              </li>
+            </ol>
+          )}
+          <p>Después vuelve aquí.</p>
+        </>
+      )}
+      {status === 'sin_soporte' && (
+        <p>
+          Este navegador no puede mostrar avisos. Prueba con Chrome, Edge o Firefox; en iPhone, con
+          Safari y la app instalada.
+        </p>
+      )}
     </section>
   );
 }
