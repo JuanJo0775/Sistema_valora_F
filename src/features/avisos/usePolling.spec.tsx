@@ -48,4 +48,24 @@ describe('consulta periódica de los avisos (ADR-043)', () => {
     expect(load).toHaveBeenCalledTimes(2);
     expect(result.current).toBe(2);
   });
+
+  // La pestaña oculta no gasta datos ni batería (ADR-031); al volver, se actualiza de inmediato.
+  it('no consulta con la pestaña oculta y consulta apenas vuelve a estar visible', async () => {
+    const load = vi.fn(() => Promise.resolve(1));
+    renderHook(() => usePolling(load, MINUTE));
+    await advance(0);
+
+    act(() => {
+      setVisibility('hidden');
+    });
+    await advance(5 * MINUTE);
+    expect(load).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      setVisibility('visible');
+    });
+    await advance(0);
+
+    expect(load).toHaveBeenCalledTimes(2);
+  });
 });
