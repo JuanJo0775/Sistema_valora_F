@@ -57,3 +57,13 @@ export async function activatePush(deps: PushDeps): Promise<'activo' | 'denegado
   }
   return 'activo';
 }
+
+// ADR-045: desactiva los avisos en este dispositivo. Primero se borra en el servidor y después en el
+// navegador: si el servidor falla, la suscripción sigue y se puede reintentar.
+export async function deactivatePush(deps: PushDeps): Promise<void> {
+  const registration = await deps.registration();
+  const subscription = await registration.pushManager.getSubscription();
+  if (subscription === null) return;
+  await deps.remove(subscription.endpoint);
+  await subscription.unsubscribe();
+}
