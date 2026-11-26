@@ -55,3 +55,31 @@ describe('pantalla de avisos push: guía para iPhone (RN7)', () => {
     expect(screen.queryByRole('button', { name: 'Activar avisos' })).not.toBeInTheDocument();
   });
 });
+
+// Quien bloqueó los avisos no puede volver a pedirlos desde la página: hay que decirle dónde se
+// permiten otra vez.
+describe('pantalla de avisos push: permiso bloqueado y navegador sin soporte (RN7)', () => {
+  it('con el permiso bloqueado en un celular Android o en un computador dice dónde permitirlo', () => {
+    render(<PushPanel {...props} status="denegado" platform="android" />);
+
+    expect(screen.getByText(/Bloqueaste los avisos/)).toBeInTheDocument();
+    expect(screen.getByText(/candado/)).toBeInTheDocument();
+    expect(screen.getByText(/activa Notificaciones/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Activar avisos' })).not.toBeInTheDocument();
+  });
+
+  it('con el permiso bloqueado en iPhone manda a los Ajustes del teléfono', () => {
+    render(<PushPanel {...props} status="denegado" platform="ios-safari" />);
+
+    expect(screen.getByText(/Ajustes del iPhone/)).toBeInTheDocument();
+    expect(screen.queryByText(/candado/)).not.toBeInTheDocument();
+  });
+
+  it('un navegador sin soporte lo dice y sugiere otro', () => {
+    render(<PushPanel {...props} status="sin_soporte" />);
+
+    expect(screen.getByText(/no puede mostrar avisos/)).toBeInTheDocument();
+    expect(screen.getByText(/Chrome, Edge o Firefox/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Activar avisos' })).not.toBeInTheDocument();
+  });
+});
