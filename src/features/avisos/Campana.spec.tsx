@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { seriousViolations } from '../../test/axe';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { type Avisos, AvisosContext } from './avisosContext';
@@ -143,5 +144,23 @@ describe('campana de avisos del comercio (ADR-043)', () => {
       [ALERTS[0]?.message, '/comercios'],
       [ALERTS[1]?.message, '/comercios'],
     ]);
+  });
+
+  // Pruebas de resguardo: ya pasan con la campana hecha.
+  it('sin avisos lo dice con palabras en lugar de dejar el panel vacío', () => {
+    renderBell({ kind: 'comercio', alerts: [] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Avisos: nada pendiente' }));
+
+    expect(screen.getByRole('region', { name: 'Tus avisos' })).toHaveTextContent(
+      'Nada pendiente por ahora.',
+    );
+  });
+
+  it('el panel abierto no tiene fallas graves de accesibilidad', async () => {
+    const { container } = renderBell({ kind: 'moderador', counts: COUNTS });
+    fireEvent.click(screen.getByRole('button', { name: 'Avisos: 3 pendientes' }));
+
+    expect(await seriousViolations(container)).toEqual([]);
   });
 });
