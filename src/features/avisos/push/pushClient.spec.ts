@@ -144,3 +144,43 @@ describe('desactivar los avisos push en este dispositivo (ADR-045)', () => {
     expect(calls).toEqual(['servidor', 'navegador']);
   });
 });
+
+// Pruebas de resguardo: ya pasan con desactivar hecho.
+describe('desactivar los avisos push, casos límite', () => {
+  it('si el servidor falla, el navegador sigue suscrito y se puede reintentar', async () => {
+    const unsubscribed: string[] = [];
+    const subscription = {
+      endpoint: 'https://push.example.net/dispositivo',
+      toJSON: () => ({}),
+      unsubscribe: () => {
+        unsubscribed.push('navegador');
+        return Promise.resolve(true);
+      },
+    };
+    const deps: PushDeps = {
+      requestPermission: () => Promise.resolve('granted'),
+      fetchKey: () => Promise.resolve('AQID'),
+      registration: () =>
+        Promise.resolve({
+          pushManager: {
+            getSubscription: () => Promise.resolve(subscription),
+            subscribe: () => Promise.resolve(subscription),
+          },
+        }),
+      save: () => Promise.resolve(),
+      remove: () => Promise.reject(new Error('sin red')),
+    };
+
+    await expect(deactivatePush(deps)).rejects.toThrow('sin red');
+
+    expect(unsubscribed).toEqual([]);
+  });
+
+  it('sin suscripción en el navegador no llama al servidor', async () => {
+    const { deps } = setup();
+
+    await deactivatePush(deps);
+
+    expect(deps.remove).not.toHaveBeenCalled();
+  });
+});
