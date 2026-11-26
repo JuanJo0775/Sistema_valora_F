@@ -68,4 +68,37 @@ describe('consulta periódica de los avisos (ADR-043)', () => {
 
     expect(load).toHaveBeenCalledTimes(2);
   });
+
+  // Pruebas de resguardo: ya pasan con el sondeo hecho.
+  it('si una consulta falla conserva el último número y no rompe la pantalla', async () => {
+    const load = vi.fn().mockResolvedValueOnce(4).mockRejectedValueOnce(new Error('sin red'));
+
+    const { result } = renderHook(() => usePolling(load, MINUTE));
+    await advance(0);
+    await advance(MINUTE);
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(result.current).toBe(4);
+  });
+
+  it('desactivado no consulta nada', async () => {
+    const load = vi.fn(() => Promise.resolve(1));
+
+    const { result } = renderHook(() => usePolling(load, MINUTE, false));
+    await advance(3 * MINUTE);
+
+    expect(load).not.toHaveBeenCalled();
+    expect(result.current).toBeUndefined();
+  });
+
+  it('al cerrar la pantalla deja de consultar', async () => {
+    const load = vi.fn(() => Promise.resolve(1));
+    const { unmount } = renderHook(() => usePolling(load, MINUTE));
+    await advance(0);
+
+    unmount();
+    await advance(3 * MINUTE);
+
+    expect(load).toHaveBeenCalledTimes(1);
+  });
 });
