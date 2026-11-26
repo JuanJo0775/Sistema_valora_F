@@ -28,4 +28,17 @@ describe('estado de los avisos push en este dispositivo (RN7)', () => {
       'sin_clave',
     );
   });
+
+  it('con una suscripción y el permiso concedido, los avisos están activos', () => {
+    expect(pushStatusOf({ ...READY, permission: 'granted', subscribed: true })).toBe('activo');
+  });
+
+  // Quien bloqueó los avisos no puede volver a pedirlos desde la página: hay que decirle dónde.
+  it('si bloqueó los avisos, dice que hay que permitirlos en el navegador', () => {
+    expect(pushStatusOf({ ...READY, permission: 'denied' })).toBe('denegado');
+  });
+
+  it('con el permiso concedido pero sin suscripción, se puede activar de nuevo', () => {
+    expect(pushStatusOf({ ...READY, permission: 'granted', subscribed: false })).toBe('listo');
+  });
 });
