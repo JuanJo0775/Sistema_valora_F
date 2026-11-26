@@ -21,11 +21,26 @@ export function usePolling<T>(
         })
         .catch(() => undefined);
     };
-    run();
-    const timer = setInterval(run, intervalMs);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      run();
+      timer = setInterval(run, intervalMs);
+    };
+    const stop = () => {
+      clearInterval(timer);
+      timer = undefined;
+    };
+    // ADR-031: con la pestaña oculta no se consulta; al volver, se actualiza de inmediato.
+    const onVisibility = () => {
+      stop();
+      if (document.visibilityState === 'visible') start();
+    };
+    if (document.visibilityState === 'visible') start();
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       controller.abort();
-      clearInterval(timer);
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [enabled, intervalMs]);
 
