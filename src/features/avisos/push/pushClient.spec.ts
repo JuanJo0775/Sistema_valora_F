@@ -59,4 +59,28 @@ describe('activar los avisos push en este dispositivo (ADR-045)', () => {
       },
     ]);
   });
+
+  // Quien dijo «No» al permiso no recibe avisos, y el servidor no debe guardar nada.
+  it('si bloquea el permiso no se suscribe ni guarda nada, y lo dice', async () => {
+    const { deps, subscribed, saved } = setup({
+      requestPermission: () => Promise.resolve('denied'),
+    });
+
+    await expect(activatePush(deps)).resolves.toBe('denegado');
+
+    expect(subscribed).toEqual([]);
+    expect(saved).toEqual([]);
+  });
+
+  // Cerrar el cuadro sin elegir deja el permiso en «default»: puede volver a intentarlo.
+  it('si cierra el cuadro del permiso sin elegir, no pasa nada y puede intentarlo de nuevo', async () => {
+    const { deps, subscribed, saved } = setup({
+      requestPermission: () => Promise.resolve('default'),
+    });
+
+    await expect(activatePush(deps)).resolves.toBe('cancelado');
+
+    expect(subscribed).toEqual([]);
+    expect(saved).toEqual([]);
+  });
 });
