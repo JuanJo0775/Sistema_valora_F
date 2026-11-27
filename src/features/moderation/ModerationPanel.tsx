@@ -4,6 +4,7 @@ import { MerchantCases } from './MerchantCases';
 import { ModerationQueue } from './ModerationQueue';
 import { ProductRequests } from './ProductRequests';
 import { RoleChange } from './RoleChange';
+import { VerifiedMerchants } from './VerifiedMerchants';
 import { StoreProposals } from './StoreProposals';
 import './moderation.css';
 import { BackLink } from '../../shared/ui/BackLink';
@@ -68,6 +69,13 @@ function ViewContent({ view }: { view: View }) {
   if (view === 'precios') return <ModerationQueue />;
   if (view === 'tiendas') return <StoreProposals />;
   if (view === 'productos') return <ProductRequests />;
-  if (view === 'comercios') return <MerchantCases />;
+  if (view === 'comercios') {
+    return (
+      <>
+        <MerchantCases />
+        <VerifiedMerchants />
+      </>
+    );
+  }
   return <RoleChange />;
 }
