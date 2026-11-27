@@ -93,7 +93,9 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
   const [store, setStore] = useState<Store | null>(readLastStore);
   // Si la persona ya eligió una tienda, la de la dirección llega tarde y no la pisa.
   const pickedStore = useRef(false);
-  const [price, setPrice] = useState('');
+  // Lo que la persona escribió en el precio; null mientras no haya escrito nada: el campo muestra
+  // entonces el precio que ya hay en la tienda elegida para la presentación elegida.
+  const [typed, setTyped] = useState<string | null>(null);
   const [onSale, setOnSale] = useState(false);
   // EC-07: la clave nace con el reporte y un reintento del mismo reporte usa la misma. Si el reporte
   // cambia después de enviarlo, es otro: el servidor responde 409 a una clave con otro cuerpo.
@@ -175,6 +177,14 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
     if (doubt !== null) doubtRef.current?.focus();
   }, [doubt]);
 
+  const known =
+    store && presentationId
+      ? offers.find(
+          (offer) => offer.establishment.id === store.id && offer.presentationId === presentationId,
+        )?.priceCop
+      : undefined;
+  const price = typed ?? (known === undefined ? '' : String(known));
+  const showingKnown = typed === null && known !== undefined;
   const reference = presentationId ? referenceFrom(offers, presentationId) : null;
   const suggestion = doubt !== null && reference ? suggestPrice(doubt, reference) : null;
   // Cierra la duda y devuelve a la persona al campo, con el valor escrito.
@@ -318,10 +328,10 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         presentations={product.presentations}
         value={presentationId}
         onChange={(id) => {
-          // El precio es de una presentación: al pasar de 500 g a 1 kg el que estaba escrito ya no vale
-          // y se vuelve a pedir. Elegir la primera presentación o la misma no lo toca.
+          // El precio es de una presentación: al pasar de 500 g a 1 kg lo escrito ya no vale, y el campo
+          // vuelve a mostrar el que hay para la nueva. Elegir la primera presentación o la misma no lo toca.
           if (presentationId !== '' && id !== presentationId) {
-            setPrice('');
+            setTyped(null);
             clear('price');
           }
           setPresentationId(id);
@@ -347,12 +357,16 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
             inputMode="numeric"
             autoComplete="off"
             value={price}
-            aria-describedby={
-              problem?.field === 'price' ? 'ayuda-precio error-precio' : 'ayuda-precio'
-            }
+            aria-describedby={[
+              'ayuda-precio',
+              showingKnown && 'precio-hoy',
+              problem?.field === 'price' && 'error-precio',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             aria-invalid={problem?.field === 'price' ? true : undefined}
             onChange={(event) => {
-              setPrice(event.target.value);
+              setTyped(event.target.value);
               setDoubt(null);
               clear('price');
             }}
@@ -363,6 +377,11 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
             ? `Es el precio de ${formatPresentation(chosenSize)}.`
             : 'Es el precio de la presentación que elijas.'}
         </p>
+        {showingKnown && store && (
+          <p id="precio-hoy" className="muted price-note">
+            {`Es el precio de hoy en ${store.name}. Cámbialo si viste otro.`}
+          </p>
+        )}
         <details className="price-help">
           <summary>¿Cómo escribirlo?</summary>
           <p className="muted">Puedes escribirlo como 4600, 4.600 o $4.600.</p>
@@ -433,7 +452,7 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
                 type="button"
                 className="btn"
                 onClick={() => {
-                  setPrice(String(suggestion));
+                  setTyped(String(suggestion));
                   fixPrice();
                 }}
               >
