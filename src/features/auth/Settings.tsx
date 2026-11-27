@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AvisosPush } from '../avisos/push/AvisosPush';
 import { RadiusControl } from '../comparison/RadiusControl';
 import { type Municipality, MUNICIPALITY_OPTIONS } from '../comparison/criteria';
 import { readMunicipality, saveMunicipality } from '../comparison/lastMunicipality';
@@ -72,6 +73,12 @@ export function Settings() {
           />
         </div>
       </section>
+      {session.status === 'active' &&
+        (session.role === 'moderador' || session.role === 'comercio') && (
+          <section className="profile-block">
+            <AvisosPush />
+          </section>
+        )}
       {session.status === 'active' && (
         <section className="profile-block" aria-labelledby="cuenta">
           <h2 id="cuenta" className="eyebrow">
