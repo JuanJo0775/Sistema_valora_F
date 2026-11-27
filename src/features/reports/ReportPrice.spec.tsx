@@ -534,29 +534,99 @@ describe('registrar un precio', () => {
     expect(sentReports(api)).toHaveLength(0);
   });
 
-  // El precio es de una presentación: 3000 por 500 g no es el precio de 1 kg.
-  describe('al cambiar de presentación', () => {
-    const open = async () => {
-      stubApi(productRoute);
+  // El precio es de una presentación: la de 500 g a $2.400 y la de 1 kg a $4.000 son precios distintos
+  // en la misma tienda. Al cambiar de presentación el campo muestra el que ya hay para esa.
+  describe('el precio de cada presentación en la tienda elegida', () => {
+    const [grams, kilo] = rice.presentations;
+    const offerAt = (presentationId: string | undefined, priceCop: number) => ({
+      establishment: donPepe,
+      reportId: crypto.randomUUID(),
+      presentationId,
+      priceCop,
+      unitPrice: { valueCop: priceCop / 10, per: '100g' },
+      source: 'comunidad',
+      freshness: 'vigente',
+      reliability: 'alta',
+      isCheapest: false,
+      confirmations: 1,
+      observedAt: '2026-11-16T10:00:00Z',
+    });
+    const open = async (results: unknown[]) => {
+      stubApi({
+        ...reportRoutes,
+        [`GET /v1/products/${rice.id}/comparison`]: { status: 200, body: { results } },
+      });
       renderReport();
-      return screen.findByLabelText('Precio en pesos');
+      fireEvent.click(await screen.findByRole('radio', { name: '500 g' }));
+      stubLocation('allow');
+      fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+      fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
+      return screen.getByLabelText('Precio en pesos');
     };
+    const bothPrices = [offerAt(grams?.id, 2400), offerAt(kilo?.id, 4000)];
 
-    it('borra el precio escrito para no enviar el de una presentación como el de otra', async () => {
-      const price = await open();
+    it('muestra el precio que ya hay hoy para cada presentación al cambiar de una a otra', async () => {
+      const price = await open(bothPrices);
+      await waitFor(() => {
+        expect(price).toHaveValue('2400');
+      });
+
+      fireEvent.click(screen.getByRole('radio', { name: '1 kg' }));
+      expect(price).toHaveValue('4000');
+      expect(screen.getByText('Es el precio de 1 kg.')).toBeInTheDocument();
+
       fireEvent.click(screen.getByRole('radio', { name: '500 g' }));
-      fireEvent.change(price, { target: { value: '3000' } });
-      expect(price).toHaveValue('3000');
+      expect(price).toHaveValue('2400');
+    });
+
+    it('si la tienda no tiene precio de esa presentación, el campo queda vacío', async () => {
+      const price = await open([offerAt(grams?.id, 2400)]);
+      await waitFor(() => {
+        expect(price).toHaveValue('2400');
+      });
 
       fireEvent.click(screen.getByRole('radio', { name: '1 kg' }));
 
       expect(price).toHaveValue('');
-      expect(screen.getByText('Es el precio de 1 kg.')).toBeInTheDocument();
     });
 
-    it('elegir la misma presentación otra vez no borra el precio', async () => {
-      const price = await open();
-      fireEvent.click(screen.getByRole('radio', { name: '500 g' }));
+    it('dice de dónde sale el precio mientras no se cambie', async () => {
+      const price = await open(bothPrices);
+      await waitFor(() => {
+        expect(price).toHaveValue('2400');
+      });
+      expect(
+        screen.getByText('Es el precio de hoy en Tienda Don Pepe. Cámbialo si viste otro.'),
+      ).toBeInTheDocument();
+
+      fireEvent.change(price, { target: { value: '2500' } });
+
+      expect(screen.queryByText(/Es el precio de hoy en/)).not.toBeInTheDocument();
+    });
+
+    it('lo que la persona escribió se queda al elegir la tienda, y se borra al cambiar de presentación', async () => {
+      stubApi({
+        ...reportRoutes,
+        [`GET /v1/products/${rice.id}/comparison`]: { status: 200, body: { results: bothPrices } },
+      });
+      renderReport();
+      fireEvent.click(await screen.findByRole('radio', { name: '500 g' }));
+      const price = screen.getByLabelText('Precio en pesos');
+      fireEvent.change(price, { target: { value: '3000' } });
+      stubLocation('allow');
+      fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+      fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
+      expect(price).toHaveValue('3000');
+
+      fireEvent.click(screen.getByRole('radio', { name: '1 kg' }));
+
+      await waitFor(() => {
+        expect(price).toHaveValue('4000');
+      });
+    });
+
+    it('elegir la misma presentación otra vez no toca lo escrito', async () => {
+      const price = await open([]);
       fireEvent.change(price, { target: { value: '3000' } });
 
       fireEvent.click(screen.getByRole('radio', { name: '500 g' }));
@@ -565,7 +635,9 @@ describe('registrar un precio', () => {
     });
 
     it('elegir la primera presentación no borra un precio ya escrito', async () => {
-      const price = await open();
+      stubApi(productRoute);
+      renderReport();
+      const price = await screen.findByLabelText('Precio en pesos');
       fireEvent.change(price, { target: { value: '3000' } });
 
       fireEvent.click(screen.getByRole('radio', { name: '500 g' }));
@@ -573,14 +645,9 @@ describe('registrar un precio', () => {
       expect(price).toHaveValue('3000');
     });
 
-    it('quita el aviso de un precio que falló', async () => {
-      stubApi(reportRoutes);
-      renderReport();
-      fireEvent.click(await screen.findByRole('radio', { name: '500 g' }));
-      stubLocation('allow');
-      fireEvent.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
-      fireEvent.click(await screen.findByRole('radio', { name: /Tienda Don Pepe/ }));
-      fireEvent.change(screen.getByLabelText('Precio en pesos'), { target: { value: 'abc' } });
+    it('al cambiar de presentación quita el aviso de un precio que falló', async () => {
+      const price = await open([]);
+      fireEvent.change(price, { target: { value: 'abc' } });
       fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
       await waitFor(() => {
         expect(document.getElementById('error-precio')).not.toBeNull();
@@ -588,7 +655,7 @@ describe('registrar un precio', () => {
 
       fireEvent.click(screen.getByRole('radio', { name: '1 kg' }));
 
-      expect(screen.getByLabelText('Precio en pesos')).toHaveValue('');
+      expect(price).toHaveValue('');
       expect(document.getElementById('error-precio')).toBeNull();
     });
   });
