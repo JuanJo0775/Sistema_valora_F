@@ -3,19 +3,9 @@ import { Link } from 'react-router';
 import type { components } from '../../shared/api/schema';
 import { shortDay } from '../../shared/days';
 import { formatCop } from '../../shared/money';
+import { offerName, restrictionsOf } from '../../shared/promotionText';
 
 type Promotion = components['schemas']['ComparisonPromotion'];
-
-function offerName(promotion: Promotion) {
-  switch (promotion.type) {
-    case 'precio_especial':
-      return 'Precio especial';
-    case 'descuento_porcentual':
-      return `${String(promotion.percent)} % de descuento`;
-    case 'pague_x_lleve_y':
-      return `Lleve ${String(promotion.takeY)}, pague ${String(promotion.payX)}`;
-  }
-}
 
 export function ComparisonPromotions({
   promotions = [],
@@ -33,14 +23,8 @@ export function ComparisonPromotions({
       <h3 id={title}>Promociones</h3>
       <ul>
         {promotions.map((promotion) => {
-          const { establishment, conditions } = promotion;
-          const restrictions = [
-            conditions.paymentMethod === 'efectivo' && 'Solo efectivo',
-            conditions.paymentMethod === 'tarjeta' && 'Solo tarjeta',
-            conditions.maxPerCustomer !== undefined &&
-              `Máximo ${String(conditions.maxPerCustomer)} por cliente`,
-            conditions.whileStocksLast && 'Hasta agotar existencias',
-          ].filter(Boolean);
+          const { establishment } = promotion;
+          const restrictions = restrictionsOf(promotion);
           return (
             <li key={promotion.id}>
               <div>
