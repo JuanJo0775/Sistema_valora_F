@@ -14,6 +14,11 @@ export interface PriceSelection {
 
 type Product = components['schemas']['Product'];
 const BARCODE = /^\d{8,14}$/;
+const MIN_LETTERS = 2;
+// Pausa tras la última tecla antes de preguntar al catálogo (igual que el buscador de la cabecera).
+const PAUSE_MS = 250;
+
+const catalogFilter = (text: string) => (BARCODE.test(text) ? { barcode: text } : { q: text });
 
 export function MerchantPriceEditor({
   selection,
@@ -44,14 +49,15 @@ export function MerchantPriceEditor({
     event.preventDefault();
     if (lookup.current) return;
     const text = query.trim();
-    if (text.length < 2) return;
+    if (text.length < MIN_LETTERS) return;
     lookup.current = true;
     setSearching(true);
     setError(null);
     setMatches(null);
     try {
-      const filter = BARCODE.test(text) ? { barcode: text } : { q: text };
-      const { items } = await call(api.GET('/products', { params: { query: filter } }));
+      const { items } = await call(
+        api.GET('/products', { params: { query: catalogFilter(text) } }),
+      );
       setMatches(items);
     } catch (failure: unknown) {
       setError(failure);
@@ -60,6 +66,28 @@ export function MerchantPriceEditor({
       setSearching(false);
     }
   };
+
+  // Mientras se escribe, las presentaciones aparecen solas después de una pausa corta; el botón y Enter
+  // siguen buscando al instante. Una respuesta tardía no reemplaza la de lo último que se escribió.
+  useEffect(() => {
+    const text = query.trim();
+    if (text.length < MIN_LETTERS) return;
+    let current = true;
+    const timer = window.setTimeout(() => {
+      call(api.GET('/products', { params: { query: catalogFilter(text) } }))
+        .then(({ items }) => {
+          if (!current) return;
+          setError(null);
+          setMatches(items);
+        })
+        // Sin red o con un error, simplemente no hay sugerencias: el botón sigue disponible.
+        .catch(() => undefined);
+    }, PAUSE_MS);
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
 
   // El precio rechazado deja el editor abierto: el foco vuelve al campo, ya habilitado, para corregirlo.
   useEffect(() => {
@@ -116,7 +144,7 @@ export function MerchantPriceEditor({
   return (
     <>
       <form
-        className="merchant-price-form"
+        className="merchant-price-search"
         onSubmit={(event) => {
           void search(event);
         }}
@@ -125,7 +153,10 @@ export function MerchantPriceEditor({
           label="Buscar producto o código de barras"
           type="search"
           value={query}
-          onValue={setQuery}
+          onValue={(value) => {
+            setQuery(value);
+            if (value.trim().length < MIN_LETTERS) setMatches(null);
+          }}
           minLength={2}
           maxLength={120}
           disabled={disabled}
