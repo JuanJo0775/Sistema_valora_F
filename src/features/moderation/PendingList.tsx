@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { restoreFocus } from '../../shared/focus';
+import { useAvisos } from '../avisos/avisosContext';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ErrorState } from '../../shared/ui/ErrorState';
 import { SkeletonList } from '../../shared/ui/Skeleton';
@@ -23,6 +24,9 @@ export function PendingList<T extends { id: string }>({
   const [attempt, setAttempt] = useState(0);
   const [outcome, setOutcome] = useState<Outcome<T> | null>(null);
   const [decided, setDecided] = useState('');
+  // Decidir un caso baja el número de la campana al momento, no en el próximo minuto.
+  const avisos = useAvisos();
+  const refreshBell = avisos.kind === 'moderador' ? avisos.refresh : undefined;
   // La tarjeta decidida desaparece de la lista: el foco pasa al aviso del resultado.
   const decidedRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
@@ -69,6 +73,7 @@ export function PendingList<T extends { id: string }>({
         : current,
     );
     setDecided(`Decisión registrada: ${label}.`);
+    refreshBell?.();
   };
   return (
     <>

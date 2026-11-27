@@ -3,6 +3,7 @@ import { choose } from '../../test/choose';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, sessionAs, stubApi, stubPendingApi } from '../../test/fakeApi';
+import { AvisosContext } from '../avisos/avisosContext';
 import { ModerationQueue } from './ModerationQueue';
 
 const item = (productName: string, reason: string, extra: Record<string, unknown> = {}) => ({
@@ -135,6 +136,32 @@ describe('precios en revisión', () => {
       decision: 'descartar',
       note: 'El precio está muy por debajo de la mediana.',
     });
+  });
+
+  it('al decidir un caso pide actualizar la campana, sin esperar al próximo minuto', async () => {
+    const rice = item('Arroz Diana · 500 g', 'marcado');
+    stubApi({
+      'GET /v1/auth/session': sessionAs('moderador'),
+      'GET /v1/moderation/queue': queue(rice),
+      [`POST /v1/moderation/${rice.id}/decision`]: { status: 204 },
+    });
+    const refresh = vi.fn();
+    render(
+      <MemoryRouter>
+        <AvisosContext.Provider value={{ kind: 'moderador', counts: undefined, refresh }}>
+          <ModerationQueue />
+        </AvisosContext.Provider>
+      </MemoryRouter>,
+    );
+
+    await decide(
+      'Arroz Diana · 500 g',
+      'Descartar',
+      'El precio está muy por debajo de la mediana.',
+    );
+
+    await screen.findByRole('status');
+    expect(refresh).toHaveBeenCalledOnce();
   });
 
   it('con un motivo de menos de 10 letras lo pide sin enviar', async () => {

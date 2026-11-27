@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-// ADR-043: consulta `load` al abrir y devuelve lo último que respondió el servidor.
+// ADR-043: consulta `load` al abrir y devuelve lo último que respondió el servidor. Cuando cambia
+// `refreshSignal` consulta de inmediato, sin esperar al próximo intervalo.
 export function usePolling<T>(
   load: (signal: AbortSignal) => Promise<T>,
   intervalMs: number,
   enabled = true,
+  refreshSignal = 0,
 ): T | undefined {
   const [value, setValue] = useState<T>();
   const loadRef = useRef(load);
@@ -45,7 +47,7 @@ export function usePolling<T>(
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [enabled, intervalMs]);
+  }, [enabled, intervalMs, refreshSignal]);
 
   return enabled ? value : undefined;
 }
