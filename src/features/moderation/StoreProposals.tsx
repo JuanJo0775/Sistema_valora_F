@@ -7,6 +7,7 @@ import { STORE_TYPES } from '../stores/storeTypes';
 import { ALREADY_DECIDED, CatalogDecision } from './CatalogDecision';
 import { explainWith } from './explain';
 import { StoreCorrection } from './StoreCorrection';
+import { Party } from './Party';
 import { PendingList } from './PendingList';
 
 type Proposal =
@@ -44,6 +45,19 @@ export function StoreProposals() {
               </p>
             )}
             {proposal.address && <p>{proposal.address}</p>}
+            {proposal.claim && (
+              <>
+                <Party
+                  title="Quien la pide"
+                  name={proposal.claim.responsibleName}
+                  nit={proposal.claim.nit ?? null}
+                  phone={proposal.claim.phone}
+                />
+                <p className="banner warn">
+                  Aprobarla verifica a esta cuenta como comercio y le da el rol de comercio.
+                </p>
+              </>
+            )}
             {proposal.possibleDuplicates.length > 0 && (
               <p>
                 {`Posibles duplicados: ${proposal.possibleDuplicates
