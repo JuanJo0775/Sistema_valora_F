@@ -1697,6 +1697,30 @@ export interface components {
             /** @description Precio de una unidad con la promoción; en pague X lleve Y, el promedio por unidad. */
             promotedPriceCop: number | null;
         };
+        /** @description Una promoción activa de la tienda, en su ficha pública (H6). */
+        StorePromotion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            presentationId: string;
+            /** @description Producto y presentación, por ejemplo «Arroz Diana · 1 kg». */
+            productName: string;
+            /** @enum {string} */
+            type: "descuento_porcentual" | "precio_especial" | "pague_x_lleve_y";
+            percent?: number;
+            specialPriceCop?: number;
+            payX?: number;
+            takeY?: number;
+            conditions: components["schemas"]["PromotionConditions"];
+            /** Format: date */
+            validFrom: string;
+            /** Format: date */
+            validUntil: string;
+            /** @description El «antes» */
+            officialPriceCop: number;
+            /** @description El precio de una unidad con la promoción. */
+            promotedPriceCop: number;
+        };
         /** @description Una promoción activa de una tienda del área, aparte de los resultados (ADR-009). */
         ComparisonPromotion: {
             /** Format: uuid */
@@ -2349,6 +2373,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description H6. La tienda tiene un comercio verificado (de moderación o por reclamo aprobado). false si es una tienda de la comunidad, sin dueño. Es un dato de la tienda, nunca de la cuenta (EC-08). */
+                        verifiedMerchant: boolean;
                         establishment: {
                             /** Format: uuid */
                             id: string;
@@ -2398,6 +2424,8 @@ export interface operations {
                             observedAt: string;
                             discrepancy?: components["schemas"]["PriceDiscrepancy"];
                         }[];
+                        /** @description H6, ADR-009. Las promociones activas de la tienda, siempre aparte de los precios y sin alterar su orden. Solo las que tienen sus fechas vigentes y un precio oficial vigente. */
+                        promotions: components["schemas"]["StorePromotion"][];
                     };
                 };
             };
