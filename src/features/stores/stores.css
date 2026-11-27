@@ -731,3 +731,36 @@
     height: 340px;
   }
 }
+
+/* H6: promociones activas de la tienda, aparte de sus precios (ADR-009). */
+.store-promotions {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+}
+
+.store-promotions :is(h2, h3, p) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.store-promotions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.store-promotions li {
+  display: grid;
+  gap: 8px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  background: var(--info-soft);
+  border-radius: var(--r-m);
+  padding: 12px;
+}
+
+.store-promotions .promotion-conditions {
+  grid-column: 1 / -1;
+}
