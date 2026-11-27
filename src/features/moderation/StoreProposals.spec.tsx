@@ -73,6 +73,26 @@ describe('tiendas propuestas', () => {
     expect(sun.getByText('Fuera del Quindío')).toBeInTheDocument();
   });
 
+  // H16: sin límites oficiales de municipios, el sistema avisa al moderador y él decide.
+  it('avisa cuando la ubicación parece de otro municipio que el registrado', async () => {
+    renderProposals({
+      'GET /v1/moderation/store-proposals': list(
+        proposal('Tienda Prueba QA', {
+          municipality: 'armenia',
+          suggestedMunicipality: 'la-tebaida',
+        }),
+        proposal('Tienda Bien Ubicada'),
+      ),
+    });
+
+    const flagged = await pendingCase('Tienda Prueba QA');
+    expect(
+      flagged.getByText('La ubicación parece de La Tebaida, pero se registró como Armenia.'),
+    ).toBeInTheDocument();
+    const fine = await pendingCase('Tienda Bien Ubicada');
+    expect(fine.queryByText(/La ubicación parece de/)).not.toBeInTheDocument();
+  });
+
   it('muestra las tiendas parecidas cercanas y solo con ellas se puede fusionar', async () => {
     renderProposals({
       'GET /v1/moderation/store-proposals': list(
