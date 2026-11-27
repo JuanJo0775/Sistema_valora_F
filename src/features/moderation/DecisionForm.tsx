@@ -66,7 +66,7 @@ export function DecisionForm<T extends string>({
   const noteInvalid = problem !== '' && !!decision;
   const explained = error === null ? null : (explain?.(error) ?? null);
   return (
-    <div className="decision">
+    <div className="decision stack">
       <fieldset
         role="radiogroup"
         className="choices"

@@ -128,6 +128,18 @@ button {
   text-align: center;
 }
 
+/* Formularios y bloques con campos y botones: un espacio parejo entre cada elemento y el botón a su
+   ancho natural, con un poco más de aire arriba para que no quede pegado al campo. */
+.stack {
+  display: grid;
+  gap: 14px;
+}
+
+.stack > .btn {
+  justify-self: start;
+  margin-top: 6px;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

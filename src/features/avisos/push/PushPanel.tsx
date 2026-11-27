@@ -17,7 +17,7 @@ export function PushPanel({ status, busy, error, platform, onEnable, onDisable }
   // Sin saber si el servidor tiene los avisos, o sin clave configurada, la opción no existe.
   if (status === 'cargando' || status === 'sin_clave') return null;
   return (
-    <section className="push-panel" aria-labelledby="push-titulo">
+    <section className="push-panel stack" aria-labelledby="push-titulo">
       <h2 id="push-titulo">Avisos en este dispositivo</h2>
       {status === 'listo' && (
         <>

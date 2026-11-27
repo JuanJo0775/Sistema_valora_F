@@ -79,7 +79,7 @@ export function FlagPrice({ reportId, storeName }: { reportId: string; storeName
   };
 
   return (
-    <div className="flag">
+    <div className="flag stack">
       <fieldset role="radiogroup" className="choices">
         <legend>{`¿Qué está mal en el precio de ${storeName}?`}</legend>
         {REASONS.map((option) => (
