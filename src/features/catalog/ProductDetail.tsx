@@ -41,6 +41,10 @@ export function ProductDetail() {
     null,
   );
   const comparison = compared?.productId === productId ? compared.comparison : null;
+  // La presentación que la persona eligió (500 g o 1 kg): la comparación se pide solo con ella. Va con
+  // su producto: al pasar a otro, no se arrastra. Sin elegir nada se comparan todas.
+  const [picked, setPicked] = useState<{ productId: string; presentationId: string } | null>(null);
+  const presentationId = picked?.productId === productId ? picked.presentationId : '';
   const key = `${productId}|${String(attempt)}`;
 
   useEffect(() => {
@@ -134,6 +138,9 @@ export function ProductDetail() {
         <AddToBasket
           product={product}
           suggestedPresentationId={cheapestPresentationId}
+          onChoose={(chosen) => {
+            setPicked({ productId, presentationId: chosen });
+          }}
           lowestPrice={cheapest ? formatCop(cheapest.priceCop) : undefined}
         />
         <Link
@@ -147,6 +154,7 @@ export function ProductDetail() {
       </SidePanel>
       <AllStores
         product={product}
+        {...(presentationId === '' ? {} : { presentationId })}
         onComparison={(latest) => {
           setFailedFor(null);
           setCompared({ productId: product.id, comparison: latest });

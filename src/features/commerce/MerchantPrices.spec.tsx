@@ -43,6 +43,38 @@ describe('panel de precios oficiales (#166)', () => {
     window.history.pushState({}, '', '/');
   });
 
+  it('sugiere presentaciones mientras escribe, sin pulsar «Buscar en el catálogo»', async () => {
+    const { calls } = openPanel({
+      [`GET ${prices}`]: { status: 200, body: { items: [], inReview: [] } },
+      'GET /v1/products': { status: 200, body: { items: [product] } },
+    });
+    const field = await screen.findByRole('searchbox', {
+      name: 'Buscar producto o código de barras',
+    });
+
+    fireEvent.change(field, { target: { value: 'a' } });
+    fireEvent.change(field, { target: { value: 'Arroz' } });
+
+    expect(await screen.findByRole('button', { name: 'Arroz · 500 g' })).toBeInTheDocument();
+    expect(calls.filter(({ path }) => path === '/v1/products')).toHaveLength(1);
+  });
+
+  it('al borrar lo escrito, las sugerencias desaparecen', async () => {
+    openPanel({
+      [`GET ${prices}`]: { status: 200, body: { items: [], inReview: [] } },
+      'GET /v1/products': { status: 200, body: { items: [product] } },
+    });
+    const field = await screen.findByRole('searchbox', {
+      name: 'Buscar producto o código de barras',
+    });
+    fireEvent.change(field, { target: { value: 'Arroz' } });
+    await screen.findByRole('button', { name: 'Arroz · 500 g' });
+
+    fireEvent.change(field, { target: { value: '' } });
+
+    expect(screen.queryByRole('button', { name: 'Arroz · 500 g' })).not.toBeInTheDocument();
+  });
+
   it('publica un precio tras buscar y elegir una presentación del catálogo', async () => {
     const { calls } = openPanel({
       [`GET ${prices}`]: { status: 200, body: { items: [], inReview: [] } },

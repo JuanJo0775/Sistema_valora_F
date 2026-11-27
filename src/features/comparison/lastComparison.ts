@@ -27,10 +27,12 @@ export const comparisonKey = (parts: {
   where: string;
   sort: string;
   onlyCurrent: boolean;
+  // Cada presentación tiene su copia: la de 500 g no se muestra como si fuera la de 1 kg.
+  presentationId?: string;
 }): string | null =>
   parts.located
     ? null
-    : `${parts.productId}|${parts.where}|${parts.sort}|${String(parts.onlyCurrent)}`;
+    : `${parts.productId}|${parts.where}|${parts.sort}|${String(parts.onlyCurrent)}|${parts.presentationId ?? ''}`;
 
 export function saveComparison(key: string | null, comparison: Comparison, now = Date.now()) {
   if (!key) return;

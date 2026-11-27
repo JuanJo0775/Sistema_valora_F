@@ -17,9 +17,12 @@ export function AddToBasket({
   product,
   suggestedPresentationId,
   lowestPrice,
+  onChoose,
 }: {
   product: Product;
   suggestedPresentationId?: string;
+  // Avisa cuando la persona elige otra presentación (el detalle compara solo con ella).
+  onChoose?: (presentationId: string) => void;
   // El precio más bajo que marcó el backend, ya con formato, para la barra de acción.
   lowestPrice?: string;
 }) {
@@ -72,7 +75,10 @@ export function AddToBasket({
             <PresentationChoices
               presentations={product.presentations}
               value={presentationId}
-              onChange={setChosen}
+              onChange={(id) => {
+                setChosen(id);
+                onChoose?.(id);
+              }}
             />
           )}
           {problem && (

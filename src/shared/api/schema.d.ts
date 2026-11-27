@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * La API está en marcha
-         * @description Pública y sin cuenta. Sirve para comprobar que el proceso responde (despliegue y monitoreo, RNF-011). No revisa la base de datos (#25).
+         * @description Pública y sin cuenta. Sirve para comprobar que el proceso responde (despliegue y monitoreo, RNF-011). No revisa la base de datos (#25). Cuando el servicio corre en Render dice también qué versión sirve (commit), para que el despliegue (#23) compruebe que la nueva ya está activa y no la anterior.
          */
         get: operations["getHealth"];
         put?: never;
@@ -2061,6 +2061,8 @@ export interface operations {
                     "application/json": {
                         /** @enum {string} */
                         status: "ok";
+                        /** @description Los primeros 7 caracteres del commit que sirve (RENDER_GIT_COMMIT). No viene si el servicio no corre en Render, como en local y en las pruebas. */
+                        commit?: string;
                     };
                 };
             };
@@ -2201,6 +2203,8 @@ export interface operations {
                 sort?: "unit_price" | "distance" | "recent";
                 /** @description Si es verdadero, solo incluye precios vigentes (excluye los por confirmar y los desactualizados). */
                 onlyCurrent?: boolean;
+                /** @description Solo esa presentación del producto (por ejemplo 500 g o 1 kg). Los resultados, isCheapest, savingsPercent y las promociones salen de entre sus precios; el servidor sigue siendo quien decide cuál es el más barato (EC-06). Sin este parámetro se comparan todas. Una presentación que no es del producto responde 404. */
+                presentationId?: string;
             };
             header?: never;
             path: {
@@ -3723,7 +3727,8 @@ export interface operations {
                 "application/json": {
                     /** @enum {string} */
                     decision: "aprobar" | "descartar" | "observar_cuentas";
-                    note: string;
+                    /** @description Motivo. Obligatorio (10 a 500 caracteres) al descartar y al observar cuentas; al aprobar es opcional. La bitácora guarda quién decidió y cuándo aunque no haya texto. */
+                    note?: string;
                 };
             };
         };

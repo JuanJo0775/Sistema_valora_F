@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { api, call } from '../../shared/api';
 import { useSession } from '../auth/session';
 import { type Avisos, AvisosContext } from './avisosContext';
@@ -17,7 +17,11 @@ export function AvisosProvider({ children }: { children: ReactNode }) {
     (signal: AbortSignal) => call(api.GET('/moderation/summary', { signal })),
     [],
   );
-  const counts = usePolling(loadSummary, AVISOS_INTERVAL_MS, role === 'moderador');
+  const [summarySignal, setSummarySignal] = useState(0);
+  const refresh = useCallback(() => {
+    setSummarySignal((current) => current + 1);
+  }, []);
+  const counts = usePolling(loadSummary, AVISOS_INTERVAL_MS, role === 'moderador', summarySignal);
 
   const loadAlerts = useCallback(
     (signal: AbortSignal) =>
@@ -27,10 +31,10 @@ export function AvisosProvider({ children }: { children: ReactNode }) {
   const alerts = usePolling(loadAlerts, AVISOS_INTERVAL_MS, role === 'comercio');
 
   const value = useMemo<Avisos>(() => {
-    if (role === 'moderador') return { kind: 'moderador', counts };
+    if (role === 'moderador') return { kind: 'moderador', counts, refresh };
     if (role === 'comercio') return { kind: 'comercio', alerts };
     return { kind: 'ninguno' };
-  }, [role, counts, alerts]);
+  }, [role, counts, alerts, refresh]);
 
   return <AvisosContext.Provider value={value}>{children}</AvisosContext.Provider>;
 }

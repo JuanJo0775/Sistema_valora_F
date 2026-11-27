@@ -11,7 +11,7 @@ export const decideCase = (
   note: string,
 ) => {
   fireEvent.click(card.getByRole('radio', { name: decision }));
-  fireEvent.change(card.getByRole('textbox', { name: 'Motivo de la decisión' }), {
+  fireEvent.change(card.getByRole('textbox', { name: /^Motivo de la decisión/ }), {
     target: { value: note },
   });
   fireEvent.click(card.getByRole('button', { name: 'Registrar decisión' }));

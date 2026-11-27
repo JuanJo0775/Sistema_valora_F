@@ -4,7 +4,8 @@ import { ErrorState } from '../../shared/ui/ErrorState';
 const MIN_NOTE = 10;
 const MAX_NOTE = 500;
 
-// RF-013: toda decisión de moderación lleva su motivo (10 a 500 letras) y queda auditada.
+// RF-013: toda decisión que sanciona o retira lleva su motivo (10 a 500 letras) y queda auditada.
+// Aprobar puede no llevarlo (`noteOptional`): la bitácora igual dice quién aprobó y cuándo.
 export function DecisionForm<T extends string>({
   id,
   options,
@@ -14,7 +15,14 @@ export function DecisionForm<T extends string>({
   id: string;
   // hint: lo que hace la opción, visible y ligado al radio. confirm: la opción tiene una sanción y
   // se pide confirmar en línea antes de enviar.
-  options: { value: T; label: string; hint?: string; confirm?: string }[];
+  options: {
+    value: T;
+    label: string;
+    hint?: string;
+    confirm?: string;
+    // El motivo no es obligatorio para esta decisión (por ejemplo, aprobar un precio).
+    noteOptional?: boolean;
+  }[];
   onDecide: (decision: T, note: string) => Promise<unknown>;
   // Mensajes propios para algunos rechazos del servidor; lo demás muestra el del servidor.
   explain?: (error: unknown) => string | null;
@@ -46,7 +54,7 @@ export function DecisionForm<T extends string>({
   const send = () => {
     const found = !decision
       ? 'Elige la decisión.'
-      : note.trim().length < MIN_NOTE
+      : !chosen?.noteOptional && note.trim().length < MIN_NOTE
         ? `Escribe el motivo: al menos ${String(MIN_NOTE)} letras.`
         : '';
     setProblem(found);
@@ -102,7 +110,7 @@ export function DecisionForm<T extends string>({
           ),
       )}
       <label className="field">
-        Motivo de la decisión
+        {chosen?.noteOptional ? 'Motivo de la decisión (opcional)' : 'Motivo de la decisión'}
         <textarea
           ref={noteBox}
           aria-invalid={noteInvalid || undefined}

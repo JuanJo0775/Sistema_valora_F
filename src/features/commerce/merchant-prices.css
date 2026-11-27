@@ -31,6 +31,21 @@
   width: 100%;
 }
 
+/* El buscador: el botón va al lado del campo y baja solo si no cabe (celular). */
+.merchant-price-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.merchant-price-search .field-group {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
 .merchant-price-list {
   list-style: none;
   margin: 0;

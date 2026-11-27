@@ -27,8 +27,15 @@ const REASON_OPTIONS: { value: Reason | ''; label: string }[] = [
   ...(Object.keys(REASONS) as Reason[]).map((value) => ({ value, label: REASONS[value] })),
 ];
 
-const DECISIONS: { value: Decision; label: string; hint?: string; confirm?: string }[] = [
-  { value: 'aprobar', label: 'Aprobar' },
+const DECISIONS: {
+  value: Decision;
+  label: string;
+  hint?: string;
+  confirm?: string;
+  noteOptional?: boolean;
+}[] = [
+  // Aprobar no sanciona a nadie: el motivo es opcional (backend B#290).
+  { value: 'aprobar', label: 'Aprobar', noteOptional: true },
   { value: 'descartar', label: 'Descartar' },
   {
     value: 'observar_cuentas',
@@ -118,7 +125,7 @@ export function ModerationQueue() {
                 call(
                   api.POST('/moderation/{itemId}/decision', {
                     params: { path: { itemId: item.id } },
-                    body: { decision, note },
+                    body: { decision, ...(note ? { note } : {}) },
                   }),
                 ).then(() => {
                   done(item.productName);

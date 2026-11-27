@@ -14,7 +14,8 @@ export type MerchantAlert = Responses<'/commerce/alerts'>['items'][number];
 // ADR-043: lo que muestra la campana según el rol. `undefined` es «todavía no hay respuesta»: sin
 // número, nunca un cero que no es verdad.
 export type Avisos =
-  | { kind: 'moderador'; counts: PendingCounts | undefined }
+  // refresh: vuelve a pedir el resumen ya, por ejemplo al decidir un caso.
+  | { kind: 'moderador'; counts: PendingCounts | undefined; refresh?: () => void }
   | { kind: 'comercio'; alerts: MerchantAlert[] | undefined }
   | { kind: 'ninguno' };
 
