@@ -590,9 +590,12 @@
   white-space: nowrap;
 }
 
-/* En la hoja, «Listo» queda a la vista aunque haya que desplazar el contenido. */
-.where-panel > .btn {
+/* En la hoja del celular, «Listo» queda a la vista aunque haya que desplazar el contenido, por encima
+   del buscador de municipios (sticky, z-index 1). En el popover va al final, sin tapar nada: ahí
+   se cierra también con la «X». */
+.overlay-sheet .where-panel > .btn {
   position: sticky;
+  z-index: 2;
   bottom: 0;
   box-shadow: 0 -8px 8px var(--bg);
 }
