@@ -1301,6 +1301,8 @@ export interface components {
             lng: number;
             municipality: components["schemas"]["Municipality"];
             outOfZone: boolean;
+            /** @description H16. Solo si la ubicación queda claramente más cerca del centro de otro municipio que el declarado en municipality (margen de 3 km por las fronteras). Es un aviso para el moderador, no un rechazo: no hay límites oficiales de municipios. No está si cuadra o si la tienda está fuera de la zona de servicio. */
+            suggestedMunicipality?: components["schemas"]["Municipality"];
             possibleDuplicates: components["schemas"]["PossibleDuplicates"];
             /** Format: date-time */
             createdAt: string;
