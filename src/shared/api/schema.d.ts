@@ -948,6 +948,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/commerce/me/dispute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi disputa de propiedad abierta (RF-015, H17)
+         * @description H17. Quien intentó registrar una tienda que ya tiene dueño abre una disputa para moderación (409 ESTABLISHMENT_HAS_OWNER en POST /commerce/claims). Este recurso le dice que sigue abierta: la tienda y desde cuándo, para que no vea un formulario vacío. dispute es null si la cuenta no tiene ninguna abierta (también cuando moderación ya la decidió: al decidirla se borran los datos de quien disputó, H18). Nunca trae la cuenta ni datos del dueño actual (EC-08). Solo las disputas abiertas desde que se guardan los datos de quien disputa. Dato de la propia cuenta, sin caché.
+         */
+        get: operations["getMyDispute"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/commerce/me/leave": {
         parameters: {
             query?: never;
@@ -986,6 +1006,46 @@ export interface paths {
          * @description D2 y D3 del grill comercial (#208). Cualquier cuenta con sesión, sobre una tienda que tiene comercio, nunca la propia, y una denuncia abierta por cuenta y tienda. Se guarda la clave seudónima de quien denuncia, nunca su cuenta (EC-08). El moderador decide en GET /moderation/merchant-cases.
          */
         post: operations["reportMerchant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/moderation/merchants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comercios verificados (RF-015, H14)
+         * @description Solo el rol moderador. Los comercios verificados, el más reciente primero, hasta 100; total dice cuántos hay. Hasta ahora moderación solo veía casos (denuncias, disputas y reclamos): con esta lista puede revisar un comercio por iniciativa propia. Datos del comercio que la persona escribió; nunca su cuenta ni su correo (EC-08). Sin caché.
+         */
+        get: operations["listVerifiedMerchants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/moderation/merchants/{establishmentId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revocar un comercio verificado por iniciativa de moderación (RF-015, H14)
+         * @description Solo el rol moderador. Hace lo mismo que revocar un caso (D3): se retiran los precios oficiales y las promociones del comercio, se cierran los casos de la tienda y la cuenta vuelve a reportante, pero sin esperar una denuncia o una disputa. La nota queda en la bitácora interna y nunca se le muestra al comercio (H15). Solo un comercio verificado: una solicitud preaprobada se decide en la cola de tiendas.
+         */
+        post: operations["revokeVerifiedMerchant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1301,6 +1361,8 @@ export interface components {
             lng: number;
             municipality: components["schemas"]["Municipality"];
             outOfZone: boolean;
+            /** @description H16. Solo si la ubicación queda claramente más cerca del centro de otro municipio que el declarado en municipality (margen de 3 km por las fronteras). Es un aviso para el moderador, no un rechazo: no hay límites oficiales de municipios. No está si cuadra o si la tienda está fuera de la zona de servicio. */
+            suggestedMunicipality?: components["schemas"]["Municipality"];
             possibleDuplicates: components["schemas"]["PossibleDuplicates"];
             /** Format: date-time */
             createdAt: string;
@@ -1417,6 +1479,31 @@ export interface components {
         };
         /** @description Lo que el comercio pre-aprobado podrá hacer al aprobarse su tienda (D2). */
         MerchantUnlocks: ("precios_oficiales" | "carga_por_archivo" | "promociones" | "avisos_de_precio" | "datos_de_la_tienda")[];
+        VerifiedMerchant: {
+            establishment: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
+            responsibleName: string;
+            /** @description null si el comercio es informal (sin NIT). */
+            nit: string | null;
+            phone: string;
+            /** Format: date-time */
+            verifiedAt: string | null;
+        };
+        MyDispute: {
+            establishment: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
+            /**
+             * Format: date-time
+             * @description Cuándo se abrió la disputa.
+             */
+            requestedAt: string;
+        };
         LeaveEstablishmentResult: {
             /**
              * @description dejada si la cuenta dejó una tienda ahora; sin_tienda si no tenía ninguna.
@@ -1696,6 +1783,30 @@ export interface components {
             officialPriceCop: number | null;
             /** @description Precio de una unidad con la promoción; en pague X lleve Y, el promedio por unidad. */
             promotedPriceCop: number | null;
+        };
+        /** @description Una promoción activa de la tienda, en su ficha pública (H6). */
+        StorePromotion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            presentationId: string;
+            /** @description Producto y presentación, por ejemplo «Arroz Diana · 1 kg». */
+            productName: string;
+            /** @enum {string} */
+            type: "descuento_porcentual" | "precio_especial" | "pague_x_lleve_y";
+            percent?: number;
+            specialPriceCop?: number;
+            payX?: number;
+            takeY?: number;
+            conditions: components["schemas"]["PromotionConditions"];
+            /** Format: date */
+            validFrom: string;
+            /** Format: date */
+            validUntil: string;
+            /** @description El «antes» */
+            officialPriceCop: number;
+            /** @description El precio de una unidad con la promoción. */
+            promotedPriceCop: number;
         };
         /** @description Una promoción activa de una tienda del área, aparte de los resultados (ADR-009). */
         ComparisonPromotion: {
@@ -2349,6 +2460,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description H6. La tienda tiene un comercio verificado (de moderación o por reclamo aprobado). false si es una tienda de la comunidad, sin dueño. Es un dato de la tienda, nunca de la cuenta (EC-08). */
+                        verifiedMerchant: boolean;
                         establishment: {
                             /** Format: uuid */
                             id: string;
@@ -2398,6 +2511,8 @@ export interface operations {
                             observedAt: string;
                             discrepancy?: components["schemas"]["PriceDiscrepancy"];
                         }[];
+                        /** @description H6, ADR-009. Las promociones activas de la tienda, siempre aparte de los precios y sin alterar su orden. Solo las que tienen sus fechas vigentes y un precio oficial vigente. */
+                        promotions: components["schemas"]["StorePromotion"][];
                     };
                 };
             };
@@ -4095,6 +4210,40 @@ export interface operations {
             };
         };
     };
+    getMyDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La disputa abierta de la cuenta, o null. */
+            200: {
+                headers: {
+                    /** @description Dato de la propia cuenta. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        dispute: null | components["schemas"]["MyDispute"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN, un moderador no tiene disputas. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     leaveMerchantEstablishment: {
         parameters: {
             query?: never;
@@ -4211,6 +4360,69 @@ export interface operations {
             };
             /** @description code OWN_ESTABLISHMENT, no se denuncia la tienda propia. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listVerifiedMerchants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Comercios verificados */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["VerifiedMerchant"][];
+                        total: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    revokeVerifiedMerchant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                establishmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Comercio revocado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description code NOT_FOUND, la tienda no tiene un comercio verificado (también al repetir la revocación). */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -283,3 +283,69 @@ describe('página de una tienda', () => {
     localStorage.clear();
   });
 });
+
+describe('ficha pública: comercio verificado y promociones (H6)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const promotion = {
+    id: 'promo-1',
+    presentationId: 'p1',
+    productName: 'Arroz Diana · 1 kg',
+    type: 'descuento_porcentual',
+    percent: 10,
+    conditions: { whileStocksLast: true, paymentMethod: 'efectivo', maxPerCustomer: 2 },
+    validFrom: '2026-11-23',
+    validUntil: '2026-11-30',
+    officialPriceCop: 5200,
+    promotedPriceCop: 4680,
+  };
+  const open = (extra: Record<string, unknown>) => {
+    stubApi({
+      [`GET /v1/establishments/${ARA}/prices`]: {
+        status: 200,
+        body: { establishment: ara, prices: [banana], ...extra },
+      },
+    });
+    renderStore();
+  };
+
+  it('una tienda con comercio verificado lo dice junto a su nombre', async () => {
+    open({ verifiedMerchant: true, promotions: [] });
+    const head = (await screen.findByRole('heading', { name: 'Ara', level: 1 })).closest('header');
+    expect(head).not.toBeNull();
+    expect(within(head as HTMLElement).getByText('Comercio verificado')).toBeInTheDocument();
+  });
+
+  it('una tienda de la comunidad no dice que tenga comercio verificado', async () => {
+    open({ verifiedMerchant: false, promotions: [] });
+    await screen.findByRole('heading', { name: 'Ara', level: 1 });
+    expect(screen.queryByText('Comercio verificado')).not.toBeInTheDocument();
+  });
+
+  it('muestra cada promoción activa con el «antes», el precio con promoción y sus condiciones', async () => {
+    open({ verifiedMerchant: true, promotions: [promotion] });
+    const section = await screen.findByRole('region', { name: 'Promociones' });
+    expect(within(section).getByText('Arroz Diana · 1 kg')).toBeInTheDocument();
+    expect(within(section).getByText('10 % de descuento')).toBeInTheDocument();
+    expect(within(section).getByText(/Antes \$5\.200/)).toBeInTheDocument();
+    expect(within(section).getByText(/\$4\.680/)).toBeInTheDocument();
+    expect(within(section).getByText(/Hasta el 30 nov/)).toBeInTheDocument();
+    expect(
+      within(section).getByText(/Solo efectivo · Máximo 2 por cliente · Hasta agotar existencias/),
+    ).toBeInTheDocument();
+  });
+
+  it('sin promociones no aparece la sección', async () => {
+    open({ verifiedMerchant: false, promotions: [] });
+    await screen.findByRole('heading', { name: 'Ara', level: 1 });
+    expect(screen.queryByRole('region', { name: 'Promociones' })).not.toBeInTheDocument();
+  });
+
+  it('con una API anterior, sin estos campos, la ficha sigue funcionando', async () => {
+    open({});
+    expect(await screen.findByRole('heading', { name: 'Ara', level: 1 })).toBeInTheDocument();
+    expect(screen.queryByText('Comercio verificado')).not.toBeInTheDocument();
+  });
+});

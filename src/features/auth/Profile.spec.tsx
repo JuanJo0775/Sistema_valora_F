@@ -280,47 +280,28 @@ describe('pestaña Yo con avisos pendientes (ADR-043)', () => {
   });
 });
 
-// RF-020, RN3 y RN7: los avisos push se activan desde «Yo», solo para moderación y comercio.
+// RF-020: los avisos push se activan en Ajustes, no en «Yo».
 describe('pestaña Yo y los avisos push (RF-020)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-    Reflect.deleteProperty(navigator, 'serviceWorker');
   });
 
-  const withPushBrowser = () => {
-    const registration = {
-      pushManager: { getSubscription: () => Promise.resolve(null), subscribe: vi.fn() },
-    };
-    Object.defineProperty(navigator, 'serviceWorker', {
-      value: { ready: Promise.resolve(registration) },
-      configurable: true,
-    });
-    vi.stubGlobal('PushManager', {});
-    vi.stubGlobal('Notification', { permission: 'default', requestPermission: vi.fn() });
-  };
+  it.each(['moderador', 'comercio'] as const)(
+    'el rol %s no ve la activación de avisos en «Yo»: está en Ajustes',
+    async (role) => {
+      const { requested } = stubApi({
+        'GET /v1/auth/session': sessionAs(role),
+        'GET /v1/notifications/vapid-public-key': { status: 200, body: { publicKey: 'AQID' } },
+      });
 
-  it.each(['moderador', 'comercio'] as const)('el rol %s ve «Activar avisos»', async (role) => {
-    withPushBrowser();
-    stubApi({
-      'GET /v1/auth/session': sessionAs(role),
-      'GET /v1/notifications/vapid-public-key': { status: 200, body: { publicKey: 'AQID' } },
-    });
+      renderProfile();
 
-    renderProfile();
-
-    expect(await screen.findByRole('button', { name: 'Activar avisos' })).toBeInTheDocument();
-  });
-
-  it('el reportante no ve la sección de avisos', async () => {
-    withPushBrowser();
-    stubApi({
-      'GET /v1/auth/session': sessionAs('reportante'),
-      'GET /v1/notifications/vapid-public-key': { status: 200, body: { publicKey: 'AQID' } },
-    });
-
-    renderProfile();
-
-    expect(await screen.findByRole('heading', { name: /Hola/ })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Avisos en este dispositivo' })).toBeNull();
-  });
+      expect(await screen.findByRole('heading', { name: /Hola/ })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Avisos en este dispositivo' })).toBeNull();
+      // Ni siquiera se consulta si el servidor tiene los avisos: esa pantalla vive en Ajustes.
+      expect(requested.map(({ pathname }) => pathname)).not.toContain(
+        '/v1/notifications/vapid-public-key',
+      );
+    },
+  );
 });

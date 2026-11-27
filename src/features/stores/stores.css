@@ -731,3 +731,8 @@
     height: 340px;
   }
 }
+
+/* H6: promociones activas de la tienda; el resto de estilos es shared/ui/promotionList.css. */
+.store-promotions {
+  grid-column: 1 / -1;
+}

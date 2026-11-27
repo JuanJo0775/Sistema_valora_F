@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import { dayInColombia } from '../../shared/days';
 import { DecisionForm } from './DecisionForm';
+import { Party } from './Party';
 import { PendingList } from './PendingList';
 import { explainWith } from './explain';
 
@@ -23,6 +24,15 @@ const explain = explainWith({
 });
 const KIND_TITLE = { disputa: 'Disputa de propiedad', denuncia: 'Denuncia' };
 
+const plural = (count: number, one: string, many: string) =>
+  `${String(count)} ${count === 1 ? one : many}`;
+
+// H18: un número, nunca quién denunció (EC-08). Una sola denuncia no es un patrón.
+const reports = (count: number, accounts: number | undefined) =>
+  `${plural(count, 'denuncia abierta', 'denuncias abiertas')}${
+    accounts === undefined ? '' : ` de ${plural(accounts, 'cuenta distinta', 'cuentas distintas')}`
+  }.`;
+
 export function MerchantCases() {
   return (
     <PendingList
@@ -39,18 +49,35 @@ export function MerchantCases() {
           </p>
           <p>{item.reason}</p>
           {item.owner ? (
-            <dl>
-              <dt>Responsable</dt>
-              <dd>{item.owner.responsibleName}</dd>
-              <dt>NIT</dt>
-              <dd>{item.owner.nit ?? 'Sin NIT'}</dd>
-              <dt>Teléfono</dt>
-              <dd>{item.owner.phone}</dd>
-              <dt>Estado</dt>
-              <dd>{item.owner.status === 'verificado' ? 'Verificado' : 'Preaprobado'}</dd>
-            </dl>
+            <Party
+              title={item.kind === 'disputa' ? 'Dueño actual' : 'Responsable'}
+              name={item.owner.responsibleName}
+              nit={item.owner.nit}
+              phone={item.owner.phone}
+              status={item.owner.status === 'verificado' ? 'Verificado' : 'Preaprobado'}
+            />
           ) : (
             <p className="muted">El comercio ya no está registrado.</p>
+          )}
+          {item.kind === 'disputa' &&
+            (item.challenger ? (
+              <Party
+                title="Quien disputa"
+                name={item.challenger.responsibleName}
+                nit={item.challenger.nit ?? null}
+                phone={item.challenger.phone}
+                since={item.challenger.requestedAt}
+              />
+            ) : (
+              <p className="muted">
+                No hay datos de quien disputa: la disputa es anterior a que se guardaran.
+              </p>
+            ))}
+          {item.kind === 'denuncia' && item.reportCount !== undefined && (
+            <p>
+              {reports(item.reportCount, item.distinctReporters)}
+              {item.firstReportedAt && ` Desde el ${dayInColombia(item.firstReportedAt)}.`}
+            </p>
           )}
           <p className="muted">
             {item.kind === 'reclamo'

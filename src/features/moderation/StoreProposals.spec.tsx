@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type FakeReply, sessionAs, stubApi } from '../../test/fakeApi';
@@ -71,6 +71,64 @@ describe('tiendas propuestas', () => {
     expect(corner.queryByText('Fuera del Quindío')).not.toBeInTheDocument();
     const sun = await pendingCase('Granero El Sol');
     expect(sun.getByText('Fuera del Quindío')).toBeInTheDocument();
+  });
+
+  // H16: sin límites oficiales de municipios, el sistema avisa al moderador y él decide.
+  it('avisa cuando la ubicación parece de otro municipio que el registrado', async () => {
+    renderProposals({
+      'GET /v1/moderation/store-proposals': list(
+        proposal('Tienda Prueba QA', {
+          municipality: 'armenia',
+          suggestedMunicipality: 'la-tebaida',
+        }),
+        proposal('Tienda Bien Ubicada'),
+      ),
+    });
+
+    const flagged = await pendingCase('Tienda Prueba QA');
+    expect(
+      flagged.getByText('La ubicación parece de La Tebaida, pero se registró como Armenia.'),
+    ).toBeInTheDocument();
+    const fine = await pendingCase('Tienda Bien Ubicada');
+    expect(fine.queryByText(/La ubicación parece de/)).not.toBeInTheDocument();
+  });
+
+  // H5: aprobar una propuesta que nace de un reclamo verifica a la cuenta; el moderador lo ve antes.
+  it('una propuesta de un comercio muestra al responsable y avisa que aprobarla lo verifica', async () => {
+    renderProposals({
+      'GET /v1/moderation/store-proposals': list(
+        proposal('Tienda Doña Rosa', {
+          claim: {
+            responsibleName: 'Rosa Gómez',
+            phone: '3001234567',
+            nit: '900123456-7',
+            grantsMerchantRole: true,
+          },
+        }),
+        proposal('Tienda Informal', {
+          claim: { responsibleName: 'Luis Ramírez', phone: '3157654321', grantsMerchantRole: true },
+        }),
+        proposal('Tienda Sugerida'),
+      ),
+    });
+
+    const registered = await pendingCase('Tienda Doña Rosa');
+    const owner = registered.getByRole('group', { name: 'Quien la pide' });
+    expect(within(owner).getByText('Rosa Gómez')).toBeInTheDocument();
+    expect(within(owner).getByText('3001234567')).toBeInTheDocument();
+    expect(within(owner).getByText('900123456-7')).toBeInTheDocument();
+    expect(
+      registered.getByText(/Aprobarla verifica a esta cuenta como comercio/),
+    ).toBeInTheDocument();
+
+    const informal = await pendingCase('Tienda Informal');
+    expect(
+      within(informal.getByRole('group', { name: 'Quien la pide' })).getByText('Sin NIT'),
+    ).toBeInTheDocument();
+
+    const suggested = await pendingCase('Tienda Sugerida');
+    expect(suggested.queryByRole('group', { name: 'Quien la pide' })).not.toBeInTheDocument();
+    expect(suggested.queryByText(/verifica a esta cuenta/)).not.toBeInTheDocument();
   });
 
   it('muestra las tiendas parecidas cercanas y solo con ellas se puede fusionar', async () => {

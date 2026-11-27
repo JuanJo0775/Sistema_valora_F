@@ -46,6 +46,22 @@ describe('política de tratamiento de datos', () => {
     expect(screen.getByText(/copias de respaldo de la base de datos/)).toBeInTheDocument();
   });
 
+  it('explica los datos de comercio y de quien disputa una tienda (H18)', () => {
+    render(
+      <MemoryRouter>
+        <PrivacyPolicy />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole('rowheader', { name: /Datos de comercio: responsable, teléfono y NIT/ }),
+    ).toBeInTheDocument();
+    const dispute = screen.getByRole('rowheader', { name: /Si disputas una tienda/ });
+    const row = dispute.closest('tr');
+    expect(row).toHaveTextContent(/solo los ve moderación/);
+    expect(row).toHaveTextContent(/Se borran cuando el dueño deja o elimina la tienda/);
+    expect(row).toHaveTextContent(/o cuando eliminas tu cuenta/);
+  });
+
   it('dice que no guarda la ubicación y que no usa cookies de seguimiento', () => {
     render(
       <MemoryRouter>

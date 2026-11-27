@@ -2,20 +2,10 @@ import { useId } from 'react';
 import { Link } from 'react-router';
 import type { components } from '../../shared/api/schema';
 import { shortDay } from '../../shared/days';
-import { formatCop } from '../../shared/money';
+import { offerName } from '../../shared/promotionText';
+import { PromotionDeal } from '../../shared/ui/PromotionDeal';
 
 type Promotion = components['schemas']['ComparisonPromotion'];
-
-function offerName(promotion: Promotion) {
-  switch (promotion.type) {
-    case 'precio_especial':
-      return 'Precio especial';
-    case 'descuento_porcentual':
-      return `${String(promotion.percent)} % de descuento`;
-    case 'pague_x_lleve_y':
-      return `Lleve ${String(promotion.takeY)}, pague ${String(promotion.payX)}`;
-  }
-}
 
 export function ComparisonPromotions({
   promotions = [],
@@ -29,18 +19,11 @@ export function ComparisonPromotions({
   if (promotions.length === 0) return null;
 
   return (
-    <section className="comparison-promotions" aria-labelledby={title}>
+    <section className="promotion-list comparison-promotions" aria-labelledby={title}>
       <h3 id={title}>Promociones</h3>
       <ul>
         {promotions.map((promotion) => {
-          const { establishment, conditions } = promotion;
-          const restrictions = [
-            conditions.paymentMethod === 'efectivo' && 'Solo efectivo',
-            conditions.paymentMethod === 'tarjeta' && 'Solo tarjeta',
-            conditions.maxPerCustomer !== undefined &&
-              `Máximo ${String(conditions.maxPerCustomer)} por cliente`,
-            conditions.whileStocksLast && 'Hasta agotar existencias',
-          ].filter(Boolean);
+          const { establishment } = promotion;
           return (
             <li key={promotion.id}>
               <div>
@@ -60,16 +43,7 @@ export function ComparisonPromotions({
                   <strong>{offerName(promotion)}</strong>
                 </p>
               </div>
-              <div>
-                <p className="muted">Antes {formatCop(promotion.officialPriceCop)}</p>
-                <p>
-                  <strong>{formatCop(promotion.promotedPriceCop)}</strong>
-                  {promotion.type === 'pague_x_lleve_y' ? ' por unidad en promedio' : ''}
-                </p>
-              </div>
-              {restrictions.length > 0 && (
-                <p className="muted promotion-conditions">{restrictions.join(' · ')}</p>
-              )}
+              <PromotionDeal promotion={promotion} />
             </li>
           );
         })}

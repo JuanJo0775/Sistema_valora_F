@@ -11,6 +11,7 @@ import { FreshnessBadge } from '../../shared/ui/FreshnessBadge';
 import { OfficialBadge } from '../../shared/ui/OfficialBadge';
 import { ReliabilityBadge } from '../../shared/ui/ReliabilityBadge';
 import { SidePanel } from '../../shared/ui/SidePanel';
+import { VerifiedMerchantBadge } from '../../shared/ui/VerifiedMerchantBadge';
 import { Skeleton } from '../../shared/ui/Skeleton';
 import { ProductThumb } from '../catalog/ProductThumb';
 import { MUNICIPALITIES } from '../comparison/criteria';
@@ -18,6 +19,7 @@ import { useSession } from '../auth/session';
 import { MerchantReport } from './MerchantReport';
 import { PinShape } from './pinShapes';
 import { StoreMap } from './StoreMap';
+import { StorePromotions } from './StorePromotions';
 import { STORE_TYPES } from './storeTypes';
 import './stores.css';
 import { BackLink } from '../../shared/ui/BackLink';
@@ -83,7 +85,7 @@ export function StorePage() {
       />
     );
   }
-  const { establishment: store, prices } = result.data;
+  const { establishment: store, prices, promotions, verifiedMerchant } = result.data;
   // El contrato aún no declara el barrio; si el API lo manda, se muestra (ver notas de la tarea).
   const { neighborhood } = store as typeof store & { neighborhood?: string };
   const place = [MUNICIPALITIES[store.municipality], neighborhood].filter(Boolean).join(' · ');
@@ -100,6 +102,11 @@ export function StorePage() {
             <PinShape type={store.type} />
             {STORE_TYPES[store.type]}
           </p>
+          {verifiedMerchant && (
+            <p className="badges">
+              <VerifiedMerchantBadge />
+            </p>
+          )}
           <p className="store-address">{store.address ?? 'Sin dirección registrada'}</p>
           <p className="muted store-place">{place}</p>
           {store.phone && (
@@ -150,6 +157,7 @@ export function StorePage() {
           <StoreMap stores={[store]} label={`Mapa: ${store.name}`} />
         </section>
       </SidePanel>
+      <StorePromotions promotions={promotions} />
       <section className="store-prices" aria-labelledby="tienda-precios">
         <div className="store-prices-head">
           <h2 id="tienda-precios">Precios</h2>

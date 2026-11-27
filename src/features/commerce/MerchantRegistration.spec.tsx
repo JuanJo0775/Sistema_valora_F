@@ -287,6 +287,68 @@ describe('registro de comercios (#165)', () => {
     ).toBeInTheDocument();
   });
 
+  // H17: quien disputa una tienda con dueño tiene una solicitud abierta, no un error.
+  const dispute = '/v1/commerce/me/dispute';
+  const openDispute = {
+    status: 200,
+    body: {
+      dispute: {
+        establishment: { id: store.id, name: 'Tienda La Rosa' },
+        requestedAt: '2026-11-24T15:00:00Z',
+      },
+    },
+  };
+
+  it('al volver muestra la disputa abierta con la tienda y la fecha, sin tono de error (H17)', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      [`GET ${dispute}`]: openDispute,
+    });
+    open(registration);
+    const notice = await screen.findByRole('status', { name: 'Tienes una disputa abierta' });
+    expect(notice).toHaveTextContent('Tienda La Rosa');
+    expect(notice).toHaveTextContent('24 nov');
+    expect(notice).toHaveTextContent('Moderación la está revisando');
+    expect(notice).not.toHaveClass('warn');
+  });
+
+  it('sin disputa abierta no muestra ese aviso', async () => {
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      [`GET ${dispute}`]: { status: 200, body: { dispute: null } },
+    });
+    open(registration);
+    await screen.findByRole('button', { name: 'Compartir mi ubicación y registrar' });
+    expect(screen.queryByText('Tienes una disputa abierta')).not.toBeInTheDocument();
+  });
+
+  it('disputar una tienda con dueño queda como solicitud abierta, no como error (H17)', async () => {
+    locate.mockResolvedValue({ lat: 4.53, lng: -75.68 });
+    let sent = false;
+    stubApi({
+      [`GET ${session}`]: sessionAs('reportante'),
+      [`GET ${profile}`]: missing,
+      'GET /v1/establishments': { status: 200, body: { items: [store] } },
+      [`GET ${dispute}`]: () => (sent ? openDispute : { status: 200, body: { dispute: null } }),
+      [`POST ${claims}`]: () => {
+        sent = true;
+        return {
+          status: 409,
+          body: { code: 'ESTABLISHMENT_HAS_OWNER', message: 'La tienda ya tiene dueño.' },
+        };
+      },
+    });
+    open(registration);
+    await findStore();
+    responsible();
+    submit();
+
+    expect(await screen.findByRole('status', { name: 'Tienes una disputa abierta' })).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('no envía el formulario si el navegador niega la ubicación', async () => {
     locate.mockRejectedValue(new Error('Ubicación denegada'));
     const { calls } = stubApi({

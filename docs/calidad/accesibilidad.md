@@ -53,4 +53,18 @@ Se midió, a 375 px de ancho, el tamaño de cada botón, enlace y campo visible 
 
 - **Prueba de usabilidad EC-01** con 8 a 10 personas: ver `docs/calidad/prueba-usabilidad.md`. La hace el equipo.
 - **Lector de pantalla real** (NVDA en Windows o TalkBack en Android) en el registro de un precio: recomendable para el informe del entregable. axe no reemplaza a una persona.
-- **Playwright con `@axe-core/playwright`** (#27): repetir la revisión automática en un navegador de verdad, que sí mide el contraste pintado.
+- ~~**Playwright con axe** en un navegador de verdad, que sí mide el contraste pintado~~: hecho para sesión, comercio y moderación (sección 6). Los flujos de búsqueda, detalle y registro de un precio ya los revisaban `pulido-pantallas` y `sin-scroll-anidado`.
+
+## 6. Revisión en un navegador de verdad (26 y 27-nov-2026)
+
+`e2e/accesibilidad-sesion-y-moderacion.e2e.ts` corre en Chrome, con `/v1` simulado (sin backend), dos revisiones sobre **16 pantallas**: iniciar sesión, crear cuenta, «Yo» (reportante y comercio), Ajustes (moderador y comercio), registrar mi tienda, el portal del comercio (Precios, Carga masiva, Promociones y Mi tienda) y las cinco pestañas del panel de moderación (Precios, Tiendas, Productos, Comercios y Roles), con casos pendientes para que se vean los números.
+
+**A. axe con contraste** (`expectNoSeriousAxe`, todas las reglas): 16 pantallas × tema claro y oscuro × celular (390 px) y computador (1280 px) = **64 comprobaciones**. Resultado: 64 de 64 sin fallas graves ni críticas.
+
+**B. Estructura y teclado** (en celular, 16 comprobaciones): `lang="es-CO"`, un solo `h1`, que «Saltar al contenido» sea el primer control en el orden del documento y que Enter lleve el foco a `#contenido` sin cambiar la dirección, y que las primeras 8 paradas de Tab tengan contorno de foco visible (2 px o más, o sombra, en el elemento o en su ficha). Resultado: 16 de 16.
+
+- **Que la revisión sí detecta fallas:** con texto gris claro (#d0d0d0) sobre blanco en etiquetas, párrafos y enlaces, la comprobación A falla, como debe. Se probó una vez a mano, sin subir esa prueba.
+- **Hallazgo que resultó ser falso:** el deslizador del radio de búsqueda parecía no mostrar foco, porque su contorno se pinta en el pulgar (`::-webkit-slider-thumb`), que `getComputedStyle` no expone. La prueba lo verifica comparando capturas del control con y sin foco, y sí cambia: el foco es visible.
+- **Observación abierta, sin explicar (27-nov-2026):** en la CI, con el Chromium de Playwright, tras cargar cada pantalla el **primer Tab real cayó en el primer control del contenido** («Volver», «Mis aportes»…) y no en «Saltar al contenido». En Chrome local sí cae en el enlace, y tampoco se reprodujo en local compilando con `NODE_ENV=development`, como hace la CI. Por eso la prueba verifica el orden del documento y no el primer Tab real. Hay que averiguar si es un efecto del navegador de la CI o si la app mueve el foco al contenido al cargar; `useRouteTitle` dice que no lo hace en la carga inicial. Si fuera la app, el enlace de salto no serviría en esa primera pulsación.
+- **Límite que hay que conocer:** cuando axe no puede determinar el color de fondo de un elemento (por ejemplo, porque otro lo tapa en parte), lo deja como «incompleto», no como falla, y la comprobación A no lo cuenta. Esos elementos quedan sin verificar por esta vía: los cubren `tokens.spec.ts` (sección 2) y la revisión manual.
+- **Qué no cubre:** pantallas con datos reales (las colas van vacías y el portal tiene un solo precio y una promoción), los avisos del comercio y la activación de avisos (el servidor simulado dice que no hay clave), el contenido tras abrir diálogos, y el contorno de foco de todos los controles (solo las primeras 8 paradas de cada pantalla). Tampoco sustituye la prueba con un lector de pantalla real ni la de usabilidad con personas (sección 5).
