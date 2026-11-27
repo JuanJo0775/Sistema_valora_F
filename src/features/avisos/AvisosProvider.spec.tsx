@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi } from '../../test/fakeApi';
 import { SessionProvider } from '../auth/SessionProvider';
@@ -52,17 +52,19 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
         { status: 200, body: { ...SUMMARY, precios: 1 } },
       ],
     });
-    let refresh: (() => void) | undefined;
-    function Capture() {
+    function Refresh() {
       const avisos = useAvisos();
-      refresh = avisos.kind === 'moderador' ? avisos.refresh : undefined;
-      return null;
+      return (
+        <button type="button" onClick={avisos.kind === 'moderador' ? avisos.refresh : undefined}>
+          Actualizar
+        </button>
+      );
     }
     render(
       <SessionProvider>
         <AvisosProvider>
           <Probe />
-          <Capture />
+          <Refresh />
         </AvisosProvider>
       </SessionProvider>,
     );
@@ -70,9 +72,7 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
       expect(screen.getByTestId('avisos')).toHaveTextContent('"precios":2');
     });
 
-    act(() => {
-      refresh?.();
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('avisos')).toHaveTextContent('"precios":1');

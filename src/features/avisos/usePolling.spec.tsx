@@ -73,9 +73,12 @@ describe('consulta periódica de los avisos (ADR-043)', () => {
   it('consulta de inmediato cuando cambia la señal de actualización', async () => {
     const load = vi.fn().mockResolvedValueOnce(3).mockResolvedValueOnce(2);
 
-    const { result, rerender } = renderHook(({ signal }) => usePolling(load, MINUTE, true, signal), {
-      initialProps: { signal: 0 },
-    });
+    const { result, rerender } = renderHook(
+      ({ signal }) => usePolling(load, MINUTE, true, signal),
+      {
+        initialProps: { signal: 0 },
+      },
+    );
     await advance(0);
     expect(result.current).toBe(3);
 

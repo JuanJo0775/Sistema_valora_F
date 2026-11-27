@@ -154,7 +154,11 @@ describe('precios en revisión', () => {
       </MemoryRouter>,
     );
 
-    await decide('Arroz Diana · 500 g', 'Descartar', 'El precio está muy por debajo de la mediana.');
+    await decide(
+      'Arroz Diana · 500 g',
+      'Descartar',
+      'El precio está muy por debajo de la mediana.',
+    );
 
     await screen.findByRole('status');
     expect(refresh).toHaveBeenCalledOnce();
