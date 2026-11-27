@@ -318,6 +318,12 @@ function ReportForm({ productId, storeId }: { productId: string; storeId: string
         presentations={product.presentations}
         value={presentationId}
         onChange={(id) => {
+          // El precio es de una presentación: al pasar de 500 g a 1 kg el que estaba escrito ya no vale
+          // y se vuelve a pedir. Elegir la primera presentación o la misma no lo toca.
+          if (presentationId !== '' && id !== presentationId) {
+            setPrice('');
+            clear('price');
+          }
           setPresentationId(id);
           setDoubt(null);
           clear('presentation');
