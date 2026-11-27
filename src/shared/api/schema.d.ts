@@ -948,6 +948,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/commerce/me/dispute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi disputa de propiedad abierta (RF-015, H17)
+         * @description H17. Quien intentó registrar una tienda que ya tiene dueño abre una disputa para moderación (409 ESTABLISHMENT_HAS_OWNER en POST /commerce/claims). Este recurso le dice que sigue abierta: la tienda y desde cuándo, para que no vea un formulario vacío. dispute es null si la cuenta no tiene ninguna abierta (también cuando moderación ya la decidió: al decidirla se borran los datos de quien disputó, H18). Nunca trae la cuenta ni datos del dueño actual (EC-08). Solo las disputas abiertas desde que se guardan los datos de quien disputa. Dato de la propia cuenta, sin caché.
+         */
+        get: operations["getMyDispute"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/commerce/me/leave": {
         parameters: {
             query?: never;
@@ -1419,6 +1439,18 @@ export interface components {
         };
         /** @description Lo que el comercio pre-aprobado podrá hacer al aprobarse su tienda (D2). */
         MerchantUnlocks: ("precios_oficiales" | "carga_por_archivo" | "promociones" | "avisos_de_precio" | "datos_de_la_tienda")[];
+        MyDispute: {
+            establishment: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
+            /**
+             * Format: date-time
+             * @description Cuándo se abrió la disputa.
+             */
+            requestedAt: string;
+        };
         LeaveEstablishmentResult: {
             /**
              * @description dejada si la cuenta dejó una tienda ahora; sin_tienda si no tenía ninguna.
@@ -4116,6 +4148,40 @@ export interface operations {
             };
             /** @description La cuenta no tiene una tienda registrada. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMyDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La disputa abierta de la cuenta, o null. */
+            200: {
+                headers: {
+                    /** @description Dato de la propia cuenta. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        dispute: null | components["schemas"]["MyDispute"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description code FORBIDDEN, un moderador no tiene disputas. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
