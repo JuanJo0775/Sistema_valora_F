@@ -26,6 +26,49 @@ describe('formulario de decisión', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('una opción con motivo opcional se envía sin motivo y la caja lo dice', () => {
+    const onDecide = vi.fn(() => Promise.resolve());
+    render(
+      <DecisionForm
+        id="caso"
+        options={[
+          { value: 'aprobar' as const, label: 'Aprobar', noteOptional: true },
+          { value: 'descartar' as const, label: 'Descartar' },
+        ]}
+        onDecide={onDecide}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Aprobar' }));
+    expect(screen.getByLabelText('Motivo de la decisión (opcional)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar decisión' }));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(onDecide).toHaveBeenCalledWith('aprobar', '');
+  });
+
+  it('al pasar a una opción que sí exige el motivo, vuelve a pedirlo', () => {
+    const onDecide = vi.fn(() => Promise.resolve());
+    render(
+      <DecisionForm
+        id="caso"
+        options={[
+          { value: 'aprobar' as const, label: 'Aprobar', noteOptional: true },
+          { value: 'descartar' as const, label: 'Descartar' },
+        ]}
+        onDecide={onDecide}
+      />,
+    );
+    fireEvent.click(screen.getByRole('radio', { name: 'Aprobar' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Descartar' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar decisión' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('al menos 10 letras');
+    expect(screen.getByLabelText('Motivo de la decisión')).toBeInTheDocument();
+    expect(onDecide).not.toHaveBeenCalled();
+  });
+
   it('sin decisión marca el grupo como inválido, lo liga al aviso y lleva el foco a la primera opción', () => {
     render(<DecisionForm id="caso" options={OPTIONS} onDecide={vi.fn(() => Promise.resolve())} />);
 

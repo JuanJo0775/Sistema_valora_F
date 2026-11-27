@@ -109,7 +109,7 @@ describe('precios en revisión', () => {
   const decide = async (name: string, decision: string, note: string) => {
     const row = within((await screen.findByText(name)).closest('li') as HTMLElement);
     fireEvent.click(row.getByRole('radio', { name: decision }));
-    fireEvent.change(row.getByLabelText('Motivo de la decisión'), { target: { value: note } });
+    fireEvent.change(row.getByLabelText(/^Motivo de la decisión/), { target: { value: note } });
     fireEvent.click(row.getByRole('button', { name: 'Registrar decisión' }));
     return row;
   };
@@ -164,15 +164,36 @@ describe('precios en revisión', () => {
     expect(refresh).toHaveBeenCalledOnce();
   });
 
-  it('con un motivo de menos de 10 letras lo pide sin enviar', async () => {
+  it('descartar con un motivo de menos de 10 letras lo pide sin enviar', async () => {
     const api = renderQueue({
       'GET /v1/moderation/queue': queue(item('Arroz Diana · 500 g', 'marcado')),
     });
 
-    const row = await decide('Arroz Diana · 500 g', 'Aprobar', 'Está bien');
+    const row = await decide('Arroz Diana · 500 g', 'Descartar', 'Está bien');
 
     expect(row.getByRole('alert')).toHaveTextContent('Escribe el motivo: al menos 10 letras.');
     expect(api.calls.some(({ method }) => method === 'POST')).toBe(false);
+  });
+
+  it('aprobar no pide motivo: se envía sin él y el caso sale de la cola', async () => {
+    const rice = item('Arroz Diana · 500 g', 'marcado');
+    const api = renderQueue({
+      'GET /v1/moderation/queue': queue(rice),
+      [`POST /v1/moderation/${rice.id}/decision`]: { status: 204 },
+    });
+    const row = within(
+      (await screen.findByText('Arroz Diana · 500 g')).closest('li') as HTMLElement,
+    );
+
+    fireEvent.click(row.getByRole('radio', { name: 'Aprobar' }));
+    expect(row.getByLabelText('Motivo de la decisión (opcional)')).toBeInTheDocument();
+    fireEvent.click(row.getByRole('button', { name: 'Registrar decisión' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Decisión registrada: Arroz Diana · 500 g.',
+    );
+    const sent = api.calls.find(({ method }) => method === 'POST');
+    expect(JSON.parse(sent?.body ?? '{}')).toEqual({ decision: 'aprobar' });
   });
 
   it.each([

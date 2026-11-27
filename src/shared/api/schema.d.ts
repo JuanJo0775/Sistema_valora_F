@@ -3727,7 +3727,8 @@ export interface operations {
                 "application/json": {
                     /** @enum {string} */
                     decision: "aprobar" | "descartar" | "observar_cuentas";
-                    note: string;
+                    /** @description Motivo. Obligatorio (10 a 500 caracteres) al descartar y al observar cuentas; al aprobar es opcional. La bitácora guarda quién decidió y cuándo aunque no haya texto. */
+                    note?: string;
                 };
             };
         };
