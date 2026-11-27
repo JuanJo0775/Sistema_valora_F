@@ -368,6 +368,38 @@ describe('detalle del producto', () => {
     expect(within(side).getByRole('radio', { name: '500 g' })).toBeChecked();
   });
 
+  it('al elegir otra presentación vuelve a comparar solo con ella y la tarjeta sigue al servidor', async () => {
+    const [grams, kilo] = rice.presentations;
+    const inKilo = {
+      ...offer('Tienda del kilo', 3000, true),
+      presentationId: kilo?.id,
+      unitPrice: { valueCop: 300, per: '100g' },
+    };
+    const inGrams = { ...offer('Tienda de la libra', 2400, true), presentationId: grams?.id };
+    const { requested } = stubApi({
+      [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
+      // Sin elegir nada: el más barato de todas las presentaciones; al elegir 500 g: el de 500 g.
+      [`GET /v1/products/${rice.id}/comparison`]: [comparisonOf([inKilo]), comparisonOf([inGrams])],
+    });
+
+    renderDetail(rice.id);
+
+    const side = await screen.findByRole('complementary', { name: 'Precios y acciones' });
+    const card = await within(side).findByRole('region', { name: 'Más barato en Armenia' });
+    expect(card).toHaveTextContent('Presentación de 1 kg');
+    expect(requested.at(-1)?.searchParams.get('presentationId')).toBeNull();
+
+    fireEvent.click(within(side).getByRole('radio', { name: '500 g' }));
+
+    await vi.waitFor(() => {
+      expect(within(side).getByRole('region', { name: 'Más barato en Armenia' })).toHaveTextContent(
+        'Presentación de 500 g',
+      );
+    });
+    expect(requested.at(-1)?.searchParams.get('presentationId')).toBe(grams?.id);
+    expect(within(side).getByRole('radio', { name: '500 g' })).toBeChecked();
+  });
+
   it('con un ahorro de 0 % no dice «Hasta 0 % menos»', async () => {
     stubApi({
       [`GET /v1/products/${rice.id}`]: { status: 200, body: rice },
