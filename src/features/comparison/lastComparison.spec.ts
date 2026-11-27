@@ -18,6 +18,24 @@ describe('última comparación vista (sin conexión)', () => {
     expect(readComparison(key('a'), 2000)).toEqual({ comparison: sample(1), savedAt: 1000 });
   });
 
+  it('cada presentación tiene su propia copia: 500 g no se muestra como 1 kg', () => {
+    const grams = comparisonKey({
+      productId: 'a',
+      located: false,
+      where: 'armenia',
+      sort: 'unit_price',
+      onlyCurrent: false,
+      presentationId: 'p-500g',
+    });
+    const all = key('a');
+
+    saveComparison(grams, sample(1), 1000);
+
+    expect(grams).not.toBe(all);
+    expect(readComparison(all, 2000)).toBeNull();
+    expect(readComparison(grams, 2000)?.comparison).toEqual(sample(1));
+  });
+
   it('con la ubicación no hay clave: nada se guarda (EC-08)', () => {
     expect(key('a', true)).toBeNull();
     saveComparison(key('a', true), sample(1));
