@@ -1,7 +1,8 @@
-import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { type SyntheticEvent, useEffect, useId, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { api, ApiError, call } from '../../shared/api';
 import type { components, paths } from '../../shared/api/schema';
+import { dayInColombia } from '../../shared/days';
 import { askLocation } from '../../shared/location';
 import { BackLink } from '../../shared/ui/BackLink';
 import { EmptyState } from '../../shared/ui/EmptyState';
@@ -42,6 +43,10 @@ const UNLOCK_LABEL: Record<Unlocks[number], string> = {
   datos_de_la_tienda: 'Actualizar los datos de la tienda',
 };
 
+type Dispute = NonNullable<
+  paths['/commerce/me/dispute']['get']['responses'][200]['content']['application/json']['dispute']
+>;
+
 export function MerchantRegistration() {
   const { session } = useSession();
   const isMerchant = session.status === 'active' && session.role === 'comercio';
@@ -58,6 +63,8 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
   const storeId = query.get('tienda');
   const [attempt, setAttempt] = useState(0);
   const [found, setFound] = useState<{ profile: Profile | null } | { error: unknown } | null>(null);
+  // H17: la disputa abierta de la cuenta. Es un dato de apoyo: si falla, la pantalla sigue sin él.
+  const [dispute, setDispute] = useState<Dispute | null>(null);
   const [receipt, setReceipt] = useState<(Receipt & { kind: ClaimKind }) | null>(null);
   const refreshedRole = useRef(false);
   const status =
@@ -78,6 +85,20 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setFound(error instanceof ApiError && error.status === 404 ? { profile: null } : { error });
+      });
+    return () => {
+      controller.abort();
+    };
+  }, [attempt]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    call(api.GET('/commerce/me/dispute', { signal: controller.signal }))
+      .then(({ dispute: open }) => {
+        if (!controller.signal.aborted) setDispute(open);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setDispute(null);
       });
     return () => {
       controller.abort();
@@ -119,6 +140,7 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
   }
   return (
     <>
+      {dispute && <DisputeNotice dispute={dispute} />}
       {profile && (
         <p className="banner warn" role="status">
           {/* La nota de un moderador es interna (puede nombrar a quien denunció): al revocar no se muestra. */}
@@ -133,6 +155,7 @@ function RegistrationStatus({ isMerchant }: { isMerchant: boolean }) {
         onRegistered={(result, kind) => {
           setReceipt({ ...result, kind });
         }}
+        onDisputed={refresh}
       />
     </>
   );
@@ -206,11 +229,23 @@ function VerifyMerchantEmail() {
   );
 }
 
+// H17: quien intentó registrar una tienda que ya tiene dueño ve que su solicitud sigue abierta. No es
+// un error ni una alerta: no hay nada que corregir, solo esperar a moderación.
+function DisputeNotice({ dispute }: { dispute: Dispute }) {
+  const titleId = useId();
+  return (
+    <section role="status" aria-labelledby={titleId} className="banner">
+      <h2 id={titleId}>Tienes una disputa abierta</h2>
+      <p>
+        {`Pediste registrar ${dispute.establishment.name}, que ya tenía dueño, el ${dayInColombia(dispute.requestedAt)}. Moderación la está revisando; no tienes que hacer nada más.`}
+      </p>
+    </section>
+  );
+}
+
 const CLAIM_ERROR: Record<string, string> = {
   NOT_AT_ESTABLISHMENT:
     'Tienes que estar en la tienda, a 50 m o menos, para comprobar tu presencia.',
-  ESTABLISHMENT_HAS_OWNER:
-    'La tienda ya tiene dueño registrado. El equipo de moderación revisará la disputa.',
   ACCOUNT_HAS_ESTABLISHMENT:
     'Esta cuenta ya tiene una tienda registrada o una solicitud pendiente.',
   EMAIL_NOT_VERIFIED: 'Verifica tu correo antes de registrar una tienda.',
@@ -234,9 +269,12 @@ const FOCUS_ID: Record<Invalid['field'], string> = {
 function ClaimForm({
   storeId,
   onRegistered,
+  onDisputed,
 }: {
   storeId: string | null;
   onRegistered: (receipt: Receipt, kind: ClaimKind) => void;
+  // H17: la tienda ya tenía dueño y quedó una disputa abierta para moderación.
+  onDisputed: () => void;
 }) {
   const [picked, setPicked] = useState<Store | null>(null);
   const [prefill, setPrefill] = useState<Store | null>(null);
@@ -369,7 +407,10 @@ function ClaimForm({
       controller.signal.throwIfAborted();
       onRegistered(result, isNew ? 'nueva' : 'reclamo');
     } catch (failure: unknown) {
-      if (!controller.signal.aborted) setError(failure);
+      if (controller.signal.aborted) return;
+      // No es un fallo: la solicitud quedó abierta. La pantalla la muestra con su estado (H17).
+      if (failure instanceof ApiError && failure.code === 'ESTABLISHMENT_HAS_OWNER') onDisputed();
+      else setError(failure);
     } finally {
       inFlight.current = null;
       setLocating(false);
