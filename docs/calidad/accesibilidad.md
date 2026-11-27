@@ -53,4 +53,14 @@ Se midió, a 375 px de ancho, el tamaño de cada botón, enlace y campo visible 
 
 - **Prueba de usabilidad EC-01** con 8 a 10 personas: ver `docs/calidad/prueba-usabilidad.md`. La hace el equipo.
 - **Lector de pantalla real** (NVDA en Windows o TalkBack en Android) en el registro de un precio: recomendable para el informe del entregable. axe no reemplaza a una persona.
-- **Playwright con `@axe-core/playwright`** (#27): repetir la revisión automática en un navegador de verdad, que sí mide el contraste pintado.
+- ~~**Playwright con axe** en un navegador de verdad, que sí mide el contraste pintado~~: hecho para sesión y moderación (sección 6). Los flujos de búsqueda, detalle y registro de un precio ya los revisaban `pulido-pantallas` y `sin-scroll-anidado`.
+
+## 6. Revisión en un navegador de verdad (26-nov-2026)
+
+`e2e/accesibilidad-sesion-y-moderacion.e2e.ts` corre axe (`expectNoSeriousAxe`, todas las reglas, **con contraste**) en Chrome, con `/v1` simulado (sin backend). Cubre 9 pantallas: iniciar sesión, crear cuenta, «Yo» con sesión, Ajustes del moderador y las cinco pestañas del panel de moderación (Precios, Tiendas, Productos, Comercios y Roles), con casos pendientes para que se vean los números de las pestañas.
+
+- **Combinaciones:** tema claro y oscuro × celular (390 px) y computador (1280 px) = **36 comprobaciones**.
+- **Resultado:** 36 de 36 sin fallas graves ni críticas.
+- **Que la revisión sí detecta fallas:** con texto gris claro (#d0d0d0) sobre blanco en etiquetas, párrafos y enlaces, la comprobación falla, como debe. Se probó una vez a mano, sin subir esa prueba.
+- **Límite que hay que conocer:** cuando axe no puede determinar el color de fondo de un elemento (por ejemplo, porque otro lo tapa en parte), lo deja como «incompleto», no como falla, y esta prueba no lo cuenta. Esos elementos quedan sin verificar por esta vía: los cubren `tokens.spec.ts` (sección 2) y la revisión manual.
+- **Qué no cubre:** pantallas con datos reales (las colas van vacías), el flujo de comercios y la activación de avisos (el servidor simulado dice que no hay clave).
