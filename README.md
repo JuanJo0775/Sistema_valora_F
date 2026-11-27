@@ -2,18 +2,39 @@
 
 Aplicación web de **Valora**, plataforma colaborativa para comparar precios entre tiendas de barrio, minimercados y supermercados de Armenia y el Quindío.
 
+**En producción: <https://www.valoora.app>**
+
 > Este repositorio contiene el frontend. El backend y la fuente de verdad del contrato API viven en [Sistema_valora_B](https://github.com/JuanJo0775/Sistema_valora_B).
 
 ## Estado
 
-Esqueleto en marcha (#20): React + Vite + TypeScript, PWA instalable, Vitest, ESLint, Prettier y CI con SonarQube. La página de inicio dice si el backend responde. Las pantallas llegan en las issues #21 a #28 y #9 a #19.
+Actualizado el 27 de noviembre de 2026. La PWA está **desplegada y en uso** en <https://www.valoora.app>; en `main` está la versión con etiqueta `v0.19.0`.
 
-- Cliente aprobado: aplicación web responsiva que se instala como PWA (ADR-017).
-- Registro de precios offline-first: cola local persistente y sincronización al recuperar conexión (#26).
-- Consulta de precios: requiere conexión.
-- API: REST + JSON + OpenAPI 3.1 bajo `/v1`.
-- Sesión de servidor con cookie segura y CSRF (ADR-014).
-- Diseño de referencia: el prototipo de MC-E4 (paleta «Actual», naranja `#F06A1A`, fuentes Outfit y Figtree).
+| Pieza             | Dónde                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Dirección pública | <https://www.valoora.app> (`valoora.app` redirige a `www`). Se define en `src/site.ts`                                  |
+| Alojamiento       | Vercel, desde `main`. `vercel.json` reenvía `/v1/*` a la API en Render: el navegador ve un solo origen                  |
+| API               | [Sistema_valora_B](https://github.com/JuanJo0775/Sistema_valora_B#estado), con base en Neon y fotos en Supabase Storage |
+
+### Qué hace hoy
+
+| Quién               | Qué puede hacer                                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sin cuenta          | Buscar productos, comparar precios, ver el historial, el mapa y las tiendas, armar la canasta, ver dónde comprar y guardar listas en el teléfono      |
+| Reportante          | Entrar con correo o Google, registrar precios (también sin conexión), ver y apelar sus aportes, marcar precios dudosos y proponer productos o tiendas |
+| Comercio verificado | Registrar su tienda, publicar precios uno a uno o por archivo, crear promociones y administrar o dejar la tienda                                      |
+| Moderación          | Revisar precios, tiendas, productos y comercios, administrar roles y ver la campana de pendientes                                                     |
+
+Además, la app se puede instalar, envía avisos push a moderación y comercio, y permite cambiar el nombre o eliminar la cuenta.
+
+Base técnica: React + Vite + TypeScript y PWA con cola sin conexión (ADR-010, ADR-017); la consulta de precios requiere conexión. API REST bajo `/v1` (OpenAPI 3.1) y sesión de servidor con cookie segura y CSRF (ADR-014). Diseño de referencia: el prototipo de MC-E4 (naranja `#F06A1A`, fuentes Outfit y Figtree).
+
+### Pendiente y límites conocidos
+
+- **Usabilidad (EC-01, #28):** la [prueba con 8 a 10 personas](docs/calidad/prueba-usabilidad.md) no tiene resultados registrados.
+- **Accesibilidad (#28):** axe pasa en un navegador real en las pantallas de sesión, comercio y moderación; falta probar con un lector de pantalla y explicar una diferencia del primer Tab en la CI ([informe](docs/calidad/accesibilidad.md)).
+- **Dispositivos reales:** queda por comprobar la instalación y la vista previa al compartir ([detalle](docs/INSTALAR_Y_COMPARTIR.md)).
+- **Primera petición:** la API usa el plan gratuito de Render; si está dormida, tarda cerca de un minuto en responder.
 
 ## Primeros pasos (desde cero)
 
@@ -68,7 +89,7 @@ Qué cargan las semillas (`seed/` del backend):
 
 **Cuentas para probar** (en tu base local, nunca con datos reales):
 
-- **Reportante:** se registra desde la app (cuando exista la pantalla, #22) o con `POST /v1/auth/register`. Toda cuenta nueva es reportante.
+- **Reportante:** se registra desde la app en «Crear cuenta» o con `POST /v1/auth/register`. Toda cuenta nueva es reportante.
 - **Moderador:** registra la cuenta y luego, en la carpeta del backend:
 
   ```bash
@@ -127,7 +148,7 @@ pnpm test        # todas las pruebas deben pasar
 - En <http://localhost:5173> busca **«banano»**: debe aparecer el producto de la semilla y, al tocarlo, su detalle. Si dice «No hay conexión con Valora», el backend está apagado o en otro puerto (paso 5).
 - <http://localhost:5173/v1/health> debe responder `{"status":"ok"}`: es el backend visto a través del frontend.
 
-**Cómo llega el frontend al backend:** el servidor de desarrollo de Vite reenvía todo lo que empieza por `/v1` al backend (`API_PROXY_TARGET`). Para el navegador todo está en un solo sitio, y así la cookie de sesión (`SameSite=Lax`) funciona. En producción se hará lo mismo con una regla de reenvío de Vercel (ADR-012). El código siempre llama a rutas relativas (`/v1/...`), nunca a `http://localhost:3000`.
+**Cómo llega el frontend al backend:** el servidor de desarrollo de Vite reenvía todo lo que empieza por `/v1` al backend (`API_PROXY_TARGET`). Para el navegador todo está en un solo sitio, y así la cookie de sesión (`SameSite=Lax`) funciona. En producción hace lo mismo la regla de reenvío de Vercel (`vercel.json`, ADR-012). El código siempre llama a rutas relativas (`/v1/...`), nunca a `http://localhost:3000`.
 
 ### 7. Prueba la PWA
 
@@ -138,9 +159,9 @@ pnpm build
 pnpm preview     # http://localhost:4173
 ```
 
-Abre <http://localhost:4173> en Chrome o Edge: aparece el ícono de **Instalar** en la barra de direcciones. En DevTools → **Application** se ven el manifiesto, los íconos y el service worker. Para instalarla en un celular hace falta HTTPS: se prueba con el despliegue (ADR-012).
+Abre <http://localhost:4173> en Chrome o Edge: aparece el ícono de **Instalar** en la barra de direcciones. En DevTools → **Application** se ven el manifiesto, los íconos y el service worker. Para instalarla en un celular hace falta HTTPS: usa <https://www.valoora.app>.
 
-Qué hace hoy la PWA: se instala con el ícono de Valora y guarda en caché los archivos de la app. Las consultas a `/v1` siempre van a la red. La cola de reportes sin conexión llega con la #26.
+Qué hace hoy la PWA: se instala con el ícono de Valora y guarda en caché los archivos de la app. Las consultas a `/v1` siempre van a la red. Los precios registrados sin conexión quedan en una cola en el teléfono y se envían al volver la señal (#26).
 
 ## Día a día
 
@@ -215,12 +236,16 @@ public/                 # íconos de la PWA (logo naranja de «Identidad de marc
 src/
   app/                  # rutas y página de inicio
   features/auth/        # sesión: crear cuenta, entrar, salir y secciones por rol
+  features/avisos/      # campana de pendientes y avisos push
   features/basket/      # canasta: lista de compras y dónde sale más barata
   features/catalog/     # buscar productos y ver su detalle
+  features/commerce/    # registro y portal del comercio: precios, promociones y tienda
   features/comparison/  # comparar precios entre tiendas con el criterio declarado
   features/contributions/ # mis aportes, apelar un descarte y marcar un precio dudoso
   features/history/     # historial y gráfica de los últimos 30 días
-  features/moderation/  # panel del moderador: precios en revisión (tiendas, productos y roles en camino)
+  features/legal/       # política de datos y aviso de cookies
+  features/moderation/  # panel del moderador: precios, tiendas, productos, comercios y roles
+  features/plan/        # dónde comprar: recomendaciones, traslado y listas guardadas
   features/proposals/   # proponer un producto o sugerir una tienda que no existe
   features/reports/     # registrar un precio: producto, tienda cercana, precio y hora (acepta ?producto= y ?tienda=)
   features/stores/      # mapa de tiendas (Leaflet + OpenStreetMap) y página de cada tienda
@@ -230,7 +255,7 @@ src/
   test/                 # configuración de Vitest
 ```
 
-Cada carpeta aparece cuando tiene su primer archivo (YAGNI). La organización prevista es por funcionalidad: `src/features/<tema>` (catalog, comparison, reports, basket, map, auth, moderation, commerce en el Corte 3), `src/shared` (componentes y cliente de la API generado) y `src/pwa` (cola sin conexión). Las pruebas van junto al archivo: `*.spec.tsx`; las de extremo a extremo, en `e2e/` (#27).
+Cada carpeta aparece cuando tiene su primer archivo (YAGNI): `src/features/<tema>`, `src/shared` (componentes y cliente de la API generado) y `src/pwa` (cola sin conexión e instalación). `api/` tiene la función de Vercel de la vista previa al compartir. Las pruebas van junto al archivo (`*.spec.tsx`); las de extremo a extremo, en `e2e/` (#27).
 
 ## Responsabilidades
 
@@ -238,7 +263,8 @@ Cada carpeta aparece cuando tiene su primer archivo (YAGNI). La organización pr
 - Experiencia del reportante: registrar y confirmar precios con pocos pasos.
 - Cola local persistente para reportes sin conexión y estado visible de sincronización.
 - Experiencia de moderación según el rol.
-- Portal de comercios en el Corte 3.
+- Portal de comercios.
+- Avisos a moderación y comercio.
 - Accesibilidad WCAG 2.2 AA en los flujos críticos.
 
 ## Documentación
