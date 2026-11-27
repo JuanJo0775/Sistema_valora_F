@@ -109,7 +109,7 @@ describe('precios en revisión', () => {
   const decide = async (name: string, decision: string, note: string) => {
     const row = within((await screen.findByText(name)).closest('li') as HTMLElement);
     fireEvent.click(row.getByRole('radio', { name: decision }));
-    fireEvent.change(row.getByLabelText('Motivo de la decisión'), { target: { value: note } });
+    fireEvent.change(row.getByLabelText(/^Motivo de la decisión/), { target: { value: note } });
     fireEvent.click(row.getByRole('button', { name: 'Registrar decisión' }));
     return row;
   };
