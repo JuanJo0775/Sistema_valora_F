@@ -7,7 +7,7 @@ import { ModerationPanel } from './ModerationPanel';
 vi.mock('../stores/StoreMap', () => ({ StoreMap: () => null }));
 
 const merchant = (name: string, change: Record<string, unknown> = {}) => ({
-  establishment: { id: `id-${name}`, name },
+  establishment: { id: `id-${name.replaceAll(' ', '-')}`, name },
   responsibleName: 'Rosa Gómez',
   nit: '900123456-7',
   phone: '3001234567',
@@ -68,7 +68,7 @@ describe('comercios verificados en moderación (H14)', () => {
   it('revocar pide el motivo y una confirmación que dice qué se retira, y saca al comercio de la lista', async () => {
     const { calls } = open(
       { items: [merchant('Tienda La Rosa')], total: 1 },
-      { 'POST /v1/moderation/merchants/id-Tienda La Rosa/revoke': { status: 204 } },
+      { 'POST /v1/moderation/merchants/id-Tienda-La-Rosa/revoke': { status: 204 } },
     );
     const rosa = await card('Tienda La Rosa');
 
