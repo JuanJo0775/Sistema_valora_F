@@ -2,8 +2,8 @@ import { useId } from 'react';
 import { Link } from 'react-router';
 import type { components } from '../../shared/api/schema';
 import { shortDay } from '../../shared/days';
-import { formatCop } from '../../shared/money';
-import { offerName, restrictionsOf } from '../../shared/promotionText';
+import { offerName } from '../../shared/promotionText';
+import { PromotionDeal } from '../../shared/ui/PromotionDeal';
 
 type Promotion = components['schemas']['ComparisonPromotion'];
 
@@ -19,12 +19,11 @@ export function ComparisonPromotions({
   if (promotions.length === 0) return null;
 
   return (
-    <section className="comparison-promotions" aria-labelledby={title}>
+    <section className="promotion-list comparison-promotions" aria-labelledby={title}>
       <h3 id={title}>Promociones</h3>
       <ul>
         {promotions.map((promotion) => {
           const { establishment } = promotion;
-          const restrictions = restrictionsOf(promotion);
           return (
             <li key={promotion.id}>
               <div>
@@ -44,16 +43,7 @@ export function ComparisonPromotions({
                   <strong>{offerName(promotion)}</strong>
                 </p>
               </div>
-              <div>
-                <p className="muted">Antes {formatCop(promotion.officialPriceCop)}</p>
-                <p>
-                  <strong>{formatCop(promotion.promotedPriceCop)}</strong>
-                  {promotion.type === 'pague_x_lleve_y' ? ' por unidad en promedio' : ''}
-                </p>
-              </div>
-              {restrictions.length > 0 && (
-                <p className="muted promotion-conditions">{restrictions.join(' · ')}</p>
-              )}
+              <PromotionDeal promotion={promotion} />
             </li>
           );
         })}
