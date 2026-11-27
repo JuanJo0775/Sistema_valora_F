@@ -141,3 +141,48 @@ describe('ajustes', () => {
     expect(localStorage.getItem('valora:modo-prueba')).toBeNull();
   });
 });
+
+// RF-020, RN3 y RN7: los avisos push se activan en Ajustes, solo para moderación y comercio.
+describe('ajustes y los avisos push (RF-020)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, 'serviceWorker');
+  });
+
+  const withPushBrowser = () => {
+    const registration = {
+      pushManager: { getSubscription: () => Promise.resolve(null), subscribe: vi.fn() },
+    };
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { ready: Promise.resolve(registration) },
+      configurable: true,
+    });
+    vi.stubGlobal('PushManager', {});
+    vi.stubGlobal('Notification', { permission: 'default', requestPermission: vi.fn() });
+  };
+
+  it.each(['moderador', 'comercio'] as const)('el rol %s ve «Activar avisos»', async (role) => {
+    withPushBrowser();
+    stubApi({
+      'GET /v1/auth/session': sessionAs(role),
+      'GET /v1/notifications/vapid-public-key': { status: 200, body: { publicKey: 'AQID' } },
+    });
+
+    renderSettings();
+
+    expect(await screen.findByRole('button', { name: 'Activar avisos' })).toBeInTheDocument();
+  });
+
+  it('el reportante no ve la sección de avisos', async () => {
+    withPushBrowser();
+    stubApi({
+      'GET /v1/auth/session': sessionAs('reportante'),
+      'GET /v1/notifications/vapid-public-key': { status: 200, body: { publicKey: 'AQID' } },
+    });
+
+    renderSettings();
+
+    expect(await screen.findByRole('heading', { name: 'Seguridad' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Avisos en este dispositivo' })).toBeNull();
+  });
+});

@@ -8,7 +8,6 @@ import { type Role, useSession } from './session';
 import { SuspendedNotice } from './SuspendedNotice';
 import { useAvisos } from '../avisos/avisosContext';
 import { totalOf } from '../avisos/Campana';
-import { AvisosPush } from '../avisos/push/AvisosPush';
 import { usePlans } from '../plan/usePlans';
 import './auth.css';
 
@@ -141,7 +140,6 @@ export function Profile() {
             )}
           </Group>
         )}
-        {(session.role === 'moderador' || session.role === 'comercio') && <AvisosPush />}
         <SavedListsGroup />
         <Group id="preferencias" title="Preferencias">
           {SETTINGS_ROW}

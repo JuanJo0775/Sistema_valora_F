@@ -81,7 +81,7 @@ export function MerchantLeaveStore({
   }
 
   return (
-    <section className="merchant-leave" aria-labelledby="leave-title">
+    <section className="merchant-leave stack" aria-labelledby="leave-title">
       <h3 id="leave-title">Dejar la tienda</h3>
       {asking === null && (
         <>

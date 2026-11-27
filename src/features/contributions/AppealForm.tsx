@@ -64,7 +64,7 @@ export function AppealForm({
     );
   }
   return (
-    <div className="appeal">
+    <div className="appeal stack">
       <label className="field">
         ¿Por qué el precio era correcto?
         <textarea
