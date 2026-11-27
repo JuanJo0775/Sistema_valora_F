@@ -74,6 +74,8 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: ['src/test/setup.ts'],
+      // Bajo carga una prueba de pantalla completa puede pasar de los 5 s por defecto.
+      testTimeout: 15_000,
       coverage: {
         provider: 'v8',
         reporter: ['text', 'lcov'],
