@@ -38,6 +38,11 @@ export function StoreProposals() {
             )}
             <h2>{proposal.name}</h2>
             <p className="muted">{`${STORE_TYPES[proposal.type]} · ${MUNICIPALITIES[proposal.municipality]}`}</p>
+            {proposal.suggestedMunicipality && (
+              <p className="banner warn">
+                {`La ubicación parece de ${MUNICIPALITIES[proposal.suggestedMunicipality]}, pero se registró como ${MUNICIPALITIES[proposal.municipality]}.`}
+              </p>
+            )}
             {proposal.address && <p>{proposal.address}</p>}
             {proposal.possibleDuplicates.length > 0 && (
               <p>
