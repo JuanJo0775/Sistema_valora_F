@@ -69,6 +69,23 @@ describe('consulta periódica de los avisos (ADR-043)', () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
+  // Al decidir un caso, la campana no espera al próximo minuto: quien llama pide actualizar.
+  it('consulta de inmediato cuando cambia la señal de actualización', async () => {
+    const load = vi.fn().mockResolvedValueOnce(3).mockResolvedValueOnce(2);
+
+    const { result, rerender } = renderHook(({ signal }) => usePolling(load, MINUTE, true, signal), {
+      initialProps: { signal: 0 },
+    });
+    await advance(0);
+    expect(result.current).toBe(3);
+
+    rerender({ signal: 1 });
+    await advance(0);
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(result.current).toBe(2);
+  });
+
   // Pruebas de resguardo: ya pasan con el sondeo hecho.
   it('si una consulta falla conserva el último número y no rompe la pantalla', async () => {
     const load = vi.fn().mockResolvedValueOnce(4).mockRejectedValueOnce(new Error('sin red'));

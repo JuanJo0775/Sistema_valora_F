@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NO_SESSION, sessionAs, stubApi } from '../../test/fakeApi';
 import { SessionProvider } from '../auth/SessionProvider';
@@ -41,6 +41,41 @@ describe('de dónde salen los avisos de cada rol (ADR-043)', () => {
         kind: 'moderador',
         counts: SUMMARY,
       });
+    });
+  });
+
+  it('el moderador puede pedir que se actualice el resumen sin esperar al minuto', async () => {
+    stubApi({
+      'GET /v1/auth/session': sessionAs('moderador'),
+      'GET /v1/moderation/summary': [
+        { status: 200, body: SUMMARY },
+        { status: 200, body: { ...SUMMARY, precios: 1 } },
+      ],
+    });
+    let refresh: (() => void) | undefined;
+    function Capture() {
+      const avisos = useAvisos();
+      refresh = avisos.kind === 'moderador' ? avisos.refresh : undefined;
+      return null;
+    }
+    render(
+      <SessionProvider>
+        <AvisosProvider>
+          <Probe />
+          <Capture />
+        </AvisosProvider>
+      </SessionProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('avisos')).toHaveTextContent('"precios":2');
+    });
+
+    act(() => {
+      refresh?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('avisos')).toHaveTextContent('"precios":1');
     });
   });
 
