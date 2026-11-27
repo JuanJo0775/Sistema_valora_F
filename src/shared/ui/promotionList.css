@@ -1,0 +1,37 @@
+/* Lista de promociones activas: la comparten la comparación y la ficha de la tienda (ADR-009). */
+.promotion-list {
+  display: grid;
+  gap: 12px;
+}
+
+.promotion-list :is(h2, h3, h4, p) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.promotion-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.promotion-list li {
+  display: grid;
+  gap: 8px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  background: var(--info-soft);
+  border-radius: var(--r-m);
+  padding: 12px;
+}
+
+.promotion-list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+}
+
+.promotion-conditions {
+  grid-column: 1 / -1;
+}
