@@ -1,8 +1,8 @@
-import { useId } from 'react';
 import { Link } from 'react-router';
 import { api, call } from '../../shared/api';
 import { dayInColombia } from '../../shared/days';
 import { DecisionForm } from './DecisionForm';
+import { Party } from './Party';
 import { PendingList } from './PendingList';
 import { explainWith } from './explain';
 
@@ -32,49 +32,6 @@ const reports = (count: number, accounts: number | undefined) =>
   `${plural(count, 'denuncia abierta', 'denuncias abiertas')}${
     accounts === undefined ? '' : ` de ${plural(accounts, 'cuenta distinta', 'cuentas distintas')}`
   }.`;
-
-function Party({
-  title,
-  name,
-  nit,
-  phone,
-  status,
-  since,
-}: {
-  title: string;
-  name: string;
-  nit: string | null;
-  phone: string;
-  status?: string;
-  since?: string;
-}) {
-  const id = useId();
-  return (
-    <div role="group" aria-labelledby={id}>
-      <h3 id={id}>{title}</h3>
-      <dl>
-        <dt>Responsable</dt>
-        <dd>{name}</dd>
-        <dt>NIT</dt>
-        <dd>{nit ?? 'Sin NIT'}</dd>
-        <dt>Teléfono</dt>
-        <dd>{phone}</dd>
-        {status && (
-          <>
-            <dt>Estado</dt>
-            <dd>{status}</dd>
-          </>
-        )}
-        {since && (
-          <>
-            <dt>Desde</dt>
-            <dd>{dayInColombia(since)}</dd>
-          </>
-        )}
-      </dl>
-    </div>
-  );
-}
 
 export function MerchantCases() {
   return (
