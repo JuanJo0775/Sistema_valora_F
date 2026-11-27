@@ -38,10 +38,13 @@ export const competes = (offer: Comparison['results'][number]) =>
 // detalle muestra el más barato).
 export function AllStores({
   product,
+  presentationId,
   onComparison,
   onFailed,
 }: {
   product: Product;
+  // Solo esa presentación (500 g o 1 kg): el servidor decide el más barato entre sus precios (EC-06).
+  presentationId?: string;
   onComparison?: (comparison: Comparison) => void;
   // La consulta falló: el detalle deja de reservar el lugar de la tarjeta «Más barato».
   onFailed?: () => void;
@@ -74,7 +77,7 @@ export function AllStores({
     notify.current = onComparison;
     notifyFailed.current = onFailed;
   }, [onComparison, onFailed]);
-  const key = `${String(attempt)}|${productId}|${sort}|${String(onlyCurrent)}|${where.key}`;
+  const key = `${String(attempt)}|${productId}|${presentationId ?? ''}|${sort}|${String(onlyCurrent)}|${where.key}`;
   // Solo se guarda lo pedido por municipio, nunca con la ubicación (EC-08).
   const savedKey = comparisonKey({
     productId,
@@ -82,6 +85,7 @@ export function AllStores({
     where: where.key,
     sort,
     onlyCurrent,
+    ...(presentationId === undefined ? {} : { presentationId }),
   });
 
   useEffect(() => {
@@ -89,7 +93,15 @@ export function AllStores({
     let current = true;
     call(
       api.GET('/products/{productId}/comparison', {
-        params: { path: { productId }, query: { ...where.query, sort, onlyCurrent } },
+        params: {
+          path: { productId },
+          query: {
+            ...where.query,
+            sort,
+            onlyCurrent,
+            ...(presentationId === undefined ? {} : { presentationId }),
+          },
+        },
       }),
     )
       .then((comparison) => {
@@ -114,7 +126,7 @@ export function AllStores({
     return () => {
       current = false;
     };
-  }, [where.ready, productId, sort, where.query, onlyCurrent, key, savedKey]);
+  }, [where.ready, productId, presentationId, sort, where.query, onlyCurrent, key, savedKey]);
 
   // Mostrando lo último que se vio: al volver la conexión se pide la comparación al día.
   const showingSaved = outcome?.key === key && 'savedAt' in outcome;
