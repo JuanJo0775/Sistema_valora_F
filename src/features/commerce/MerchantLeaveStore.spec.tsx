@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '../../test/fakeApi';
@@ -48,7 +48,10 @@ describe('dejar y eliminar la tienda (H36, ADR-040)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Dejar de administrar esta tienda' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sí, dejar la tienda' }));
     const title = await screen.findByRole('heading', { name: 'Dejaste de administrar La Rosa' });
-    expect(title).toHaveFocus();
+    // El foco se pone en un efecto, un instante después de que el título aparece.
+    await waitFor(() => {
+      expect(title).toHaveFocus();
+    });
     expect(calls.find(({ method }) => method === 'POST')?.headers.get('X-CSRF-Token')).toBe('csrf');
     fireEvent.click(screen.getByRole('link', { name: 'Ir a Yo' }));
     expect(finished).toHaveBeenCalledOnce();
