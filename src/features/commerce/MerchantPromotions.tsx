@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { type SyntheticEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { restoreFocus } from '../../shared/focus';
 import { api, ApiError, call } from '../../shared/api';
 import type { components } from '../../shared/api/schema';
@@ -66,8 +66,11 @@ export function MerchantPromotions({
   const retireButtons = useRef(new Map<string, HTMLButtonElement>());
   const cancelled = useRef<string | null>(null);
 
-  // El resultado de la acción recibe el foco: el botón que la pidió ya no existe o cambió.
-  useEffect(() => {
+  // El resultado de la acción recibe el foco: el botón que la pidió ya no existe o cambió. Va en
+  // useLayoutEffect y no en useEffect: el foco tiene que quedar puesto en el mismo commit en que
+  // aparece el aviso, sin depender de cuándo se vacíe la cola de efectos (en la CI, un
+  // useEffect llegaba tarde y el foco se quedaba en <body>).
+  useLayoutEffect(() => {
     if (notice) restoreFocus(statusRef.current);
   }, [notice]);
   // Al cancelar el retiro, el foco vuelve al botón «Retirar promoción» de esa promoción.
