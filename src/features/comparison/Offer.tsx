@@ -86,7 +86,9 @@ export function Offer({
           >
             Cómo llegar
           </a>
-          {offer.reportId && (
+          {/* ADR-028: solo un precio de la comunidad es un reporte y puede marcarse. Un dato inicial
+              (siembra) trae un id que no existe como reporte y marcarlo responde 404. */}
+          {offer.source === 'comunidad' && offer.reportId && (
             <FlagPrice reportId={offer.reportId} storeName={offer.establishment.name} />
           )}
         </p>
