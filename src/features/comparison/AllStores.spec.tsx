@@ -5,6 +5,7 @@ import { seriousViolations } from '../../test/axe';
 import { type FakeReply, stubApi, stubPendingApi } from '../../test/fakeApi';
 import { stubLocation, stubNoGeolocation } from '../../test/location';
 import type { components } from '../../shared/api/schema';
+import { type Session, type SessionState, SessionContext } from '../auth/session';
 import { AllStores } from './AllStores';
 
 const rice = {
@@ -69,6 +70,17 @@ const renderCompare = () =>
     </MemoryRouter>,
   );
 
+// El contexto de sesión por defecto queda «cargando»: para ver lo que ofrece a una persona sin
+// sesión hay que darlo explícito.
+const renderCompareAs = (session: Session) =>
+  render(
+    <SessionContext.Provider value={{ session } as SessionState}>
+      <MemoryRouter>
+        <AllStores product={rice as components['schemas']['Product']} />
+      </MemoryRouter>
+    </SessionContext.Provider>,
+  );
+
 // El chip «dónde buscar» abre la elección del municipio, la ubicación y el radio.
 const openWhere = async () => {
   fireEvent.click(await screen.findByRole('button', { name: /^Dónde buscar/ }));
@@ -105,6 +117,32 @@ describe('todas las tiendas, en el detalle del producto', () => {
     expect(official).not.toHaveTextContent(/Marcar|Confiabilidad/);
     expect(await screen.findByText(/Oficial \$1.800 · Reportado \$2.000/)).toBeInTheDocument();
     expect(screen.getByText(/2 reportes desde el 20 nov/)).toBeInTheDocument();
+  });
+
+  it('solo ofrece marcar un precio de la comunidad, nunca un dato inicial', async () => {
+    stubCompare(
+      comparison([
+        result({ establishment: store('comunidad', 'Tienda Comunidad') }),
+        result({
+          source: 'siembra',
+          reliability: 'baja',
+          confirmations: 0,
+          establishment: store('inicial', 'Tienda Inicial'),
+        }),
+      ]),
+    );
+    renderCompareAs({ status: 'anonymous' });
+
+    const community = (await screen.findByRole('heading', { name: 'Tienda Comunidad' })).closest(
+      'li',
+    );
+    const initial = (await screen.findByRole('heading', { name: 'Tienda Inicial' })).closest('li');
+    expect(
+      within(community as HTMLElement).getByText('¿Este precio está mal?'),
+    ).toBeInTheDocument();
+    // Aunque la API todavía mande un reportId, un dato inicial no es un reporte (ADR-028): marcarlo
+    // responde 404 «Recurso no encontrado».
+    expect(within(initial as HTMLElement).queryByText('¿Este precio está mal?')).toBeNull();
   });
 
   it('muestra las promociones aparte sin cambiar el orden de las ofertas', async () => {

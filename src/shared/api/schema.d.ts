@@ -1664,7 +1664,7 @@ export interface components {
             establishment: components["schemas"]["Establishment"];
             /**
              * Format: uuid
-             * @description El reporte cuyo precio se muestra; sirve para marcarlo como dudoso (RF-013). No viene en un precio oficial (#204).
+             * @description El reporte cuyo precio se muestra; sirve para marcarlo como dudoso (RF-013). No viene en un precio oficial ni en un dato inicial (#204, #135).
              */
             reportId?: string;
             /** Format: uuid */
@@ -2491,7 +2491,7 @@ export interface operations {
                             productName: string;
                             /**
                              * Format: uuid
-                             * @description El reporte cuyo precio se muestra (RF-013). Se omite para un oficial (#218).
+                             * @description Reporte mostrado (RF-013); no viene en un oficial ni en un dato inicial.
                              */
                             reportId?: string;
                             priceCop: number;
